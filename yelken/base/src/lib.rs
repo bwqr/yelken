@@ -3,6 +3,7 @@ use std::{ops::Deref, sync::Arc};
 use config::Config;
 
 pub mod config;
+pub mod schema;
 
 #[derive(Clone)]
 pub struct AppState(Arc<Inner>);
