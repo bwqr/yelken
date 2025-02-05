@@ -1,0 +1,32 @@
+package yelken:handler@0.1.0;
+
+interface page {
+  record request {
+    url: string,
+    query: string,
+  }
+
+  record response {
+    head: list<string>,
+    body: string,
+    scripts: list<string>,
+  }
+
+  load: func(req: request) -> response;
+}
+
+interface api {
+  record request {
+    url: string,
+  }
+
+  record response {
+    body: string,
+  }
+
+  get: func(req: request) -> response;
+}
+
+world root {
+  export page;
+}

@@ -1,0 +1,10 @@
+[package]
+name = "plugin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+log = { workspace = true }
+wasmtime = { version = "29.0.1", features = ["async"] }
+wasmtime-wasi = { version = "29.0.1", default-features = false }

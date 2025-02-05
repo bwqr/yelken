@@ -1,0 +1,9 @@
+package yelken:frontend@0.1.0;
+
+use yelken:plugin/init@0.1.0;
+use yelken:handler/page@0.1.0;
+
+world root {
+  export yelken:plugin/init@0.1.0;
+  export yelken:handler/page@0.1.0;
+}

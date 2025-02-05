@@ -1,0 +1,19 @@
+package yelken:plugin@0.1.0;
+
+interface init {
+  record host-info {
+    environment: string,
+    version: string,
+  }
+
+  record plugin-info {
+    name: string,
+    events: list<string>,
+  }
+
+  register: func(host: host-info) -> plugin-info;
+}
+
+world root {
+  export init;
+}

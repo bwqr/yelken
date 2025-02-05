@@ -1,0 +1,21 @@
+{
+  "name": "yelken-frontend",
+  "version": "0.1.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "types": "jco types -n root -o types wit/"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@bytecodealliance/componentize-js": "^0.16.0",
+    "@bytecodealliance/jco": "^1.9.1",
+    "esbuild": "^0.24.2",
+    "esbuild-plugin-solid": "^0.6.0"
+  },
+  "dependencies": {
+    "@solidjs/start": "^1.0.11",
+    "solid-js": "^1.9.4"
+  }
+}

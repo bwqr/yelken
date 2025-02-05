@@ -1,0 +1,35 @@
+[workspace]
+members = [
+  "plugin"
+]
+
+[package]
+name = "yelken"
+version = "0.1.0"
+edition = "2021"
+
+[workspace.dependencies]
+anyhow = "1.0.95"
+axum = "0.8.1"
+log = "0.4.25"
+serde = { version = "1.0.217", features = ["serde_derive"] }
+
+[dependencies]
+plugin = { path = "./plugin" }
+
+anyhow = { workspace = true }
+axum = { workspace = true }
+dotenvy = "0.15.7"
+env_logger = "0.11.6"
+log = { workspace = true }
+serde = { workspace = true }
+tokio = { version = "1.43.0", features = ["full"] }
+tower = "0.5.2"
+tower-http = { version = "0.6.2", features = ["fs"] }
+
+[profile.dev]
+debug = false
+opt-level = 1
+
+[profile.release]
+lto = true
