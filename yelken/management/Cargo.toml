@@ -1,0 +1,13 @@
+[package]
+name = "management"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base = { path = "../base" }
+plugin = { path = "../plugin" }
+
+anyhow = { workspace = true }
+axum = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }

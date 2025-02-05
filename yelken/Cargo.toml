@@ -1,6 +1,8 @@
 [workspace]
 members = [
-  "plugin"
+  "base",
+  "management",
+  "plugin",
 ]
 
 [package]
@@ -15,6 +17,8 @@ log = "0.4.25"
 serde = { version = "1.0.217", features = ["serde_derive"] }
 
 [dependencies]
+base = { path = "./base" }
+management = { path = "./management" }
 plugin = { path = "./plugin" }
 
 anyhow = { workspace = true }

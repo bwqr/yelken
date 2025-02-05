@@ -1,3 +1,6 @@
+use std::ops::Deref;
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
 use log::warn;
 use wasmtime::component::{Component, Linker, ResourceTable};
@@ -7,28 +10,19 @@ use wasmtime_wasi::WasiCtxBuilder;
 use crate::bindings::handler::exports::yelken::handler::page;
 use crate::{ComponentRunState, Plugin};
 
-pub struct PluginHost {
-    engine: Engine,
-    linker: Linker<ComponentRunState>,
-    plugins: Vec<Plugin>,
+#[derive(Clone)]
+pub struct PluginHost(Arc<Inner>);
+
+impl Deref for PluginHost {
+    type Target = Inner;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
 }
 
 impl PluginHost {
-    fn discover_plugin_files(base_dir: &str) -> Result<Vec<String>> {
-        Ok(std::fs::read_dir(base_dir)?
-            .filter_map(|result| {
-                let path = result.ok()?.path();
-
-                if !path.extension()?.to_str()?.ends_with("wasm") {
-                    return None;
-                }
-
-                path.to_str().map(|p| p.to_string())
-            })
-            .collect())
-    }
-
-    pub async fn new(base_dir: &str) -> Result<PluginHost> {
+    pub async fn new(base_dir: &str) -> Result<Self> {
         let mut config = Config::new();
         config.async_support(true);
 
@@ -59,15 +53,35 @@ impl PluginHost {
             plugins.push(plugin);
         }
 
-        Ok(PluginHost {
+        Ok(Self(Arc::new(Inner {
             engine,
             linker,
             plugins,
-        })
+        })))
+    }
+
+    fn discover_plugin_files(base_dir: &str) -> Result<Vec<String>> {
+        Ok(std::fs::read_dir(base_dir)?
+            .filter_map(|result| {
+                let path = result.ok()?.path();
+
+                if !path.extension()?.to_str()?.ends_with("wasm") {
+                    return None;
+                }
+
+                path.to_str().map(|p| p.to_string())
+            })
+            .collect())
     }
 }
 
-impl PluginHost {
+pub struct Inner {
+    engine: Engine,
+    linker: Linker<ComponentRunState>,
+    plugins: Vec<Plugin>,
+}
+
+impl Inner {
     pub async fn process_page_load(&self, url: String, query: String) -> Result<page::Response> {
         let wasi = WasiCtxBuilder::new()
             .inherit_stdout()

@@ -208,6 +208,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1265,6 +1272,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b955cdeb2a02b9117f121ce63aa52d08ade45de53e48fe6a38b39c10f6f709"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "management"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base",
+ "log",
+ "plugin",
+ "serde",
 ]
 
 [[package]]
@@ -2709,9 +2728,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base",
  "dotenvy",
  "env_logger",
  "log",
+ "management",
  "plugin",
  "serde",
  "tokio",

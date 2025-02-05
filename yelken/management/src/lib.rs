@@ -1,6 +1,7 @@
-use axum::{extract::State, response::Html, routing::get, Router};
+use axum::{response::Html, routing::get, Extension, Router};
 
-use crate::AppState;
+use base::AppState;
+use plugin::PluginHost;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
@@ -8,9 +9,8 @@ pub fn router(state: AppState) -> Router<AppState> {
         .with_state(state)
 }
 
-async fn show_editor(State(state): State<AppState>) -> Html<String> {
-    let text = match state
-        .plugin_host
+async fn show_editor(plugin_host: Extension<PluginHost>) -> Html<String> {
+    let text = match plugin_host
         .process_page_load("/admin/editor".to_string(), "".to_string())
         .await
     {
