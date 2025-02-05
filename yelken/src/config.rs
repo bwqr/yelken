@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 
 pub struct ServerConfig {
     pub address: SocketAddrV4,
+    pub database_url: String,
 }
 
 impl ServerConfig {
@@ -15,6 +16,12 @@ impl ServerConfig {
             .parse()
             .context("invalid YELKEN_BIND_ADDRESS is given")?;
 
-        Ok(Self { address })
+        let database_url =
+            std::env::var("YELKEN_DATABASE_URL").context("YELKEN_DATABASE_URL is not defined")?;
+
+        Ok(Self {
+            address,
+            database_url,
+        })
     }
 }

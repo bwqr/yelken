@@ -2,8 +2,12 @@ use anyhow::Context;
 use axum::{
     extract::Request, middleware::Next, response::Response, routing::get, Extension, Router,
 };
-use base::{config::Config, AppState};
+use base::{config::Config, types::Pool, AppState};
 use config::ServerConfig;
+use diesel_async::{
+    pooled_connection::{bb8, AsyncDieselConnectionManager},
+    AsyncPgConnection,
+};
 use plugin::PluginHost;
 use tower::ServiceBuilder;
 use tower_http::services::ServeDir;
@@ -33,9 +37,17 @@ async fn main() {
 
     let server_config = ServerConfig::from_env().unwrap();
 
-    let plugin_host = PluginHost::new(&format!("{}/plugins", storage_dir))
-        .await
-        .unwrap();
+    let db_config =
+        AsyncDieselConnectionManager::<AsyncPgConnection>::new(&server_config.database_url);
+    let pool: Pool = bb8::Pool::builder().build(db_config).await.unwrap();
+
+    let plugin_host = {
+        let conn = pool.get().await.unwrap();
+
+        PluginHost::new(&format!("{}/plugins", storage_dir), conn)
+            .await
+            .unwrap()
+    };
 
     let state = AppState::new(config);
 

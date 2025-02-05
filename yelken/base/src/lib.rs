@@ -4,6 +4,7 @@ use config::Config;
 
 pub mod config;
 pub mod schema;
+pub mod types;
 
 #[derive(Clone)]
 pub struct AppState(Arc<Inner>);

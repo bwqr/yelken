@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 diesel.workspace = true
+diesel-async.workspace = true

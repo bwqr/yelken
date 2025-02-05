@@ -2,10 +2,15 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use log::warn;
+use base::types::Connection;
+use diesel::QueryDsl;
+use diesel_async::RunQueryDsl;
+use log::{info, warn};
 use wasmtime::component::{Component, Linker, ResourceTable};
 use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::WasiCtxBuilder;
+
+use base::schema;
 
 use crate::bindings::handler::exports::yelken::handler::page;
 use crate::{ComponentRunState, Plugin};
@@ -22,7 +27,14 @@ impl Deref for PluginHost {
 }
 
 impl PluginHost {
-    pub async fn new(base_dir: &str) -> Result<Self> {
+    pub async fn new(base_dir: &str, mut conn: Connection<'_>) -> Result<Self> {
+        let plugin_names = schema::plugins::table
+            .select(schema::plugins::columns::name)
+            .load::<String>(&mut conn)
+            .await?;
+
+        info!("loading plugins {:?}", plugin_names);
+
         let mut config = Config::new();
         config.async_support(true);
 
@@ -30,11 +42,11 @@ impl PluginHost {
         let mut linker = Linker::new(&engine);
         wasmtime_wasi::add_to_linker_async(&mut linker)?;
 
-        let plugin_files = Self::discover_plugin_files(base_dir)?;
-
         let mut plugins = vec![];
 
-        for path in plugin_files.iter() {
+        for name in plugin_names.iter() {
+            let path = format!("{}/{}.wasm", base_dir, name);
+
             let Some(component) = Component::from_file(&engine, &path)
                 .inspect_err(|e| warn!("failed to read file as component, {path}, {e:?}"))
                 .ok()
@@ -58,20 +70,6 @@ impl PluginHost {
             linker,
             plugins,
         })))
-    }
-
-    fn discover_plugin_files(base_dir: &str) -> Result<Vec<String>> {
-        Ok(std::fs::read_dir(base_dir)?
-            .filter_map(|result| {
-                let path = result.ok()?.path();
-
-                if !path.extension()?.to_str()?.ends_with("wasm") {
-                    return None;
-                }
-
-                path.to_str().map(|p| p.to_string())
-            })
-            .collect())
     }
 }
 
