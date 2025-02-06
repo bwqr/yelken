@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-base = { path = "../base" }
-plugin = { path = "../plugin" }
-ui = { path = "../ui" }
+base.path = "../base"
+plugin.path = "../plugin"
+ui.path = "../ui"
 
 anyhow.workspace = true
 axum.workspace = true

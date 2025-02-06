@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-base = { path = "../base" }
+base.path = "../base"
 
 anyhow.workspace = true
 diesel.workspace = true
