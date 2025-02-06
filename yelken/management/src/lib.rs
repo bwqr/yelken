@@ -1,12 +1,28 @@
-use axum::{response::Html, routing::get, Extension, Router};
+use axum::{
+    extract::Request,
+    http::Method,
+    response::{Html, IntoResponse, Response},
+    Extension, Router,
+};
 
 use base::AppState;
+use leptos::{config::LeptosOptions, prelude::RenderHtml};
 use plugin::PluginHost;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/editor", get(show_editor))
+        .fallback(handle_req)
         .with_state(state)
+}
+
+async fn handle_req(req: Request) -> Response {
+    if req.method() != Method::GET {
+        return "Method not allowed".into_response();
+    }
+
+    let options = LeptosOptions::builder().site_pkg_dir("assets/yelken").output_name("yelken").build();
+
+    Html(ui::shell(options).to_html()).into_response()
 }
 
 async fn show_editor(plugin_host: Extension<PluginHost>) -> Html<String> {

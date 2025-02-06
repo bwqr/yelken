@@ -3,6 +3,8 @@ members = [
   "base",
   "management",
   "plugin",
+  "ui",
+  "web",
 ]
 
 [package]
@@ -15,6 +17,7 @@ anyhow = "1.0.95"
 axum = "0.8.1"
 diesel = { version = "2.2.7", features = ["postgres"] }
 diesel-async = { version = "0.5.2", features = ["bb8", "postgres"] }
+leptos = { version = "0.7.5", default-features = false }
 log = "0.4.25"
 serde = { version = "1.0.217", features = ["serde_derive"] }
 

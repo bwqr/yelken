@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use anyhow::Context;
 use axum::{
     extract::Request, middleware::Next, response::Response, routing::get, Extension, Router,
@@ -17,9 +19,16 @@ mod config;
 async fn logger(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_owned();
 
+    let start = Instant::now();
+
     let res = next.run(req).await;
 
-    log::info!("{:?} - {}", path, res.status());
+    log::info!(
+        "{:?} - {} - {}",
+        path,
+        res.status(),
+        Instant::now().duration_since(start).as_secs_f32()
+    );
 
     res
 }
@@ -53,10 +62,10 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(root))
-        .nest("/app/management", management::router(state.clone()))
+        .nest("/yk-app/management", management::router(state.clone()))
         .nest_service(
-            "/assets/plugins",
-            ServeDir::new(format!("{}/assets/plugins", storage_dir)),
+            "/assets",
+            ServeDir::new(format!("{}/assets", storage_dir)),
         )
         .with_state(state)
         .layer(

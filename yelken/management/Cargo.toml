@@ -6,8 +6,10 @@ edition = "2021"
 [dependencies]
 base = { path = "../base" }
 plugin = { path = "../plugin" }
+ui = { path = "../ui" }
 
 anyhow.workspace = true
 axum.workspace = true
+leptos = { workspace = true, features = ["ssr"] }
 log.workspace = true
 serde.workspace = true
