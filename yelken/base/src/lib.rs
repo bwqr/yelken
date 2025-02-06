@@ -24,5 +24,5 @@ impl AppState {
 }
 
 pub struct Inner {
-    config: Config,
+    pub config: Config,
 }

@@ -20,6 +20,7 @@ diesel-async = { version = "0.5.2", features = ["bb8", "postgres"] }
 leptos = { version = "0.7.5", default-features = false }
 log = "0.4.25"
 serde = { version = "1.0.217", features = ["serde_derive"] }
+tokio = { version = "1.43.0", features = ["full"] }
 
 [dependencies]
 base.path = "./base"
@@ -34,7 +35,7 @@ dotenvy = "0.15.7"
 env_logger = "0.11.6"
 log.workspace = true
 serde.workspace = true
-tokio = { version = "1.43.0", features = ["full"] }
+tokio.workspace = true
 tower = "0.5.2"
 tower-http = { version = "0.6.2", features = ["fs"] }
 

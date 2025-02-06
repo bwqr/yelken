@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{YELKEN_ROOT_PATH}/{YELKEN_PKG_PATH}/{CSS_OUTPUT}" type="text/css">
+    <link rel="modulepreload" href="{YELKEN_ROOT_PATH}/{YELKEN_PKG_PATH}/{OUTPUT_NAME}">
+    <link rel="preload" href="{YELKEN_ROOT_PATH}/{YELKEN_PKG_PATH}/{WASM_OUTPUT_NAME}" as="fetch" type="application/wasm" crossorigin="">
+
+    <script type="module">
+      (function (root, pkg_path, output_name, wasm_output_name) {
+        import(`${root}/${pkg_path}/${output_name}`)
+          .then(mod => {
+            mod.default({module_or_path: `${root}/${pkg_path}/${wasm_output_name}`})
+              .then(() => { mod.hydrate(); });
+          })
+       }
+      )("{YELKEN_ROOT_PATH}", "{YELKEN_PKG_PATH}", "{OUTPUT_NAME}", "{WASM_OUTPUT_NAME}")
+    </script>
+
+    <!--YELKEN_META-->
+  </head>
+  <body>
+
+  <!--YELKEN_SCRIPTS-->
+  </body>
+</html>

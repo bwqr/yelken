@@ -15,27 +15,10 @@ pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
 
     view! {
         <div>
-            <button on:click=clear>"Clear"</button>
-            <button on:click=decrement>"-1"</button>
-            <span>"Value: " {value} "!"</span>
-            <button on:click=increment>"+1"</button>
+            <button class="btn" on:click=clear>"Clear"</button>
+            <button class="btn" on:click=decrement>"-1"</button>
+            <span>"Value: "{value}"!"</span>
+            <button class="btn" on:click=increment>"+1"</button>
         </div>
-    }
-}
-
-pub fn shell(options: LeptosOptions) -> impl IntoView {
-    view! {
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <HydrationScripts options/>
-                // <MetaTags/>
-            </head>
-            <body>
-                <SimpleCounter initial_value=32/>
-            </body>
-        </html>
     }
 }
