@@ -41,7 +41,12 @@ tower-http = { version = "0.6.2", features = ["fs"] }
 
 [profile.dev]
 debug = false
-opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev-wasm]
+inherits = "dev"
 
 [profile.release]
 lto = true
