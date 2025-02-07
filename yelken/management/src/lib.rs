@@ -28,10 +28,7 @@ pub fn router(state: AppState) -> Router<AppState> {
     let (body, tail) = body.split_once("<!--YELKEN_SCRIPTS-->").unwrap();
 
     let index_html = IndexHtml {
-        head: head
-            .trim()
-            .replace("{YELKEN_ROOT_PATH}", "")
-            .replace("{YELKEN_PKG_PATH}", "assets/yelken"),
+        head: head.trim().to_string(),
         body: body.trim().to_string(),
         tail: tail.trim().to_string(),
     };

@@ -1,13 +1,7 @@
 {
   "name": "web",
   "version": "0.1.0",
-  "scripts": {
-    "build": "node esbuild.mjs"
-  },
   "devDependencies": {
-    "bootstrap": "^5.3.3",
-    "esbuild": "^0.24.2",
-    "esbuild-sass-plugin": "^3.3.1",
-    "sass": "^1.84.0"
+    "bootstrap": "^5.3.3"
   }
 }

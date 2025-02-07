@@ -3,13 +3,15 @@ name = "web"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
 ui.path = "../ui"
 
 console_error_panic_hook = "0.1.7"
-leptos = { workspace = true, features = ["hydrate"] }
+leptos.workspace = true
 log.workspace = true
 wasm-bindgen = "0.2.100"
+
+[features]
+default = ["hydrate"]
+hydrate = ["leptos/hydrate"]
+csr = ["leptos/csr"]
