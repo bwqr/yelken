@@ -2,9 +2,9 @@ use std::time::Instant;
 
 use anyhow::Context;
 use axum::{
-    extract::Request, middleware::Next, response::Response, routing::get, Extension, Router,
+    extract::Request, middleware::Next, response::Response, Extension, Router,
 };
-use base::{config::Config, types::Pool, AppState};
+use base::{config::Config, crypto::Crypto, types::Pool, AppState};
 use config::ServerConfig;
 use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
@@ -58,19 +58,23 @@ async fn main() {
             .unwrap()
     };
 
-    let state = AppState::new(config);
+    let crypto = Crypto::new(
+        std::env::var("YELKEN_SECRET_KEY")
+            .expect("YELKEN_SECRET_KEY is not provided in env")
+            .as_str(),
+    );
+
+    let state = AppState::new(config, pool);
 
     let app = Router::new()
-        .route("/", get(root))
-        .nest("/yk-app/management", management::router(state.clone()))
-        .nest_service(
-            "/assets",
-            ServeDir::new(format!("{}/assets", storage_dir)),
-        )
+        .nest("/api/auth", auth::router(state.clone()))
+        .nest("/yk-app/", management::router(state.clone()))
+        .nest_service("/assets", ServeDir::new(format!("{}/assets", storage_dir)))
         .with_state(state)
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(plugin_host))
+                .layer(Extension(crypto))
                 .layer(axum::middleware::from_fn(logger)),
         );
 
@@ -79,8 +83,4 @@ async fn main() {
         .unwrap();
 
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn root() -> &'static str {
-    "Hello, World!"
 }

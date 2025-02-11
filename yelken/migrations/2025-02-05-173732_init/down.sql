@@ -1,2 +1,5 @@
--- This file should undo anything in `up.sql`
+drop table users;
+
 drop table plugins;
+
+drop function update_timestamp;

@@ -1,17 +1,16 @@
 [package]
-name = "base"
+name = "auth"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+base.path = "../base"
+
 anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
+rand.workspace = true
 serde.workspace = true
-
-base64 = "0.22.1"
-jsonwebtoken = { version = "9.3.1", default-features = false }
-ring = "0.17.8"

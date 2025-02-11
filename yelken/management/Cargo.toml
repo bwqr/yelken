@@ -10,6 +10,10 @@ ui.path = "../ui"
 
 anyhow.workspace = true
 axum.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
 leptos = { workspace = true, features = ["ssr"] }
+leptos_router = { workspace = true, features = ["ssr"] }
 log.workspace = true
 serde.workspace = true
+tokio.workspace = true

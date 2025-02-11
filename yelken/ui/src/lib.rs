@@ -1,24 +1,62 @@
+use std::sync::Arc;
+
 use leptos::prelude::*;
+use leptos_router::components::*;
+use leptos_router::path;
+
+mod auth;
+pub mod user;
+
+use auth::AuthRoutes;
+use user::UserStore;
 
 #[component]
-pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
-    log::info!("Hey from Simple Counter with value {initial_value}");
-
-    // create a reactive signal with the initial value
-    let (value, set_value) = signal(initial_value);
-
-    // create event handlers for our buttons
-    // note that `value` and `set_value` are `Copy`, so it's super easy to move them into closures
-    let clear = move |_| set_value.set(0);
-    let decrement = move |_| *set_value.write() -= 1;
-    let increment = move |_| *set_value.write() += 1;
+fn Dashboard() -> impl IntoView {
+    let user_store = use_context::<Arc<dyn UserStore>>().expect("UserStore should be provided");
 
     view! {
         <div>
-            <button class="btn" on:click=clear>"Clear"</button>
-            <button class="btn" on:click=decrement>"-1"</button>
-            <span>"Value: "{value}"!"</span>
-            <button class="btn" on:click=increment>"+1"</button>
+            <p>"Dashboard"</p>
+            {move || if let Some(user) = user_store.user().get() {
+                    view !{
+                        <p>"You have logged in " {user.name}</p>
+                    }
+                    .into_any()
+                } else {
+                    view !{
+                        <A href="auth" attr:class="btn btn-primary">"Login"</A>
+                    }
+                    .into_any()
+                }
+            }
         </div>
+    }
+}
+
+#[component]
+fn App() -> impl IntoView {
+    view! {
+        <main>
+            <Outlet/>
+        </main>
+    }
+}
+
+#[component]
+pub fn Root(user_store: Arc<dyn UserStore>, base: String) -> impl IntoView {
+    log::info!("Running App with base {base}");
+
+    provide_context(user_store);
+
+    view! {
+        <Router base>
+            <Routes fallback=|| "Not found.">
+                <AuthRoutes/>
+
+                <ParentRoute path=path!("") view=App>
+                    <Route path=path!("") view=Dashboard/>
+                </ParentRoute>
+            </Routes>
+        </Router>
     }
 }

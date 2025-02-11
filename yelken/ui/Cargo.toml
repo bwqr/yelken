@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 leptos.workspace = true
+leptos_router.workspace = true
 log.workspace = true

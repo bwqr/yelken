@@ -3,6 +3,9 @@ use std::{ops::Deref, sync::Arc};
 use config::Config;
 
 pub mod config;
+pub mod crypto;
+pub mod middlewares;
+pub mod models;
 pub mod schema;
 pub mod types;
 
@@ -18,11 +21,12 @@ impl Deref for AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config) -> Self {
-        Self(Arc::new(Inner { config }))
+    pub fn new(config: Config, pool: types::Pool) -> Self {
+        Self(Arc::new(Inner { config, pool }))
     }
 }
 
 pub struct Inner {
     pub config: Config,
+    pub pool: types::Pool,
 }

@@ -1,15 +1,51 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::Request,
+    extract::{Request, State},
     http::Method,
+    middleware,
     response::{Html, IntoResponse, Response},
     Extension, Router,
 };
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+use leptos::prelude::{
+    provide_context, GetUntracked, Owner, ReadSignal, RenderHtml, RwSignal, Write,
+};
+use leptos_router::location::RequestUrl;
 
-use base::AppState;
-use leptos::prelude::RenderHtml;
+use base::{models::AuthUser, schema::users, AppState};
 use plugin::PluginHost;
+use ui::user::{User, UserStore};
+
+struct UserContext {
+    state: AppState,
+    auth_user: AuthUser,
+    user_signal: RwSignal<Option<User>>,
+}
+
+impl UserContext {
+    fn new(state: AppState, auth_user: AuthUser) -> Self {
+        Self {
+            state,
+            auth_user,
+            user_signal: RwSignal::new(None),
+        }
+    }
+}
+
+impl UserStore for UserContext {
+    fn user(&self) -> ReadSignal<Option<ui::user::User>> {
+        if self.user_signal.get_untracked().is_none() {
+            *self.user_signal.write() = Some(User {
+                id: self.auth_user.id,
+                name: self.auth_user.name.clone(),
+            });
+        }
+
+        self.user_signal.read_only()
+    }
+}
 
 struct IndexHtml {
     head: String,
@@ -35,16 +71,39 @@ pub fn router(state: AppState) -> Router<AppState> {
 
     Router::new()
         .fallback(handle_req)
-        .with_state(state)
+        .with_state(state.clone())
         .layer(Extension(Arc::new(index_html)))
+        .layer(middleware::from_fn_with_state(
+            state,
+            base::middlewares::auth,
+        ))
 }
 
-async fn handle_req(Extension(index_html): Extension<Arc<IndexHtml>>, req: Request) -> Response {
+async fn handle_req(
+    State(state): State<AppState>,
+    Extension(index_html): Extension<Arc<IndexHtml>>,
+    auth_user: AuthUser,
+    req: Request,
+) -> Response {
     if req.method() != Method::GET {
         return "Method not allowed".into_response();
     }
 
-    let body = ui::SimpleCounter(ui::SimpleCounterProps { initial_value: 32 }).to_html();
+    let url = req
+        .uri()
+        .path_and_query()
+        .map(|pq| pq.as_str())
+        .unwrap_or("/");
+
+    let body = Owner::new_root(None).with(move || {
+        provide_context(RequestUrl::new(&format!("/yk-app{}", url)));
+
+        ui::Root(ui::RootProps {
+            base: "/yk-app".to_string(),
+            user_store: Arc::new(UserContext::new(state, auth_user)),
+        })
+        .to_html()
+    });
 
     Html(format!(
         "{}{}{}{}",
