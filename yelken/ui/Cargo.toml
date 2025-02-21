@@ -4,6 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+shared = { path = "../shared", features = ["auth", "user"] }
+
 leptos.workspace = true
 leptos_router.workspace = true
 log.workspace = true
+reqwest = { workspace = true, optional = true }
+serde.workspace = true
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { workspace = true, features = ["Document", "HtmlDocument", "Storage", "Window"], optional = true }
+
+[features]
+web = ["dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]

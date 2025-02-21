@@ -37,6 +37,22 @@ pub async fn auth(
     Ok(next.run(req).await)
 }
 
+pub async fn try_auth(
+    State(state): State<AppState>,
+    mut req: Request,
+    next: Next,
+) -> Result<Response, HttpError> {
+    let Some(token) = parse_token(&req)? else {
+        return Ok(next.run(req).await);
+    };
+
+    let auth_user = fetch_user(&mut state.pool.get().await?, token.id).await?;
+
+    req.extensions_mut().insert(auth_user);
+
+    Ok(next.run(req).await)
+}
+
 async fn fetch_user(
     conn: &mut PooledConnection<'_, AsyncPgConnection>,
     user_id: i32,

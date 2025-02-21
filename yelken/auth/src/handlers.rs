@@ -10,7 +10,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
-use crate::{requests::{Login, SignUp}, responses::Token};
+use shared::auth::{Login, Token};
 
 type UserRow = (i32, String, String, String, String, String, NaiveDateTime);
 
@@ -43,6 +43,13 @@ pub async fn login(
     Ok(RespJson(Token {
         token: crypto.encode(&base::models::Token::new(user_id))?,
     }))
+}
+
+#[derive(serde::Deserialize)]
+pub struct SignUp {
+    pub name: String,
+    pub email: String,
+    pub password: String,
 }
 
 pub async fn sign_up(

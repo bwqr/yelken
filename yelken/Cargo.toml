@@ -4,7 +4,9 @@ members = [
   "base",
   "management",
   "plugin",
+  "shared",
   "ui",
+  "user",
   "web",
 ]
 
@@ -23,14 +25,18 @@ leptos = { version = "0.7.5", default-features = false }
 leptos_router = "0.7.5"
 log = "0.4.25"
 rand = "0.9.0"
+reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1.0.217", features = ["serde_derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
+wasm-bindgen = "0.2.100"
+web-sys = "0.3.77"
 
 [dependencies]
 auth.path = "./auth"
 base.path = "./base"
 management.path = "./management"
 plugin.path = "./plugin"
+user.path = "./user"
 
 anyhow.workspace = true
 axum.workspace = true
@@ -42,7 +48,7 @@ log.workspace = true
 serde.workspace = true
 tokio.workspace = true
 tower = "0.5.2"
-tower-http = { version = "0.6.2", features = ["fs"] }
+tower-http = { version = "0.6.2", features = ["cors", "fs"] }
 
 [profile.dev]
 debug = false

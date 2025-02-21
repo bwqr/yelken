@@ -15,13 +15,15 @@
 @import "node_modules/bootstrap/scss/root";
 
 // 6. Optionally include any other parts as needed
-/* @import "bootstrap/scss/utilities"; */
+@import "node_modules/bootstrap/scss/utilities";
+@import "node_modules/bootstrap/scss/reboot";
+@import "node_modules/bootstrap/scss/forms";
 @import "node_modules/bootstrap/scss/buttons";
 @import "node_modules/bootstrap/scss/containers";
 @import "node_modules/bootstrap/scss/grid";
 @import "node_modules/bootstrap/scss/helpers";
 
 // 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss`
-/* @import "bootstrap/scss/utilities/api"; */
+@import "node_modules/bootstrap/scss/utilities/api";
 
 // 8. Add additional custom code here

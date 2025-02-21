@@ -4,12 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ui.path = "../ui"
+shared = { path = "../shared", features = ["user"] }
+ui = { path = "../ui", features = ["web"] }
 
 console_error_panic_hook = "0.1.7"
 leptos.workspace = true
 log.workspace = true
-wasm-bindgen = "0.2.100"
+reqwest.workspace = true
+send_wrapper = "0.6.0"
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Location", "Storage", "Window"] }
 
 [features]
 default = ["hydrate"]

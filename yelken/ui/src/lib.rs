@@ -5,58 +5,66 @@ use leptos_router::components::*;
 use leptos_router::path;
 
 mod auth;
-pub mod user;
+mod config;
+mod dashboard;
+mod user;
 
-use auth::AuthRoutes;
+pub use auth::{Auth, AuthProps};
+pub use config::Config;
+pub use user::UserAction;
+
+use dashboard::Dashboard;
 use user::UserStore;
 
-#[component]
-fn Dashboard() -> impl IntoView {
-    let user_store = use_context::<Arc<dyn UserStore>>().expect("UserStore should be provided");
+#[component(transparent)]
+fn BackgroundServices<T: UserAction + 'static>(
+    user_action: T,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let user = OnceResource::new(async move { user_action.fetch_user().await });
+    let children = StoredValue::new(children);
 
     view! {
-        <div>
-            <p>"Dashboard"</p>
-            {move || if let Some(user) = user_store.user().get() {
-                    view !{
-                        <p>"You have logged in " {user.name}</p>
-                    }
-                    .into_any()
-                } else {
-                    view !{
-                        <A href="auth" attr:class="btn btn-primary">"Login"</A>
-                    }
-                    .into_any()
-                }
-            }
-        </div>
+        <Suspense fallback=move || view! { <p>"Loading"</p> }>
+            {move || Suspend::new(async move {
+                let user = match user.await {
+                    Ok(user) => user,
+                    Err(e) => return view! { <p>"Failed to load user " {format!("{e:?}")}</p> }.into_any()
+                };
+
+                provide_context(Arc::new(UserStore::new(user)));
+
+                view! {{children.read_value()()}}.into_any()
+            })}
+        </Suspense>
     }
 }
 
 #[component]
-fn App() -> impl IntoView {
-    view! {
-        <main>
-            <Outlet/>
-        </main>
-    }
-}
+pub fn App<T: UserAction + 'static>(config: Config, user_action: T) -> impl IntoView {
+    let base = config.base.clone();
 
-#[component]
-pub fn Root(user_store: Arc<dyn UserStore>, base: String) -> impl IntoView {
-    log::info!("Running App with base {base}");
-
-    provide_context(user_store);
+    provide_context(config);
 
     view! {
         <Router base>
-            <Routes fallback=|| "Not found.">
-                <AuthRoutes/>
-
-                <ParentRoute path=path!("") view=App>
-                    <Route path=path!("") view=Dashboard/>
-                </ParentRoute>
-            </Routes>
+            <nav>
+                <ul>
+                    <li><A href="/">"Dashboard"</A></li>
+                    <li><A href="/plugins">"Plugin Manager"</A></li>
+                    <li><A href="/settings">"Settings"</A></li>
+                    <li><A href="/about">"About"</A></li>
+                </ul>
+            </nav>
+            <main>
+                <BackgroundServices user_action>
+                    <Routes fallback=|| "Not found.">
+                        <ParentRoute path=path!("") view=Outlet>
+                            <Route path=path!("") view=Dashboard/>
+                        </ParentRoute>
+                    </Routes>
+                </BackgroundServices>
+            </main>
         </Router>
     }
 }

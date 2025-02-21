@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 base.path = "../base"
 plugin.path = "../plugin"
+shared = { path = "../shared", features = ["user"] }
 ui.path = "../ui"
 
 anyhow.workspace = true
@@ -17,3 +18,4 @@ leptos_router = { workspace = true, features = ["ssr"] }
 log.workspace = true
 serde.workspace = true
 tokio.workspace = true
+any_spawner = { version = "0.2.0", features = ["tokio"] }

@@ -2,7 +2,11 @@ use std::time::Instant;
 
 use anyhow::Context;
 use axum::{
-    extract::Request, middleware::Next, response::Response, Extension, Router,
+    extract::Request,
+    http::{self, HeaderValue},
+    middleware::Next,
+    response::Response,
+    Extension, Router,
 };
 use base::{config::Config, crypto::Crypto, types::Pool, AppState};
 use config::ServerConfig;
@@ -12,7 +16,7 @@ use diesel_async::{
 };
 use plugin::PluginHost;
 use tower::ServiceBuilder;
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
 mod config;
 
@@ -64,16 +68,28 @@ async fn main() {
             .as_str(),
     );
 
+    let cors = CorsLayer::new()
+        .allow_methods([
+            http::Method::GET,
+            http::Method::POST,
+            http::Method::PUT,
+            http::Method::DELETE,
+        ])
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+        .allow_origin(config.web_origin.parse::<HeaderValue>().unwrap());
+
     let state = AppState::new(config, pool);
 
     let app = Router::new()
-        .nest("/api/auth", auth::router(state.clone()))
+        .nest("/api/auth", auth::router())
+        .nest("/api/user", user::router(state.clone()))
         .nest("/yk-app/", management::router(state.clone()))
         .nest_service("/assets", ServeDir::new(format!("{}/assets", storage_dir)))
         .with_state(state)
         .layer(
             ServiceBuilder::new()
                 .layer(Extension(plugin_host))
+                .layer(cors)
                 .layer(Extension(crypto))
                 .layer(axum::middleware::from_fn(logger)),
         );

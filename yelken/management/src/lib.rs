@@ -7,43 +7,56 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Extension, Router,
 };
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-use leptos::prelude::{
-    provide_context, GetUntracked, Owner, ReadSignal, RenderHtml, RwSignal, Write,
-};
+use leptos::prelude::{provide_context, Owner, RenderHtml};
 use leptos_router::location::RequestUrl;
 
-use base::{models::AuthUser, schema::users, AppState};
+use base::{models::AuthUser, AppState};
 use plugin::PluginHost;
-use ui::user::{User, UserStore};
+use shared::user::User;
+use ui::{Config, UserAction};
+
+async fn auth_cookie() {
+    //  else if let Some(cookie) = req.headers().get(http::header::COOKIE) {
+    //     let Ok(cookie) = cookie.to_str() else {
+    //         return Ok(None);
+    //     };
+
+    //     let Some(token) = cookie.split_once("yelken_token=").map(|split| split.1) else {
+    //         return Ok(None);
+    //     };
+
+    //     log::info!("Yelken Token {}", token);
+
+    //     let Some(token) = token.split_once(";").map(|split| split.0) else {
+    //         return Ok(None);
+    //     };
+
+    //     token
+    // }
+}
 
 struct UserContext {
-    state: AppState,
-    auth_user: AuthUser,
-    user_signal: RwSignal<Option<User>>,
+    auth_user: Option<AuthUser>,
 }
 
 impl UserContext {
-    fn new(state: AppState, auth_user: AuthUser) -> Self {
-        Self {
-            state,
-            auth_user,
-            user_signal: RwSignal::new(None),
-        }
+    fn new(auth_user: Option<AuthUser>) -> Self {
+        Self { auth_user }
     }
 }
 
-impl UserStore for UserContext {
-    fn user(&self) -> ReadSignal<Option<ui::user::User>> {
-        if self.user_signal.get_untracked().is_none() {
-            *self.user_signal.write() = Some(User {
-                id: self.auth_user.id,
-                name: self.auth_user.name.clone(),
-            });
-        }
+impl UserAction for UserContext {
+    fn fetch_user(&self) -> impl std::future::Future<Output = Result<User, String>> + Send {
+        let user = self
+            .auth_user
+            .as_ref()
+            .map(|user| User {
+                id: user.id,
+                name: user.name.clone(),
+            })
+            .ok_or("User does not exist".to_string());
 
-        self.user_signal.read_only()
+        async move { user }
     }
 }
 
@@ -54,6 +67,8 @@ struct IndexHtml {
 }
 
 pub fn router(state: AppState) -> Router<AppState> {
+    any_spawner::Executor::init_tokio().unwrap();
+
     let index_html = std::fs::read_to_string(format!(
         "{}/assets/yelken/index.html",
         state.config.storage_dir
@@ -71,18 +86,17 @@ pub fn router(state: AppState) -> Router<AppState> {
 
     Router::new()
         .fallback(handle_req)
-        .with_state(state.clone())
         .layer(Extension(Arc::new(index_html)))
         .layer(middleware::from_fn_with_state(
             state,
-            base::middlewares::auth,
+            base::middlewares::try_auth,
         ))
 }
 
 async fn handle_req(
     State(state): State<AppState>,
     Extension(index_html): Extension<Arc<IndexHtml>>,
-    auth_user: AuthUser,
+    auth_user: Option<AuthUser>,
     req: Request,
 ) -> Response {
     if req.method() != Method::GET {
@@ -95,12 +109,14 @@ async fn handle_req(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
+    let config = Config::new("/yk-app".to_string(), state.config.api_origin.clone());
+
     let body = Owner::new_root(None).with(move || {
         provide_context(RequestUrl::new(&format!("/yk-app{}", url)));
 
-        ui::Root(ui::RootProps {
-            base: "/yk-app".to_string(),
-            user_store: Arc::new(UserContext::new(state, auth_user)),
+        ui::App(ui::AppProps {
+            config,
+            user_action: UserContext::new(auth_user),
         })
         .to_html()
     });
