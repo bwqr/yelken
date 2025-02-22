@@ -83,7 +83,10 @@ async fn main() {
     let app = Router::new()
         .nest("/api/auth", auth::router())
         .nest("/api/user", user::router(state.clone()))
-        .nest("/yk-app/", management::router(state.clone()))
+        .nest(
+            &format!("{}/", state.config.app_root),
+            management::router(state.clone()),
+        )
         .nest_service("/assets", ServeDir::new(format!("{}/assets", storage_dir)))
         .with_state(state)
         .layer(

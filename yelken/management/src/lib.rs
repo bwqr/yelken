@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
 use axum::{
+    body::Body,
     extract::{Request, State},
-    http::Method,
+    http::{header, Method},
     middleware,
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse, Redirect, Response},
     Extension, Router,
 };
+use futures::StreamExt;
+use hydration_context::{SharedContext, SsrSharedContext};
 use leptos::prelude::{provide_context, Owner, RenderHtml};
 use leptos_router::location::RequestUrl;
 
@@ -15,48 +18,24 @@ use plugin::PluginHost;
 use shared::user::User;
 use ui::{Config, UserAction};
 
-async fn auth_cookie() {
-    //  else if let Some(cookie) = req.headers().get(http::header::COOKIE) {
-    //     let Ok(cookie) = cookie.to_str() else {
-    //         return Ok(None);
-    //     };
-
-    //     let Some(token) = cookie.split_once("yelken_token=").map(|split| split.1) else {
-    //         return Ok(None);
-    //     };
-
-    //     log::info!("Yelken Token {}", token);
-
-    //     let Some(token) = token.split_once(";").map(|split| split.0) else {
-    //         return Ok(None);
-    //     };
-
-    //     token
-    // }
-}
-
 struct UserContext {
-    auth_user: Option<AuthUser>,
+    user: AuthUser,
 }
 
 impl UserContext {
-    fn new(auth_user: Option<AuthUser>) -> Self {
-        Self { auth_user }
+    fn new(user: AuthUser) -> Self {
+        Self { user }
     }
 }
 
 impl UserAction for UserContext {
     fn fetch_user(&self) -> impl std::future::Future<Output = Result<User, String>> + Send {
-        let user = self
-            .auth_user
-            .as_ref()
-            .map(|user| User {
-                id: user.id,
-                name: user.name.clone(),
-            })
-            .ok_or("User does not exist".to_string());
+        let user = User {
+            id: self.user.id,
+            name: self.user.name.clone(),
+        };
 
-        async move { user }
+        async move { Ok(user) }
     }
 }
 
@@ -85,12 +64,45 @@ pub fn router(state: AppState) -> Router<AppState> {
     };
 
     Router::new()
+        .nest("/auth", Router::new().fallback(handle_auth_req))
         .fallback(handle_req)
         .layer(Extension(Arc::new(index_html)))
         .layer(middleware::from_fn_with_state(
             state,
-            base::middlewares::try_auth,
+            base::middlewares::try_auth_from_cookie,
         ))
+}
+
+async fn handle_auth_req(
+    State(state): State<AppState>,
+    Extension(index_html): Extension<Arc<IndexHtml>>,
+    req: Request,
+) -> Response {
+    let url = req
+        .uri()
+        .path_and_query()
+        .map(|pq| pq.as_str())
+        .unwrap_or("/");
+
+    let config = Config::new(
+        state.config.app_root.clone(),
+        state.config.api_origin.clone(),
+    );
+
+    let body = Owner::new_root(None).with(move || {
+        provide_context(RequestUrl::new(&format!(
+            "{}/auth{}",
+            state.config.app_root, url
+        )));
+
+        ui::Auth(ui::AuthProps { config }).to_html()
+    });
+
+    Html(format!(
+        "{}{}{}{}",
+        index_html.head, index_html.body, body, index_html.tail
+    ))
+    .into_response()
 }
 
 async fn handle_req(
@@ -103,29 +115,62 @@ async fn handle_req(
         return "Method not allowed".into_response();
     }
 
+    let Some(auth_user) = auth_user else {
+        return Redirect::to(&format!("{}/auth/login", state.config.app_root)).into_response();
+    };
+
     let url = req
         .uri()
         .path_and_query()
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let config = Config::new("/yk-app".to_string(), state.config.api_origin.clone());
+    let config = Config::new(
+        state.config.app_root.clone(),
+        state.config.api_origin.clone(),
+    );
 
-    let body = Owner::new_root(None).with(move || {
-        provide_context(RequestUrl::new(&format!("/yk-app{}", url)));
+    let shared_context = Arc::new(SsrSharedContext::new());
+
+    let mut body = Owner::new_root(Some(
+        Arc::clone(&shared_context) as Arc<dyn SharedContext + Send + Sync>
+    ))
+    .with(move || {
+        provide_context(RequestUrl::new(&format!(
+            "{}{}",
+            state.config.app_root, url
+        )));
 
         ui::App(ui::AppProps {
             config,
             user_action: UserContext::new(auth_user),
         })
-        .to_html()
+        .to_html_stream_in_order()
     });
 
-    Html(format!(
-        "{}{}{}{}",
-        index_html.head, index_html.body, body, index_html.tail
-    ))
-    .into_response()
+    body.push_sync(&index_html.head);
+    body.push_sync(&index_html.body);
+
+    let mut resp = Body::from_stream(
+        body.chain(
+            shared_context
+                .pending_data()
+                .unwrap()
+                .map(|chunk| format!("<script>{chunk}</script>")),
+        )
+        .chain(futures::stream::once(
+            async move { index_html.tail.clone() },
+        ))
+        .map(|body| -> Result<String, &str> { Ok(body) }),
+    )
+    .into_response();
+
+    resp.headers_mut().insert(
+        header::CONTENT_TYPE,
+        "text/html; charset=utf-8".parse().unwrap(),
+    );
+
+    resp
 }
 
 async fn show_editor(plugin_host: Extension<PluginHost>) -> Html<String> {
