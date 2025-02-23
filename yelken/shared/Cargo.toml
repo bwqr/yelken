@@ -8,4 +8,5 @@ serde.workspace = true
 
 [features]
 auth = []
+plugin = []
 user = []

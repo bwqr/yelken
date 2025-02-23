@@ -1,7 +1,7 @@
 use leptos::prelude::IntoAny;
 use send_wrapper::SendWrapper;
-use shared::user::User;
-use ui::{App, AppProps, Auth, AuthProps, Config, UserAction};
+use shared::{plugin::Plugin, user::User};
+use ui::{App, AppProps, Auth, AuthProps, Config, PluginResource, UserResource};
 
 mod log;
 
@@ -13,11 +13,51 @@ enum Root {
     App,
 }
 
-struct UserActions {
+#[derive(Clone)]
+struct PluginResources {
     config: Config,
 }
 
-impl UserAction for UserActions {
+impl PluginResource for PluginResources {
+    async fn fetch_plugins(&self) -> Result<Vec<Plugin>, String> {
+        SendWrapper::new(async move {
+            let window = web_sys::window().unwrap();
+
+            let token = window
+                .local_storage()
+                .unwrap()
+                .unwrap()
+                .get_item("token")
+                .unwrap()
+                .unwrap_or("".to_string());
+
+            let resp = reqwest::Client::new()
+                .get(format!("{}/api/plugin/plugins", self.config.api_url))
+                .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
+                .send()
+                .await
+                .map_err(|err| format!("{err:?}"))?;
+
+            if resp.status() == 401 {
+                window
+                    .location()
+                    .assign(&format!("{}/auth/login", self.config.base))
+                    .unwrap();
+
+                return Err("Unauthorized error".to_string());
+            }
+
+            resp.json().await.map_err(|err| format!("{err:?}"))
+        })
+        .await
+    }
+}
+
+struct UserResources {
+    config: Config,
+}
+
+impl UserResource for UserResources {
     async fn fetch_user(&self) -> Result<User, String> {
         SendWrapper::new(async move {
             let window = web_sys::window().unwrap();
@@ -87,13 +127,18 @@ fn main() {
 
     mount(move || match root {
         Root::App => {
-            let user_action = UserActions {
+            let user_resource = UserResources {
+                config: config.clone(),
+            };
+
+            let plugin_resource = PluginResources {
                 config: config.clone(),
             };
 
             App(AppProps {
                 config,
-                user_action,
+                user_resource,
+                plugin_resource,
             })
             .into_any()
         }

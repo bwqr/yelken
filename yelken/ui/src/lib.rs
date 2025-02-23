@@ -14,8 +14,9 @@ mod user;
 pub use auth::{Auth, AuthProps};
 pub use config::Config;
 use plugin::PluginManager;
+pub use plugin::PluginResource;
 use settings::Settings;
-pub use user::UserAction;
+pub use user::UserResource;
 
 use dashboard::Dashboard;
 use user::UserStore;
@@ -64,11 +65,8 @@ fn TopBar() -> impl IntoView {
 }
 
 #[component(transparent)]
-fn BackgroundServices<T: UserAction + 'static>(
-    user_action: T,
-    children: ChildrenFn,
-) -> impl IntoView {
-    let user = OnceResource::new(async move { user_action.fetch_user().await });
+fn BackgroundServices<U: UserResource>(user_resource: U, children: ChildrenFn) -> impl IntoView {
+    let user = OnceResource::new(async move { user_resource.fetch_user().await });
     let children = StoredValue::new(children);
 
     view! {
@@ -88,7 +86,11 @@ fn BackgroundServices<T: UserAction + 'static>(
 }
 
 #[component]
-pub fn App<T: UserAction + 'static>(config: Config, user_action: T) -> impl IntoView {
+pub fn App<U: UserResource, P: PluginResource + Clone + Sync>(
+    config: Config,
+    user_resource: U,
+    plugin_resource: P,
+) -> impl IntoView {
     let base = config.base.clone();
 
     provide_context(config);
@@ -117,13 +119,13 @@ pub fn App<T: UserAction + 'static>(config: Config, user_action: T) -> impl Into
                     </ul>
                 </nav>
                 <main class="flex-grow-1">
-                    <BackgroundServices user_action>
+                    <BackgroundServices user_resource>
                         <TopBar/>
 
-                        <Routes fallback=|| "Not found.">
-                            <ParentRoute path=path!("") view=Outlet>
+                        <Routes fallback=|| "Not found." clone:plugin_resource>
+                            <ParentRoute path=path!("") view=Outlet clone:plugin_resource>
                                 <Route path=path!("") view=Dashboard/>
-                                <Route path=path!("plugin-manager") view=PluginManager/>
+                                <Route path=path!("plugin-manager") view=move || view! { <PluginManager plugin_resource=plugin_resource.clone()></PluginManager> }/>
                                 <Route path=path!("settings") view=Settings/>
                             </ParentRoute>
                         </Routes>

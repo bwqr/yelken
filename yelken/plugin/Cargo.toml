@@ -5,8 +5,10 @@ edition = "2021"
 
 [dependencies]
 base.path = "../base"
+shared = { path = "../shared", features = ["plugin"] }
 
 anyhow.workspace = true
+axum.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true

@@ -1,4 +1,6 @@
 use anyhow::{Context, Result};
+use axum::{middleware, routing::get, Router};
+use base::AppState;
 use log::info;
 use wasmtime::{
     component::{Component, Linker, ResourceTable},
@@ -7,9 +9,11 @@ use wasmtime::{
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiView};
 
 mod bindings;
+mod handlers;
 mod host;
 
 pub use host::PluginHost;
+pub use handlers::fetch_plugins;
 
 pub(crate) struct ComponentRunState {
     pub wasi_ctx: WasiCtx,
@@ -93,4 +97,10 @@ impl Plugin {
             events: plugin.events,
         })
     }
+}
+
+pub fn router(state: AppState) -> Router<AppState> {
+    Router::new()
+        .route("/plugins", get(handlers::fetch_plugins))
+        .layer(middleware::from_fn_with_state(state, base::middlewares::auth))
 }

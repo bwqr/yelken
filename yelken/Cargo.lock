@@ -2442,10 +2442,12 @@ name = "plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "base",
  "diesel",
  "diesel-async",
  "log",
+ "shared",
  "wasmtime",
  "wasmtime-wasi",
 ]

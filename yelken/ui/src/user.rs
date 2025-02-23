@@ -16,6 +16,6 @@ impl UserStore {
     }
 }
 
-pub trait UserAction: Send {
+pub trait UserResource: Send + 'static {
     fn fetch_user(&self) -> impl Future<Output = Result<User, String>> + Send;
 }

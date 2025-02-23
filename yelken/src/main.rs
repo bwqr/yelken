@@ -82,6 +82,7 @@ async fn main() {
 
     let app = Router::new()
         .nest("/api/auth", auth::router())
+        .nest("/api/plugin", plugin::router(state.clone()))
         .nest("/api/user", user::router(state.clone()))
         .nest(
             &format!("{}/", state.config.app_root),

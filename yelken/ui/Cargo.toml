@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared", features = ["auth", "user"] }
+shared = { path = "../shared", features = ["auth", "plugin", "user"] }
 
 leptos.workspace = true
 leptos_router.workspace = true
