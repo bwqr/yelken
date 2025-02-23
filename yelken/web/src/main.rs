@@ -20,8 +20,9 @@ struct UserActions {
 impl UserAction for UserActions {
     async fn fetch_user(&self) -> Result<User, String> {
         SendWrapper::new(async move {
-            let token = web_sys::window()
-                .unwrap()
+            let window = web_sys::window().unwrap();
+
+            let token = window
                 .local_storage()
                 .unwrap()
                 .unwrap()
@@ -37,8 +38,7 @@ impl UserAction for UserActions {
                 .map_err(|err| format!("{err:?}"))?;
 
             if resp.status() == 401 {
-                web_sys::window()
-                    .unwrap()
+                window
                     .location()
                     .assign(&format!("{}/auth/login", self.config.base))
                     .unwrap();

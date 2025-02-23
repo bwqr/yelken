@@ -39,11 +39,7 @@ fn save_token_and_redirect(base: &str, token: &str) {
         .set_item("token", token)
         .unwrap();
 
-    web_sys::window()
-        .unwrap()
-        .location()
-        .assign(&format!("{}/", base))
-        .unwrap();
+    window.location().assign(&format!("{}/", base)).unwrap();
 }
 
 #[cfg(not(feature = "web"))]

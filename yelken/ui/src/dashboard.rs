@@ -1,6 +1,6 @@
-use std::sync::Arc;
-use leptos::prelude::*;
 use crate::user::UserStore;
+use leptos::prelude::*;
+use std::sync::Arc;
 
 #[component]
 pub fn Dashboard() -> impl IntoView {
@@ -8,7 +8,6 @@ pub fn Dashboard() -> impl IntoView {
 
     view! {
         <div>
-            <p>"Dashboard"</p>
             <p>"You have logged in " {move || user_store.user().get().name}</p>
         </div>
     }
