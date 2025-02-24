@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use axum::{middleware, routing::get, Router};
 use base::AppState;
 use log::info;
+use shared::plugin::Menu;
 use wasmtime::{
     component::{Component, Linker, ResourceTable},
     Engine, Store,
@@ -12,8 +13,8 @@ mod bindings;
 mod handlers;
 mod host;
 
-pub use host::PluginHost;
 pub use handlers::fetch_plugins;
+pub use host::PluginHost;
 
 pub(crate) struct ComponentRunState {
     pub wasi_ctx: WasiCtx,
@@ -31,13 +32,15 @@ impl WasiView for ComponentRunState {
 }
 
 pub(crate) struct Plugin {
-    name: String,
+    id: String,
+    version: String,
+    menus: Option<Vec<Menu>>,
     component: Component,
-    events: Vec<String>,
 }
 
 impl Plugin {
     async fn new(
+        id: String,
         component: Component,
         engine: &Engine,
         linker: &Linker<ComponentRunState>,
@@ -78,7 +81,6 @@ impl Plugin {
             .call_async(
                 &mut store,
                 (HostInfo {
-                    environment: "dev".to_string(),
                     version: "0.1.0".to_string(),
                 },),
             )
@@ -87,14 +89,23 @@ impl Plugin {
         typed.post_return_async(&mut store).await?;
 
         info!(
-            "Loaded plugin {} with events {:?}",
-            plugin.name, plugin.events
+            "Loaded plugin {} with menus {:?}",
+            plugin.name, plugin.management.menus
         );
 
         Ok(Self {
-            name: plugin.name,
+            id,
+            version: plugin.version,
+            menus: plugin.management.menus.map(|menus| {
+                menus
+                    .into_iter()
+                    .map(|menu| Menu {
+                        path: menu.path,
+                        name: menu.name,
+                    })
+                    .collect()
+            }),
             component,
-            events: plugin.events,
         })
     }
 }
@@ -102,5 +113,8 @@ impl Plugin {
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/plugins", get(handlers::fetch_plugins))
-        .layer(middleware::from_fn_with_state(state, base::middlewares::auth))
+        .layer(middleware::from_fn_with_state(
+            state,
+            base::middlewares::auth,
+        ))
 }

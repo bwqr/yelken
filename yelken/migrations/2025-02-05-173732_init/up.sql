@@ -6,9 +6,12 @@ end;
 $$ language plpgsql;
 
 create table plugins(
-    id          serial primary key not null,
-    name        varchar(255)       not null,
-    created_at  timestamp          not null default current_timestamp
+    id          varchar(255) primary key not null,
+    version     varchar(32)  not null,
+    enabled     boolean      not null default true,
+    name        varchar(255) not null,
+    "desc"      text         not null,
+    created_at  timestamp    not null default current_timestamp
 );
 
 create table users(

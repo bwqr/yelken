@@ -20,18 +20,23 @@ use ui::{Config, PluginResource, UserResource};
 
 #[derive(Clone)]
 struct PluginContext {
+    plugin_host: PluginHost,
     state: AppState,
 }
 
 impl PluginResource for PluginContext {
     fn fetch_plugins(&self) -> impl Future<Output = Result<Vec<Plugin>, String>> + Send {
         let state = self.state.clone();
+        let plugin_host = self.plugin_host.clone();
 
         async move {
-            plugin::fetch_plugins(axum::extract::State(state))
-                .await
-                .map(|json| json.0)
-                .map_err(|e| e.error.to_string())
+            plugin::fetch_plugins(
+                axum::extract::State(state),
+                axum::extract::Extension(plugin_host),
+            )
+            .await
+            .map(|json| json.0)
+            .map_err(|e| e.error.to_string())
         }
     }
 }
@@ -125,6 +130,7 @@ async fn handle_auth_req(
 
 async fn handle_req(
     State(state): State<AppState>,
+    Extension(plugin_host): Extension<PluginHost>,
     Extension(index_html): Extension<Arc<IndexHtml>>,
     auth_user: Option<AuthUser>,
     req: Request,
@@ -162,7 +168,7 @@ async fn handle_req(
         ui::App(ui::AppProps {
             config,
             user_resource: UserContext::new(auth_user),
-            plugin_resource: PluginContext { state },
+            plugin_resource: PluginContext { plugin_host, state },
         })
         .to_html_stream_in_order()
     });

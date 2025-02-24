@@ -2,9 +2,14 @@
 
 diesel::table! {
     plugins (id) {
-        id -> Int4,
+        #[max_length = 255]
+        id -> Varchar,
+        #[max_length = 32]
+        version -> Varchar,
+        enabled -> Bool,
         #[max_length = 255]
         name -> Varchar,
+        desc -> Text,
         created_at -> Timestamp,
     }
 }

@@ -3,14 +3,15 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use base::types::Connection;
-use diesel::QueryDsl;
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use log::{info, warn};
+use shared::plugin::Menu;
 use wasmtime::component::{Component, Linker, ResourceTable};
 use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::WasiCtxBuilder;
 
-use base::schema;
+use base::schema::plugins;
 
 use crate::bindings::handler::exports::yelken::handler::page;
 use crate::{ComponentRunState, Plugin};
@@ -28,9 +29,10 @@ impl Deref for PluginHost {
 
 impl PluginHost {
     pub async fn new(base_dir: &str, mut conn: Connection<'_>) -> Result<Self> {
-        let plugin_names = schema::plugins::table
-            .select(schema::plugins::columns::name)
-            .load::<String>(&mut conn)
+        let plugin_names = plugins::table
+            .select((plugins::id, plugins::version))
+            .filter(plugins::enabled.eq(true))
+            .load::<(String, String)>(&mut conn)
             .await?;
 
         info!("loading plugins {:?}", plugin_names);
@@ -44,8 +46,8 @@ impl PluginHost {
 
         let mut plugins = vec![];
 
-        for name in plugin_names.iter() {
-            let path = format!("{}/{}.wasm", base_dir, name);
+        for (id, version) in plugin_names.into_iter() {
+            let path = format!("{}/{}@{}.wasm", base_dir, id, version);
 
             let Some(component) = Component::from_file(&engine, &path)
                 .inspect_err(|e| warn!("failed to read file as component, {path}, {e:?}"))
@@ -54,7 +56,7 @@ impl PluginHost {
                 continue;
             };
 
-            let Some(plugin) = Plugin::new(component, &engine, &linker)
+            let Some(plugin) = Plugin::new(id.clone(), component, &engine, &linker)
                 .await
                 .inspect_err(|e| warn!("failed to construct plugin, {path}, {e:?}"))
                 .ok()
@@ -62,7 +64,17 @@ impl PluginHost {
                 continue;
             };
 
-            plugins.push(plugin);
+            if plugin.id != *id || plugin.version != *version {
+                log::warn!(
+                    "mismatched plugin name or version, expected {}@{}, received {}@{}",
+                    id,
+                    version,
+                    plugin.id,
+                    plugin.version
+                );
+            } else {
+                plugins.push(plugin);
+            }
         }
 
         Ok(Self(Arc::new(Inner {
@@ -80,6 +92,14 @@ pub struct Inner {
 }
 
 impl Inner {
+    pub fn plugin_menus(&self, id: &str) -> Option<Vec<Menu>> {
+        self.plugins
+            .iter()
+            .find(|plugin| plugin.id == *id)
+            .map(|plugin| plugin.menus.clone())
+            .unwrap_or(None)
+    }
+
     pub async fn process_page_load(&self, url: String, query: String) -> Result<page::Response> {
         let wasi = WasiCtxBuilder::new()
             .inherit_stdout()
