@@ -1,23 +1,21 @@
 package yelken:plugin@0.1.0;
 
 interface init {
-  record menu {
-    path: string,
-    name: string,
-  }
-
-  record management {
-    menus: option<list<menu>>,
-  }
-
   record host-info {
     version: string,
   }
 
-  record plugin-info {
+  record impl {
+    namespace: string,
     name: string,
     version: string,
-    management: management,
+    iface: string,
+  }
+
+  record plugin-info {
+    id: string,
+    version: string,
+    impls: list<impl>,
   }
 
   register: func(host: host-info) -> plugin-info;

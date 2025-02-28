@@ -19,6 +19,7 @@ use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 mod config;
+mod handlers;
 
 async fn logger(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_owned();
@@ -89,6 +90,7 @@ async fn main() {
             management::router(state.clone()),
         )
         .nest_service("/assets", ServeDir::new(format!("{}/assets", storage_dir)))
+        .fallback(handlers::default_handler)
         .with_state(state)
         .layer(
             ServiceBuilder::new()

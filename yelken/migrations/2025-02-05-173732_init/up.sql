@@ -23,3 +23,16 @@ create table users(
     salt        varchar(32)     not null,
     created_at  timestamp       not null default current_timestamp
 );
+
+create table contents(
+    id         serial primary key not null,
+    content    text         not null,
+    created_at timestamp    not null default current_timestamp
+);
+
+create table pages(
+    id         serial primary key not null,
+    paths      text         not null,
+    content    text         not null,
+    created_at timestamp    not null default current_timestamp
+);

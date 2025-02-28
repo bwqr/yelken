@@ -1,0 +1,14 @@
+package yelken:management@0.1.0;
+
+interface menu {
+  record menu {
+    path: string,
+    name: string,
+  }
+
+  register: func() -> list<menu>;
+}
+
+world root {
+  export menu;
+}

@@ -97,9 +97,9 @@ pub fn App<U: UserResource, P: PluginResource + Clone + Sync>(
     provide_context(config);
 
     let links = vec![
-        ("/", "Dashboard"),
-        ("/plugin-manager", "Plugin Manager"),
-        ("/settings", "Settings"),
+        ("", "Dashboard"),
+        ("plugin-manager", "Plugin Manager"),
+        ("settings", "Settings"),
     ];
 
     view! {

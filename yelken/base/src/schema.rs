@@ -1,6 +1,23 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    contents (id) {
+        id -> Int4,
+        content -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    pages (id) {
+        id -> Int4,
+        paths -> Text,
+        content -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     plugins (id) {
         #[max_length = 255]
         id -> Varchar,
@@ -32,6 +49,8 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
+    contents,
+    pages,
     plugins,
     users,
 );

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -13,5 +15,5 @@ pub struct Plugin {
     pub enabled: bool,
     pub name: String,
     pub desc: String,
-    pub menus: Option<Vec<Menu>>,
+    pub menus: Option<Arc<[Menu]>>,
 }

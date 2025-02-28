@@ -1,22 +1,84 @@
 mod bindings;
 
-use bindings::plugin::exports::yelken::plugin;
+use bindings::handler;
+use bindings::management;
+use bindings::plugin;
 
 struct Plugin;
 
 impl plugin::init::Guest for Plugin {
     fn register(_: plugin::init::HostInfo) -> plugin::init::PluginInfo {
-        plugin::init::PluginInfo {
-            name: "yelken.editor".to_string(),
+        use plugin::init::{Impl, PluginInfo};
+
+        PluginInfo {
+            id: "yelken.editor".to_string(),
             version: "0.1.0".to_string(),
-            management: plugin::init::Management {
-                menus: Some(vec![plugin::init::Menu {
-                    path: "/".to_string(),
-                    name: "Yelken Editor".to_string(),
-                }]),
-            },
+            impls: vec![
+                Impl {
+                    namespace: "yelken".to_string(),
+                    name: "management".to_string(),
+                    version: "0.1.0".to_string(),
+                    iface: "menu".to_string(),
+                },
+                Impl {
+                    namespace: "yelken".to_string(),
+                    name: "handler".to_string(),
+                    version: "0.1.0".to_string(),
+                    iface: "init".to_string(),
+                },
+            ],
         }
     }
 }
 
+impl management::menu::Guest for Plugin {
+    fn register() -> Vec<management::menu::Menu> {
+        use management::menu::Menu;
+
+        vec![Menu {
+            path: "writing".to_string(),
+            name: "Writing Settings for me".to_string(),
+        }]
+    }
+}
+
+impl handler::init::Guest for Plugin {
+    fn register() -> Vec<handler::init::Reg> {
+        use handler::init::{Hook, Reg};
+
+        vec![
+            Reg {
+                path: "/".to_string(),
+                hook: Hook::PreLoad,
+            },
+            Reg {
+                path: "/".to_string(),
+                hook: Hook::Loading,
+            },
+        ]
+    }
+}
+
+impl handler::page::Guest for Plugin {
+    fn pre_load(req: handler::page::Request) {
+        println!("received a request with url {}", req.url);
+    }
+
+    fn loading(req: handler::page::Request, mut page: handler::page::Page) -> handler::page::Page {
+        page.body = format!("Replaced all the body with url {}", req.url);
+
+        page
+    }
+
+    fn loaded(page: handler::page::Page) -> handler::page::Page {
+        page
+    }
+
+    fn post_load(req: handler::page::Request) {
+        println!("received a request with url {}", req.url);
+    }
+}
+
 bindings::plugin::export!(Plugin with_types_in bindings::plugin);
+bindings::management::export!(Plugin with_types_in bindings::management);
+bindings::handler::export!(Plugin with_types_in bindings::handler);

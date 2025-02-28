@@ -1,32 +1,39 @@
 package yelken:handler@0.1.0;
 
+interface init {
+  enum hook {
+    pre-load,
+    loading,
+    loaded,
+    post-load,
+  }
+
+  record reg {
+    path: string,
+    hook: hook,
+  }
+
+  register: func() -> list<reg>;
+}
+
 interface page {
   record request {
     url: string,
-    query: string,
   }
 
-  record response {
-    head: list<string>,
+  record page {
+    head: string,
     body: string,
-    scripts: list<string>,
+    scripts: string,
   }
 
-  load: func(req: request) -> response;
-}
-
-interface api {
-  record request {
-    url: string,
-  }
-
-  record response {
-    body: string,
-  }
-
-  get: func(req: request) -> response;
+  pre-load: func(req: request);
+  loading: func(req: request, page: page) -> page;
+  loaded: func(page: page) -> page;
+  post-load: func(req: request);
 }
 
 world root {
+  export init;
   export page;
 }
