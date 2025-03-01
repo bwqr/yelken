@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     extract::{Request, State},
     response::{Html, IntoResponse},
@@ -6,7 +8,9 @@ use axum::{
 use base::{models::HttpError, schema::pages, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use matchit::Router;
 use plugin::PluginHost;
+use tera::{from_value, to_value, Tera, Value};
 
 pub struct Page {
     head: String,
@@ -28,7 +32,7 @@ pub async fn default_handler(
     State(state): State<AppState>,
     Extension(plugin_host): Extension<PluginHost>,
     req: Request,
-) -> Result<Page, HttpError> {
+) -> Result<Html<String>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let url = req
@@ -38,42 +42,48 @@ pub async fn default_handler(
         .unwrap_or("/");
 
     let pages = pages::table
-        .select((pages::id, pages::paths))
-        .load::<(i32, String)>(&mut conn)
+        .select((pages::id, pages::paths, pages::template))
+        .load::<(i32, String, String)>(&mut conn)
         .await?;
 
-    let Some(page_id) = pages
-        .into_iter()
-        .find(|(_, paths)| paths.find(url).is_some())
-        .map(|(id, _)| id)
-    else {
+    let mut router = Router::new();
+
+    pages.into_iter().for_each(|(id, paths, template)| {
+        paths.split(";").for_each(|path| {
+            if let Err(e) = router.insert(path, template.clone()) {
+                log::warn!("Failed to add path {path} of page {id} due to {e:?}");
+            }
+        })
+    });
+
+    let Ok(template) = router.at(url) else {
         return Err(HttpError::not_found("page_not_found"));
     };
 
-    let content = pages::table
-        .select(pages::content)
-        .filter(pages::id.eq(page_id))
-        .first::<String>(&mut conn)
-        .await?;
+    let mut renderer = Tera::new(&format!(
+        "{}/themes/default/**/*.html",
+        state.config.storage_dir
+    ))
+    .unwrap();
 
-    if let Err(e) = plugin_host.run_pre_load_handlers(&url).await {
-        log::warn!("Failed to run some preload handlers, {e:?}");
-    };
+    renderer.register_function(
+        "url_for",
+        |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            match args.get("name") {
+                Some(val) => match from_value::<String>(val.clone()) {
+                    Ok(v) => Ok(to_value(format!("/yk-app/{v}")).unwrap()),
+                    Err(_) => Err("oops".into()),
+                },
+                None => Err("oops".into()),
+            }
+        },
+    );
 
-    let (head, body, scripts) = match plugin_host
-        .run_loading_handlers(&url, ("".to_string(), content.clone(), "".to_string()))
-        .await
-    {
-        Ok(page) => page,
-        Err(e) => {
-            log::warn!("Failed to run some loading handlers, {e:?}");
-            ("".to_string(), content, "".to_string())
-        }
-    };
+    let context = tera::Context::new();
 
-    Ok(Page {
-        head,
-        body,
-        scripts,
-    })
+    Ok(Html(
+        renderer
+            .render(template.value, &context)
+            .unwrap_or_else(|e| format!("Failed to render page, {e:?}")),
+    ))
 }

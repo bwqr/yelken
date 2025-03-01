@@ -24,15 +24,45 @@ create table users(
     created_at  timestamp       not null default current_timestamp
 );
 
+create table fields(
+    id   serial primary key not null,
+    name varchar(128)   not null,
+    kind varchar(16)    not null
+);
+
+create table models(
+    id    serial primary key not null,
+    name  varchar(128) not null
+);
+
+create table model_fields(
+    field_id int not null,
+    model_id int not null,
+    primary key (field_id, model_id),
+    constraint  fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
+    constraint  fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
+);
+
 create table contents(
     id         serial primary key not null,
-    content    text         not null,
-    created_at timestamp    not null default current_timestamp
+    model_id   int          not null,
+    name       text         not null,
+    created_at timestamp    not null default current_timestamp,
+    constraint  fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action
+);
+
+create table content_values(
+    content_id int not null,
+    field_id   int not null,
+    value      text default null,
+    primary key (content_id, field_id),
+    constraint  fk_content_values_content_id foreign key (content_id) references contents (id) on delete no action on update no action,
+    constraint  fk_content_values_field_id foreign key (field_id) references fields (id) on delete no action on update no action
 );
 
 create table pages(
     id         serial primary key not null,
     paths      text         not null,
-    content    text         not null,
+    template   varchar(255) not null,
     created_at timestamp    not null default current_timestamp
 );
