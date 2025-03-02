@@ -1,9 +1,9 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    content_values (content_id, field_id) {
+    content_values (content_id, model_field_id) {
         content_id -> Int4,
-        field_id -> Int4,
+        model_field_id -> Int4,
         value -> Nullable<Text>,
     }
 }
@@ -28,9 +28,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    model_fields (field_id, model_id) {
+    model_fields (id) {
+        id -> Int4,
         field_id -> Int4,
         model_id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
     }
 }
 
@@ -45,8 +48,9 @@ diesel::table! {
 diesel::table! {
     pages (id) {
         id -> Int4,
-        paths -> Text,
-        #[max_length = 256]
+        #[max_length = 255]
+        path -> Varchar,
+        #[max_length = 255]
         template -> Varchar,
         created_at -> Timestamp,
     }
@@ -84,7 +88,7 @@ diesel::table! {
 }
 
 diesel::joinable!(content_values -> contents (content_id));
-diesel::joinable!(content_values -> fields (field_id));
+diesel::joinable!(content_values -> model_fields (model_field_id));
 diesel::joinable!(contents -> models (model_id));
 diesel::joinable!(model_fields -> fields (field_id));
 diesel::joinable!(model_fields -> models (model_id));

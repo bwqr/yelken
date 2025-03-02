@@ -36,9 +36,10 @@ create table models(
 );
 
 create table model_fields(
+    id       serial primary key not null,
     field_id int not null,
     model_id int not null,
-    primary key (field_id, model_id),
+    name     varchar(255) not null,
     constraint  fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint  fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );
@@ -52,17 +53,17 @@ create table contents(
 );
 
 create table content_values(
-    content_id int not null,
-    field_id   int not null,
-    value      text default null,
-    primary key (content_id, field_id),
+    content_id     int not null,
+    model_field_id int not null,
+    value          text default null,
+    primary key (content_id, model_field_id),
     constraint  fk_content_values_content_id foreign key (content_id) references contents (id) on delete no action on update no action,
-    constraint  fk_content_values_field_id foreign key (field_id) references fields (id) on delete no action on update no action
+    constraint  fk_content_values_model_field_id foreign key (model_field_id) references model_fields (id) on delete no action on update no action
 );
 
 create table pages(
     id         serial primary key not null,
-    paths      text         not null,
+    path       varchar(255) not null,
     template   varchar(255) not null,
     created_at timestamp    not null default current_timestamp
 );
