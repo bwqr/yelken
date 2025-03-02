@@ -31,8 +31,8 @@ create table fields(
 );
 
 create table models(
-    id    serial primary key not null,
-    name  varchar(128) not null
+    id    serial primary key  not null,
+    name  varchar(128) unique not null
 );
 
 create table model_fields(

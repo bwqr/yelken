@@ -14,6 +14,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
 use plugin::PluginHost;
+use serde::de::DeserializeOwned;
 use tera::{from_value, to_value, Tera, Value};
 
 pub struct Page {
@@ -30,6 +31,10 @@ impl IntoResponse for Page {
         ))
         .into_response()
     }
+}
+
+fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Option<T> {
+    args.get(k).cloned().and_then(|v| from_value::<T>(v).ok())
 }
 
 pub async fn default_handler(
@@ -96,11 +101,7 @@ pub async fn default_handler(
         renderer.register_function(
             "get_content",
             move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-                let get_string = |k: &str| {
-                    args.get(k)
-                        .cloned()
-                        .and_then(|v| from_value::<String>(v).ok())
-                };
+                let get_string = |k: &str| get_value::<String>(args, k);
 
                 let (model, field, value) = match (
                     get_string("model"),
@@ -148,6 +149,63 @@ pub async fn default_handler(
                             .await?;
 
                         Ok(HashMap::from_iter(values.into_iter()))
+                    });
+
+                values
+                    .map(|v| to_value(v).unwrap())
+                    .map_err(|e| format!("failed to get content, {e:?}").into())
+            },
+        );
+    }
+
+    {
+        let pool = state.pool.clone();
+
+        renderer.register_function(
+            "get_contents",
+            move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+                let (model, fields) = match (
+                    get_value::<String>(args, "model"),
+                    get_value::<Vec<String>>(args, "fields"),
+                ) {
+                    (Some(model), Some(fields)) => (model, fields),
+                    _ => return Err("invalid args".into()),
+                };
+
+                let pool = pool.clone();
+
+                let values: Result<Vec<HashMap<String, Option<String>>>, HttpError> =
+                    tokio::runtime::Handle::current().block_on(async move {
+                        let mut conn = pool.get().await?;
+
+                        let values = contents::table
+                            .inner_join(models::table)
+                            .inner_join(content_values::table.inner_join(model_fields::table))
+                            .filter(models::name.eq(&model))
+                            .filter(model_fields::name.eq_any(&fields))
+                            .select((contents::id, model_fields::name, content_values::value))
+                            .limit(10)
+                            .load::<(i32, String, Option<String>)>(&mut conn)
+                            .await?;
+
+                        let mut contents: Vec<HashMap<String, Option<String>>> = vec![];
+                        let mut indices: Vec<i32> = vec![];
+
+                        for (id, name, value) in values {
+                            if let Some(i) = indices
+                                .iter()
+                                .enumerate()
+                                .find(|(_, val)| **val == id)
+                                .map(|(i, _)| i)
+                            {
+                                contents[i].insert(name, value);
+                            } else {
+                                indices.push(id);
+                                contents.push(HashMap::from([(name, value)]));
+                            }
+                        }
+
+                        Ok(contents)
                     });
 
                 values
