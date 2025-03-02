@@ -7,4 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
+leptos = { version = "0.7.7", default-features = false, features = ["ssr"] }
 wit-bindgen.workspace = true

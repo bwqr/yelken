@@ -31,6 +31,8 @@ interface page {
   loading: func(req: request, page: page) -> page;
   loaded: func(page: page) -> page;
   post-load: func(req: request);
+
+  render: func(id: string, opts: list<string>) -> string;
 }
 
 world root {

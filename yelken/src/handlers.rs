@@ -215,6 +215,39 @@ pub async fn default_handler(
         );
     }
 
+    {
+        renderer.register_function(
+            "call_plugin",
+            move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+                let (plugin, fn_id, opts) = match (
+                    get_value::<String>(args, "plugin"),
+                    get_value::<String>(args, "fn_id"),
+                    get_value::<Vec<String>>(args, "opts"),
+                ) {
+                    (Some(plugin), Some(func), Some(opts)) => (plugin, func, opts),
+                    _ => return Err("invalid args".into()),
+                };
+
+                let plugin_host = plugin_host.clone();
+
+                let values: Result<String, HttpError> =
+                    tokio::runtime::Handle::current().block_on(async move {
+                        plugin_host
+                            .run_render_handler(&plugin, &fn_id, &opts)
+                            .await
+                            .inspect_err(|e| log::warn!("failed to run render handler, {e:?}"))
+                            .map_err(|_| {
+                                HttpError::internal_server_error("failed_running_render_plugin")
+                            })
+                    });
+
+                values
+                    .map(|v| to_value(v).unwrap())
+                    .map_err(|e| format!("failed to get content, {e:?}").into())
+            },
+        );
+    }
+
     let context = tera::Context::new();
 
     let res = tokio::runtime::Handle::current()

@@ -3,6 +3,7 @@ mod bindings;
 use bindings::handler;
 use bindings::management;
 use bindings::plugin;
+use leptos::prelude::*;
 
 struct Plugin;
 
@@ -59,6 +60,13 @@ impl handler::init::Guest for Plugin {
     }
 }
 
+#[component]
+fn Button() -> impl IntoView {
+    view! {
+        <button>"Hello World"</button>
+    }
+}
+
 impl handler::page::Guest for Plugin {
     fn pre_load(req: handler::page::Request) {
         println!("received a request with url {}", req.url);
@@ -76,6 +84,10 @@ impl handler::page::Guest for Plugin {
 
     fn post_load(req: handler::page::Request) {
         println!("received a request with url {}", req.url);
+    }
+
+    fn render(id: String, opts: Vec<String>) -> String {
+        Button().to_html()
     }
 }
 

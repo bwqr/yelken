@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use base::types::Connection;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -296,6 +296,28 @@ impl Inner {
         }
 
         Ok((page.head, page.body, page.scripts))
+    }
+
+    pub async fn run_render_handler(
+        &self,
+        plugin_id: &str,
+        fn_id: &str,
+        opts: &[String],
+    ) -> Result<String> {
+        let Some(handler) = self.handlers.iter().find(|h| h.plugin.1.id == plugin_id) else {
+            return Err(anyhow!("Plugin not found"));
+        };
+
+        call::<(&str, &[String]), (String,)>(
+            &handler.plugin.0,
+            &self.engine,
+            &self.linker,
+            "yelken:handler/page@0.1.0",
+            "render",
+            (fn_id, opts),
+        )
+        .await
+        .map(|ret| ret.0)
     }
 }
 
