@@ -2,6 +2,7 @@
 @import "node_modules/bootstrap/scss/functions";
 
 // 2. Include any default variable overrides here
+/* $font-size-base: .85rem; */
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
 @import "node_modules/bootstrap/scss/variables";
@@ -20,6 +21,7 @@
 @import "node_modules/bootstrap/scss/reboot";
 @import "node_modules/bootstrap/scss/forms";
 @import "node_modules/bootstrap/scss/buttons";
+@import "node_modules/bootstrap/scss/dropdown";
 @import "node_modules/bootstrap/scss/containers";
 @import "node_modules/bootstrap/scss/grid";
 @import "node_modules/bootstrap/scss/navbar";
@@ -31,6 +33,11 @@
 
 // 8. Add additional custom code here
 
-:root {
-  --nav-bg: #e1e1f1;
+#sidenav {
+  width: 260px;
+
+  .navbar-nav a[aria-current="page"] {
+    background: rgba(0, 62, 129, 0.24);
+    border-left: 3px solid rgb(60, 60, 180);
+  }
 }

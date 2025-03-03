@@ -22,6 +22,9 @@ use dashboard::Dashboard;
 use plugin::{Plugin, PluginNav};
 use user::UserStore;
 
+// Load i18n
+leptos_i18n::load_locales!();
+
 #[cfg(not(feature = "web"))]
 fn logout(_base: &str) {}
 
@@ -52,15 +55,56 @@ fn logout(base: &str) {
 
 #[component]
 fn TopBar() -> impl IntoView {
-    let config = expect_context::<Config>();
+    let config = StoredValue::new(expect_context::<Config>());
     let user_store = expect_context::<Arc<UserStore>>();
 
-    let login_link = format!("{}/auth/login", config.base);
+    let (dropdown, set_dropdown) = signal(false);
+
+    #[cfg(feature = "web")]
+    {
+        use wasm_bindgen::JsCast;
+        use web_sys::Event;
+
+        let closure =
+            wasm_bindgen::prelude::Closure::<dyn Fn(Event)>::new(move |_| set_dropdown.set(false));
+
+        web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .add_event_listener_with_callback("click", closure.as_ref().unchecked_ref())
+            .unwrap();
+
+        closure.forget();
+    }
 
     view! {
-        <nav class="navbar" style="background: var(--nav-bg);">
-            <div class="flex-grow-1"><a href=login_link on:click=move |_| logout(&config.base) rel="external">"Logout"</a></div>
-            <div><p>{move || user_store.user().get().name}</p></div>
+        <nav class="navbar px-4 py-3 mb-4">
+            <div class="flex-grow-1"></div>
+
+            <div class="dropdown">
+                <button
+                    class="btn border border-2 border-primary-subtle"
+                    type="button"
+                    aria-expanded=move || if dropdown.get() { "true" } else { "false" }
+                    on:click=move |e| { e.stop_propagation(); set_dropdown.set(!dropdown.get_untracked()) }
+                >
+                    {move || user_store.user().get().name}
+                </button>
+
+                <Show clone:config when=move || dropdown.get() fallback=|| view! {}>
+                    <ul class="dropdown-menu mt-1" style="right: 0;" class:show=dropdown on:click=|e| e.stop_propagation()>
+                        <li>
+                            <a
+                                class="dropdown-item"
+                                href=move || config.with_value(|c| format!("{}/auth/login", c.base))
+                                on:click=move |_| config.with_value(|c| logout(&c.base))
+                                rel="external"
+                            >"Logout"</a>
+                        </li>
+                    </ul>
+                </Show>
+            </div>
         </nav>
     }
 }
@@ -92,6 +136,8 @@ pub fn App<U: UserResource, P: PluginResource + Clone + Sync>(
     user_resource: U,
     plugin_resource: P,
 ) -> impl IntoView {
+    use i18n::*;
+
     let base = config.base.clone();
 
     provide_context(config);
@@ -103,43 +149,45 @@ pub fn App<U: UserResource, P: PluginResource + Clone + Sync>(
     ];
 
     view! {
-        <Router base>
-            <div class="d-flex">
-                <nav class="vh-100" style="background: var(--nav-bg);">
-                    <div class="px-3 py-2">
-                        <A href="/" attr:class="text-decoration-none fs-4">"YELKEN"</A>
-                    </div>
+        <I18nContextProvider>
+            <Router base>
+                <div class="d-flex">
+                    <nav id="sidenav" class="vh-100 text-secondary" style="background-color: #ffdabd;">
+                        <div class="px-4 py-4 mb-2">
+                            <A href="/" attr:class="text-decoration-none fs-4 text-secondary-emphasis">"Yelken"</A>
+                        </div>
 
-                    <p>"App"</p>
-                    <hr/>
-                    <ul class="navbar-nav">
-                        {
-                            links.into_iter().map(|(href, title)| view! {
-                                <li class="nav-item"><A href=href attr:class="nav-link d-block ps-3 pe-5 py-2">{title}</A></li>
-                            })
-                            .collect_view()
-                        }
-                    </ul>
+                        <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>{t!(use_i18n(), main.apps)}</b></p>
+                        <ul class="navbar-nav mb-4">
+                            {
+                                links.into_iter().map(|(href, title)| view! {
+                                    <li class="nav-item"><A href=href attr:class="nav-link d-block ps-3 pe-5 py-2">{title}</A></li>
+                                })
+                                .collect_view()
+                            }
+                        </ul>
 
-                    <PluginNav plugin_resource=plugin_resource.clone()/>
-                </nav>
-                <main class="flex-grow-1">
-                    <BackgroundServices user_resource>
-                        <TopBar/>
+                        <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>{t!(use_i18n(), main.plugins)}</b></p>
+                        <PluginNav plugin_resource=plugin_resource.clone()/>
+                    </nav>
+                    <main class="flex-grow-1">
+                        <BackgroundServices user_resource>
+                            <TopBar/>
 
-                        <Routes fallback=|| "Not found." clone:plugin_resource>
-                            <ParentRoute path=path!("") view=Outlet clone:plugin_resource>
-                                <Route path=path!("") view=Dashboard/>
-                                <Route path=path!("plugin-manager") view=move || view! {
-                                    <PluginManager plugin_resource=plugin_resource.clone()></PluginManager>
-                                }/>
-                                <Route path=path!("settings") view=Settings/>
-                                <Route path=path!("plugin/:plugin") view=Plugin/>
-                            </ParentRoute>
-                        </Routes>
-                    </BackgroundServices>
-                </main>
-            </div>
-        </Router>
+                            <Routes fallback=|| "Not found." clone:plugin_resource>
+                                <ParentRoute path=path!("") view=Outlet clone:plugin_resource>
+                                    <Route path=path!("") view=Dashboard/>
+                                    <Route path=path!("plugin-manager") view=move || view! {
+                                        <PluginManager plugin_resource=plugin_resource.clone()></PluginManager>
+                                    }/>
+                                    <Route path=path!("settings") view=Settings/>
+                                    <Route path=path!("plugin/:plugin") view=Plugin/>
+                                </ParentRoute>
+                            </Routes>
+                        </BackgroundServices>
+                    </main>
+                </div>
+            </Router>
+        </I18nContextProvider>
     }
 }

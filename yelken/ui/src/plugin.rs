@@ -1,7 +1,7 @@
 use std::{future::Future, sync::Arc};
 
 use leptos::prelude::*;
-use leptos_router::hooks::use_params_map;
+use leptos_router::{components::A, hooks::use_params_map};
 use shared::plugin::Plugin;
 
 use crate::Config;
@@ -51,27 +51,36 @@ pub fn PluginNav<P: PluginResource>(plugin_resource: P) -> impl IntoView {
                     }
 
                     view! {
-                        <p class="mt-2">"Plugins"</p>
-                        <hr/>
                         <ul class="navbar-nav">
                             {move || plugins.iter().filter_map(|plugin| {
                                 let Some(menus) = &plugin.menus else {
                                     return None;
                                 };
 
+                                let plugin_name = plugin.name.clone();
+
                                 Some(view! {
                                     <li class="nav-item">
-                                        <a class="nav-link d-block ps-3 pe-5 py-2" rel="external" href=format!("{}/plugin/{}", config.base, plugin.id)>
-                                            {plugin.name.clone()}
-                                        </a>
-                                        <ul>
-                                            {menus.iter().map(|menu| view! {
-                                                <li>
-                                                    <a rel="external" href=format!("{}/plugin/{}/{}", config.base, plugin.id, menu.path)>
-                                                        {menu.name.clone()}
-                                                    </a>
-                                                </li>
-                                            }).collect_view()}
+                                        <A attr:class="nav-link d-block ps-3 pe-5 py-2" attr:rel="external" exact=true href=format!("{}/plugin/{}", config.base, plugin.id)>
+                                            {plugin_name}
+                                        </A>
+                                        <ul class="navbar-nav">
+                                            {menus.iter().map(|menu| {
+                                                let menu_name = menu.name.clone();
+
+                                                view! {
+                                                    <li>
+                                                        <A
+                                                            href=format!("{}/plugin/{}/{}", config.base, plugin.id, menu.path)
+                                                            attr:class="nav-link d-block ps-5 pe-2 py-2"
+                                                            attr:rel="external"
+                                                            attr:style="font-size: calc(var(--bs-body-font-size) - 0.1rem)"
+                                                        >
+                                                            {menu_name}
+                                                        </A>
+                                                    </li>
+                                                }
+                                        }).collect_view()}
                                         </ul>
                                     </li>
                                 })

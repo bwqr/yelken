@@ -2,12 +2,14 @@ use std::collections::HashMap;
 
 use axum::{
     extract::{Request, State},
-    response::{Html, IntoResponse},
+    http::StatusCode,
+    response::Html,
     Extension,
 };
 use base::{
     models::HttpError,
     schema::{content_values, contents, model_fields, models, pages},
+    types::Pool,
     AppState,
 };
 use diesel::prelude::*;
@@ -17,33 +19,11 @@ use plugin::PluginHost;
 use serde::de::DeserializeOwned;
 use tera::{from_value, to_value, Tera, Value};
 
-pub struct Page {
-    head: String,
-    body: String,
-    scripts: String,
-}
-
-impl IntoResponse for Page {
-    fn into_response(self) -> axum::response::Response {
-        Html(format!(
-            "<!DOCTYPE html><html><head>{}</head><body>{}{}</body></html>",
-            self.head, self.body, self.scripts
-        ))
-        .into_response()
-    }
-}
-
-fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Option<T> {
-    args.get(k).cloned().and_then(|v| from_value::<T>(v).ok())
-}
-
 pub async fn default_handler(
     State(state): State<AppState>,
     Extension(plugin_host): Extension<PluginHost>,
     req: Request,
-) -> Result<Html<String>, HttpError> {
-    let mut conn = state.pool.get().await?;
-
+) -> Result<(StatusCode, Html<String>), HttpError> {
     let url = req
         .uri()
         .path_and_query()
@@ -52,7 +32,7 @@ pub async fn default_handler(
 
     let pages = pages::table
         .select((pages::id, pages::path, pages::template))
-        .load::<(i32, String, String)>(&mut conn)
+        .load::<(i32, String, String)>(&mut state.pool.get().await?)
         .await?;
 
     let mut router = Router::new();
@@ -63,25 +43,60 @@ pub async fn default_handler(
         }
     });
 
+    let mut renderer = Tera::new(&format!(
+        "{}/themes/default/**/*.html",
+        state.config.storage_dir
+    ))
+    .inspect_err(|e| log::warn!("Failed to parse templates, {e:?}"))
+    .map_err(|_| HttpError::internal_server_error("failed_parsing_templates"))?;
+
     let Ok(Match {
         params,
         value: template,
     }) = router.at(url)
     else {
-        return Err(HttpError::not_found("page_not_found"));
+        let not_found = renderer
+            .render("__404__.html", &tera::Context::new())
+            .inspect_err(|e| log::warn!("Failed to parse templates, {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("failed_parsing_templates"))?;
+
+        return Ok((StatusCode::NOT_FOUND, Html(not_found)));
     };
 
     let params: HashMap<String, String> =
         HashMap::from_iter(params.iter().map(|(k, v)| (k.to_string(), v.to_string())));
     let template = template.clone();
 
-    let mut renderer = Tera::new(&format!(
-        "{}/themes/default/**/*.html",
-        state.config.storage_dir
-    ))
-    .inspect_err(|e| log::warn!("Failed to parse templates, {e:?}"))
-    .map_err(|_| HttpError::internal_server_error("failed_parsing_template"))?;
+    build_renderer(&mut renderer, params, state.pool.clone(), plugin_host)
+        .inspect_err(|e| log::warn!("Failed to build renderer, {e:?}"))
+        .map_err(|_| HttpError::internal_server_error("failed_building_renderer"))?;
 
+    let context = tera::Context::new();
+
+    let res = tokio::runtime::Handle::current()
+        .spawn_blocking(move || renderer.render(&template, &context))
+        .await
+        .unwrap();
+
+    match res {
+        Ok(html) => Ok((StatusCode::OK, Html(html))),
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Html(format!("Failed to render page, {e:?}")),
+        )),
+    }
+}
+
+fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Option<T> {
+    args.get(k).cloned().and_then(|v| from_value::<T>(v).ok())
+}
+
+fn build_renderer(
+    renderer: &mut Tera,
+    params: HashMap<String, String>,
+    pool: Pool,
+    plugin_host: PluginHost,
+) -> Result<(), &'static str> {
     renderer.register_function(
         "url_param",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
@@ -96,7 +111,7 @@ pub async fn default_handler(
     );
 
     {
-        let pool = state.pool.clone();
+        let pool = pool.clone();
 
         renderer.register_function(
             "get_content",
@@ -159,7 +174,7 @@ pub async fn default_handler(
     }
 
     {
-        let pool = state.pool.clone();
+        let pool = pool.clone();
 
         renderer.register_function(
             "get_contents",
@@ -224,7 +239,7 @@ pub async fn default_handler(
                     get_value::<String>(args, "fn_id"),
                     get_value::<Vec<String>>(args, "opts"),
                 ) {
-                    (Some(plugin), Some(func), Some(opts)) => (plugin, func, opts),
+                    (Some(plugin), Some(fn_id), Some(opts)) => (plugin, fn_id, opts),
                     _ => return Err("invalid args".into()),
                 };
 
@@ -248,14 +263,5 @@ pub async fn default_handler(
         );
     }
 
-    let context = tera::Context::new();
-
-    let res = tokio::runtime::Handle::current()
-        .spawn_blocking(move || renderer.render(&template, &context))
-        .await
-        .unwrap();
-
-    Ok(Html(res.unwrap_or_else(|e| {
-        format!("Failed to render page, {e:?}")
-    })))
+    Ok(())
 }

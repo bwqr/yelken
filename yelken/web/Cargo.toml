@@ -8,6 +8,7 @@ shared = { path = "../shared", features = ["user"] }
 ui = { path = "../ui", features = ["web"] }
 
 console_error_panic_hook = "0.1.7"
+leptos_i18n.workspace = true
 leptos.workspace = true
 log.workspace = true
 reqwest.workspace = true
@@ -17,5 +18,5 @@ web-sys = { workspace = true, features = ["Location", "Storage", "Window"] }
 
 [features]
 default = ["hydrate"]
-hydrate = ["leptos/hydrate"]
-csr = ["leptos/csr"]
+hydrate = ["leptos/hydrate", "leptos_i18n/hydrate"]
+csr = ["leptos/csr", "leptos_i18n/hydrate"]
