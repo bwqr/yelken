@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 base.path = "../base"
+content.path = "../content"
 plugin.path = "../plugin"
 shared = { path = "../shared", features = ["user"] }
 ui.path = "../ui"
@@ -15,6 +16,7 @@ diesel.workspace = true
 diesel-async.workspace = true
 futures.workspace = true
 leptos = { workspace = true, features = ["ssr"] }
+leptos_i18n = { workspace = true, features = ["ssr"] }
 leptos_router = { workspace = true, features = ["ssr"] }
 log.workspace = true
 serde.workspace = true

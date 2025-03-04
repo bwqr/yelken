@@ -1,4 +1,4 @@
-use std::{future::Future, sync::Arc};
+use std::sync::Arc;
 
 use axum::{
     body::Body,
@@ -15,52 +15,10 @@ use leptos_router::location::RequestUrl;
 
 use base::{models::AuthUser, AppState};
 use plugin::PluginHost;
-use shared::{plugin::Plugin, user::User};
-use ui::{Config, PluginResource, UserResource};
+use resources::{ContentContext, PluginContext, UserContext};
+use ui::Config;
 
-#[derive(Clone)]
-struct PluginContext {
-    plugin_host: PluginHost,
-    state: AppState,
-}
-
-impl PluginResource for PluginContext {
-    fn fetch_plugins(&self) -> impl Future<Output = Result<Vec<Plugin>, String>> + Send {
-        let state = self.state.clone();
-        let plugin_host = self.plugin_host.clone();
-
-        async move {
-            plugin::fetch_plugins(
-                axum::extract::State(state),
-                axum::extract::Extension(plugin_host),
-            )
-            .await
-            .map(|json| json.0)
-            .map_err(|e| e.error.to_string())
-        }
-    }
-}
-
-struct UserContext {
-    user: AuthUser,
-}
-
-impl UserContext {
-    fn new(user: AuthUser) -> Self {
-        Self { user }
-    }
-}
-
-impl UserResource for UserContext {
-    fn fetch_user(&self) -> impl std::future::Future<Output = Result<User, String>> + Send {
-        let user = User {
-            id: self.user.id,
-            name: self.user.name.clone(),
-        };
-
-        async move { Ok(user) }
-    }
-}
+mod resources;
 
 struct IndexHtml {
     head: String,
@@ -168,7 +126,8 @@ async fn handle_req(
         ui::App(ui::AppProps {
             config,
             user_resource: UserContext::new(auth_user),
-            plugin_resource: PluginContext { plugin_host, state },
+            plugin_resource: PluginContext::new(plugin_host, state.clone()),
+            content_resource: ContentContext::new(state.clone()),
         })
         .to_html_stream_in_order()
     });

@@ -2,6 +2,7 @@
 members = [
   "auth",
   "base",
+  "content",
   "management",
   "plugin",
   "shared",
@@ -36,6 +37,7 @@ web-sys = "0.3.77"
 [dependencies]
 auth.path = "./auth"
 base.path = "./base"
+content.path = "./content"
 management.path = "./management"
 plugin.path = "./plugin"
 user.path = "./user"

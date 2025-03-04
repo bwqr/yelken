@@ -1,0 +1,15 @@
+[package]
+name = "content"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base.path = "../base"
+shared = { path = "../shared", features = ["content"] }
+
+anyhow.workspace = true
+axum.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
+log.workspace = true
+serde.workspace = true
