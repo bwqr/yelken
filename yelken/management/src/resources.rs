@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
-use axum::extract::State;
+use axum::{extract::State, Extension};
 use base::{models::AuthUser, AppState};
 use plugin::PluginHost;
 use shared::{
@@ -28,13 +28,10 @@ impl PluginResource for PluginContext {
         let plugin_host = self.plugin_host.clone();
 
         Box::pin(async move {
-            plugin::fetch_plugins(
-                axum::extract::State(state),
-                axum::extract::Extension(plugin_host),
-            )
-            .await
-            .map(|json| json.0)
-            .map_err(|e| e.error.to_string())
+            plugin::fetch_plugins(State(state), Extension(plugin_host))
+                .await
+                .map(|json| json.0)
+                .map_err(|e| e.error.to_string())
         })
     }
 }

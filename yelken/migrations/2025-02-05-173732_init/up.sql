@@ -24,6 +24,11 @@ create table users(
     created_at  timestamp       not null default current_timestamp
 );
 
+create table locales(
+    key  varchar(8) primary key not null,
+    name varchar(64) not null
+);
+
 create table fields(
     id   serial primary key not null,
     name varchar(128)   not null,
@@ -36,10 +41,11 @@ create table models(
 );
 
 create table model_fields(
-    id       serial primary key not null,
-    field_id int not null,
-    model_id int not null,
-    name     varchar(255) not null,
+    id        serial primary key not null,
+    field_id  int not null,
+    model_id  int not null,
+    localized bool not null default false,
+    name      varchar(255) not null,
     constraint  fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint  fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );
@@ -53,12 +59,14 @@ create table contents(
 );
 
 create table content_values(
+    id             serial primary key not null,
     content_id     int not null,
     model_field_id int not null,
+    locale         varchar(8) default null,
     value          text default null,
-    primary key (content_id, model_field_id),
     constraint  fk_content_values_content_id foreign key (content_id) references contents (id) on delete no action on update no action,
-    constraint  fk_content_values_model_field_id foreign key (model_field_id) references model_fields (id) on delete no action on update no action
+    constraint  fk_content_values_model_field_id foreign key (model_field_id) references model_fields (id) on delete no action on update no action,
+    constraint  fk_content_values_locale foreign key (locale) references locales (key) on delete no action on update no action
 );
 
 create table pages(

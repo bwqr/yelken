@@ -1,9 +1,12 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    content_values (content_id, model_field_id) {
+    content_values (id) {
+        id -> Int4,
         content_id -> Int4,
         model_field_id -> Int4,
+        #[max_length = 8]
+        locale -> Nullable<Varchar>,
         value -> Nullable<Text>,
     }
 }
@@ -28,10 +31,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    locales (key) {
+        #[max_length = 8]
+        key -> Varchar,
+        #[max_length = 64]
+        name -> Varchar,
+    }
+}
+
+diesel::table! {
     model_fields (id) {
         id -> Int4,
         field_id -> Int4,
         model_id -> Int4,
+        localized -> Bool,
         #[max_length = 255]
         name -> Varchar,
     }
@@ -88,6 +101,7 @@ diesel::table! {
 }
 
 diesel::joinable!(content_values -> contents (content_id));
+diesel::joinable!(content_values -> locales (locale));
 diesel::joinable!(content_values -> model_fields (model_field_id));
 diesel::joinable!(contents -> models (model_id));
 diesel::joinable!(model_fields -> fields (field_id));
@@ -97,6 +111,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     content_values,
     contents,
     fields,
+    locales,
     model_fields,
     models,
     pages,

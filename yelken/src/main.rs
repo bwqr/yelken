@@ -90,7 +90,8 @@ async fn main() {
             &format!("{}/", state.config.app_root),
             management::router(state.clone()),
         )
-        .nest_service("/assets", ServeDir::new(format!("{}/assets", storage_dir)))
+        .nest_service("/assets/static", ServeDir::new(format!("{}/assets", storage_dir)))
+        .nest_service("/assets/content", ServeDir::new(format!("{}/content", storage_dir)))
         .fallback(handlers::default_handler)
         .with_state(state)
         .layer(

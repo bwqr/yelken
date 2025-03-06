@@ -5,6 +5,7 @@ pub struct Config {
     pub api_origin: String,
     pub web_origin: String,
     pub app_root: String,
+    pub theme: String,
 }
 
 impl Config {
@@ -21,11 +22,15 @@ impl Config {
         let app_root =
             std::env::var("YELKEN_APP_ROOT").context("YELKEN_APP_ROOT is not defined")?;
 
+        let theme =
+            std::env::var("YELKEN_THEME").context("YELKEN_THEME is not defined")?;
+
         Ok(Self {
             storage_dir,
             api_origin,
             web_origin,
             app_root,
+            theme,
         })
     }
 }

@@ -10,6 +10,8 @@ drop table models;
 
 drop table fields;
 
+drop table locales;
+
 drop table plugins;
 
 drop table users;

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     extract::{Request, State},
@@ -8,7 +8,7 @@ use axum::{
 };
 use base::{
     models::HttpError,
-    schema::{content_values, contents, model_fields, models, pages},
+    schema::{content_values, contents, locales, model_fields, models, pages},
     types::Pool,
     AppState,
 };
@@ -30,10 +30,27 @@ pub async fn default_handler(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let pages = pages::table
-        .select((pages::id, pages::path, pages::template))
-        .load::<(i32, String, String)>(&mut state.pool.get().await?)
-        .await?;
+    let (locales, pages) = {
+        let mut conn = state.pool.get().await?;
+
+        let locales = locales::table
+            .select((locales::key, locales::name))
+            .load::<(String, String)>(&mut conn)
+            .await?;
+
+        let pages = pages::table
+            .select((pages::id, pages::path, pages::template))
+            .load::<(i32, String, String)>(&mut conn)
+            .await?;
+
+        (locales, pages)
+    };
+
+    let current_locale: Arc<str> = locales
+        .get(0)
+        .map(|locale| locale.0.clone())
+        .unwrap_or("".to_string())
+        .into();
 
     let mut router = Router::new();
 
@@ -44,11 +61,18 @@ pub async fn default_handler(
     });
 
     let mut renderer = Tera::new(&format!(
-        "{}/themes/default/**/*.html",
-        state.config.storage_dir
+        "{}/themes/{}/**/*.html",
+        state.config.storage_dir, state.config.theme,
     ))
     .inspect_err(|e| log::warn!("Failed to parse templates, {e:?}"))
     .map_err(|_| HttpError::internal_server_error("failed_parsing_templates"))?;
+
+    let mut context = tera::Context::new();
+    context.insert(
+        "locales",
+        &HashMap::<String, String>::from_iter(locales.into_iter()),
+    );
+    context.insert("locale", &current_locale);
 
     let Ok(Match {
         params,
@@ -67,11 +91,15 @@ pub async fn default_handler(
         HashMap::from_iter(params.iter().map(|(k, v)| (k.to_string(), v.to_string())));
     let template = template.clone();
 
-    build_renderer(&mut renderer, params, state.pool.clone(), plugin_host)
-        .inspect_err(|e| log::warn!("Failed to build renderer, {e:?}"))
-        .map_err(|_| HttpError::internal_server_error("failed_building_renderer"))?;
-
-    let context = tera::Context::new();
+    build_renderer(
+        &mut renderer,
+        current_locale,
+        params,
+        state.pool.clone(),
+        plugin_host,
+    )
+    .inspect_err(|e| log::warn!("Failed to build renderer, {e:?}"))
+    .map_err(|_| HttpError::internal_server_error("failed_building_renderer"))?;
 
     let res = tokio::runtime::Handle::current()
         .spawn_blocking(move || renderer.render(&template, &context))
@@ -93,25 +121,53 @@ fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Opt
 
 fn build_renderer(
     renderer: &mut Tera,
+    current_locale: Arc<str>,
     params: HashMap<String, String>,
     pool: Pool,
     plugin_host: PluginHost,
 ) -> Result<(), &'static str> {
     renderer.register_function(
+        "localize",
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let Some(key) = get_value::<String>(args, "key") else {
+                return Err("invalid args".into());
+            };
+
+            Ok(to_value(key).unwrap())
+        },
+    );
+
+    renderer.register_function(
+        "asset_url",
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let Some(path) = get_value::<String>(args, "path") else {
+                return Err("invalid args".into());
+            };
+
+            let kind = get_value::<String>(args, "kind").unwrap_or_else(|| "static".to_string());
+
+            match kind.as_ref() {
+                "static" => Ok(to_value(format!("/assets/static/{path}")).unwrap()),
+                "content" => Ok(to_value(format!("/assets/content/{path}")).unwrap()),
+                _ => Err("unhandled asset kind".into()),
+            }
+        },
+    );
+
+    renderer.register_function(
         "url_param",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            match args.get("param") {
-                Some(val) => match from_value::<String>(val.clone()) {
-                    Ok(v) => Ok(to_value(params.get(&v)).unwrap()),
-                    Err(_) => Err("oops".into()),
-                },
-                None => Err("oops".into()),
-            }
+            let Some(param) = get_value::<String>(args, "param") else {
+                return Err("invalid args".into());
+            };
+
+            Ok(to_value(params.get(&param)).unwrap())
         },
     );
 
     {
         let pool = pool.clone();
+        let current_locale = current_locale.clone();
 
         renderer.register_function(
             "get_content",
@@ -126,6 +182,9 @@ fn build_renderer(
                     (Some(model), Some(field), Some(value)) => (model, field, value),
                     _ => return Err("invalid args".into()),
                 };
+
+                let locale =
+                    get_value::<Arc<str>>(args, "locale").unwrap_or(current_locale.clone());
 
                 let pool = pool.clone();
 
@@ -159,6 +218,11 @@ fn build_renderer(
                         let values = content_values::table
                             .inner_join(model_fields::table)
                             .filter(content_values::content_id.eq(content))
+                            .filter(
+                                content_values::locale
+                                    .eq(&*locale)
+                                    .or(content_values::locale.is_null()),
+                            )
                             .select((model_fields::name, content_values::value))
                             .load::<(String, Option<String>)>(&mut conn)
                             .await?;
@@ -175,6 +239,7 @@ fn build_renderer(
 
     {
         let pool = pool.clone();
+        let current_locale = current_locale.clone();
 
         renderer.register_function(
             "get_contents",
@@ -187,6 +252,9 @@ fn build_renderer(
                     _ => return Err("invalid args".into()),
                 };
 
+                let locale =
+                    get_value::<Arc<str>>(args, "locale").unwrap_or(current_locale.clone());
+
                 let pool = pool.clone();
 
                 let values: Result<Vec<HashMap<String, Option<String>>>, HttpError> =
@@ -198,8 +266,12 @@ fn build_renderer(
                             .inner_join(content_values::table.inner_join(model_fields::table))
                             .filter(models::name.eq(&model))
                             .filter(model_fields::name.eq_any(&fields))
+                            .filter(
+                                content_values::locale
+                                    .eq(&*locale)
+                                    .or(content_values::locale.is_null()),
+                            )
                             .select((contents::id, model_fields::name, content_values::value))
-                            .limit(10)
                             .load::<(i32, String, Option<String>)>(&mut conn)
                             .await?;
 
@@ -216,7 +288,10 @@ fn build_renderer(
                                 contents[i].insert(name, value);
                             } else {
                                 indices.push(id);
-                                contents.push(HashMap::from([(name, value)]));
+                                contents.push(HashMap::from([
+                                    ("id".to_string(), Some(id.to_string())),
+                                    (name, value),
+                                ]));
                             }
                         }
 
