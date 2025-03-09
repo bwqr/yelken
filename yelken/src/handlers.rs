@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 
 use axum::{
     extract::{Request, State},
@@ -8,7 +11,9 @@ use axum::{
 };
 use base::{
     models::HttpError,
-    schema::{content_values, contents, locales, model_fields, models, pages},
+    schema::{
+        content_values, contents, enum_options, fields, locales, model_fields, models, pages,
+    },
     types::Pool,
     AppState,
 };
@@ -127,6 +132,17 @@ fn build_renderer(
     plugin_host: PluginHost,
 ) -> Result<(), &'static str> {
     renderer.register_function(
+        "localize_url",
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let Some(path) = get_value::<String>(args, "path") else {
+                return Err("invalid args".into());
+            };
+
+            Ok(to_value(path).unwrap())
+        },
+    );
+
+    renderer.register_function(
         "localize",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
             let Some(key) = get_value::<String>(args, "key") else {
@@ -188,34 +204,51 @@ fn build_renderer(
 
                 let pool = pool.clone();
 
-                let values: Result<HashMap<String, Option<String>>, HttpError> =
+                let values: Result<HashMap<String, Value>, HttpError> =
                     tokio::runtime::Handle::current().block_on(async move {
                         let mut conn = pool.get().await?;
 
-                        let model_field = model_fields::table
-                            .select(model_fields::id)
-                            .inner_join(models::table)
-                            .filter(
-                                model_fields::model_id
-                                    .eq(models::id)
-                                    .and(model_fields::name.eq(field))
-                                    .and(models::name.eq(model)),
-                            )
-                            .first::<i32>(&mut conn)
+                        let fields = fields::table
+                            .select((fields::id, fields::kind))
+                            .load::<(i32, String)>(&mut conn)
                             .await?;
 
-                        let content = contents::table
-                            .select(contents::id)
-                            .inner_join(content_values::table)
-                            .filter(
-                                content_values::model_field_id
-                                    .eq(model_field)
-                                    .and(content_values::value.eq(value)),
-                            )
-                            .first::<i32>(&mut conn)
-                            .await?;
+                        let content = if field == "id" {
+                            let id = str::parse::<i32>(&value).map_err(|_| {
+                                HttpError::internal_server_error("invalid_arg_received")
+                            })?;
 
-                        let values = content_values::table
+                            contents::table
+                                .select(contents::id)
+                                .filter(contents::id.eq(id))
+                                .first::<i32>(&mut conn)
+                                .await?
+                        } else {
+                            let model_field = model_fields::table
+                                .select(model_fields::id)
+                                .inner_join(models::table)
+                                .filter(
+                                    model_fields::model_id
+                                        .eq(models::id)
+                                        .and(model_fields::name.eq(field))
+                                        .and(models::name.eq(model)),
+                                )
+                                .first::<i32>(&mut conn)
+                                .await?;
+
+                            contents::table
+                                .select(contents::id)
+                                .inner_join(content_values::table)
+                                .filter(
+                                    content_values::model_field_id
+                                        .eq(model_field)
+                                        .and(content_values::value.eq(value)),
+                                )
+                                .first::<i32>(&mut conn)
+                                .await?
+                        };
+
+                        let content_values = content_values::table
                             .inner_join(model_fields::table)
                             .filter(content_values::content_id.eq(content))
                             .filter(
@@ -223,11 +256,49 @@ fn build_renderer(
                                     .eq(&*locale)
                                     .or(content_values::locale.is_null()),
                             )
-                            .select((model_fields::name, content_values::value))
-                            .load::<(String, Option<String>)>(&mut conn)
+                            .order((content_values::content_id.asc(), content_values::id.asc()))
+                            .select((model_fields::field_id, model_fields::multiple, model_fields::name, content_values::value))
+                            .load::<(i32, bool, String, Option<String>)>(&mut conn)
                             .await?;
 
-                        Ok(HashMap::from_iter(values.into_iter()))
+                        let mut values = HashMap::new();
+
+                        for (field_id, multiple, key, val) in content_values.into_iter() {
+                            let Some(field) = fields.iter().find(|f| f.0 == field_id) else {
+                                log::error!("A content without a corresponding field is identified, field_id {field_id}");
+                                continue;
+                            };
+
+                            if multiple && !values.contains_key(&key) {
+                                values.insert(key.clone(), to_value(Vec::<Value>::new()).unwrap());
+                            }
+
+                            let val = match field.1.as_ref() {
+                                "string" => to_value(val).unwrap(),
+                                "integer" => {
+                                    if let Ok(num) = str::parse::<i64>(val.as_ref().map(|s| s.as_str()).unwrap_or("")) {
+                                        to_value(num).unwrap()
+                                    } else {
+                                        log::warn!("failed to parse number value");
+
+                                        Value::Null
+                                    }
+                                },
+                                unknown => {
+                                    log::error!("Unhandled field kind is found, {unknown}");
+
+                                    Value::Null
+                                }
+                            };
+
+                            if multiple {
+                                values.get_mut(&key).unwrap().as_array_mut().unwrap().push(val);
+                            } else {
+                                values.insert(key, to_value(val).unwrap());
+                            }
+                        }
+
+                        Ok(values)
                     });
 
                 values
@@ -254,44 +325,110 @@ fn build_renderer(
 
                 let locale =
                     get_value::<Arc<str>>(args, "locale").unwrap_or(current_locale.clone());
+                let filter = get_value::<(String, String)>(args, "filter");
+
+                if filter.is_none() && args.contains_key("filter") {
+                    return Err("invalid args".into());
+                }
 
                 let pool = pool.clone();
 
-                let values: Result<Vec<HashMap<String, Option<String>>>, HttpError> =
+                // Use BTreeMap to preserve the insertion order
+                let values: Result<BTreeMap<i32, Value>, HttpError> =
                     tokio::runtime::Handle::current().block_on(async move {
                         let mut conn = pool.get().await?;
 
-                        let values = contents::table
-                            .inner_join(models::table)
-                            .inner_join(content_values::table.inner_join(model_fields::table))
-                            .filter(models::name.eq(&model))
-                            .filter(model_fields::name.eq_any(&fields))
-                            .filter(
-                                content_values::locale
-                                    .eq(&*locale)
-                                    .or(content_values::locale.is_null()),
-                            )
-                            .select((contents::id, model_fields::name, content_values::value))
-                            .load::<(i32, String, Option<String>)>(&mut conn)
+                        let content_values = if let Some(filter) = filter {
+                            let (c1, c2) = diesel::alias!(contents as c1, contents as c2);
+                            let (mf1, mf2) = diesel::alias!(model_fields as mf1, model_fields as mf2);
+                            let (cv1, cv2) = diesel::alias!(content_values as cv1, content_values as cv2);
+
+                            c1
+                                .inner_join(models::table)
+                                .inner_join(cv1.inner_join(mf1))
+                                .filter(models::name.eq(&model))
+                                .filter(mf1.field(model_fields::name).eq_any(&fields))
+                                .filter(
+                                    cv1.field(content_values::locale)
+                                        .eq(&*locale)
+                                        .or(cv1.field(content_values::locale).is_null()),
+                                )
+                                .filter(
+                                    c1.field(contents::id).eq_any(
+                                        c2.select(c2.field(contents::id))
+                                            .inner_join(cv2.inner_join(mf2))
+                                            .filter(mf2.field(model_fields::name).eq(&filter.0))
+                                            .filter(cv2.field(content_values::value).eq(&filter.1))
+                                    )
+                                )
+                                .order((cv1.field(content_values::content_id).asc(), cv1.field(content_values::id).asc()))
+                                .select((
+                                    c1.field(contents::id),
+                                    mf1.field(model_fields::field_id),
+                                    mf1.field(model_fields::multiple),
+                                    mf1.field(model_fields::name),
+                                    cv1.field(content_values::value)
+                                ))
+                                .load::<(i32, i32, bool, String, Option<String>)>(&mut conn)
+                                .await?
+                        } else {
+                            contents::table
+                                .inner_join(models::table)
+                                .inner_join(content_values::table.inner_join(model_fields::table))
+                                .filter(models::name.eq(&model))
+                                .filter(model_fields::name.eq_any(&fields))
+                                .filter(
+                                    content_values::locale
+                                        .eq(&*locale)
+                                        .or(content_values::locale.is_null()),
+                                )
+                                .order((content_values::content_id.asc(), content_values::id.asc()))
+                                .select((contents::id, model_fields::field_id, model_fields::multiple, model_fields::name, content_values::value))
+                                .load::<(i32, i32, bool, String, Option<String>)>(&mut conn)
+                                .await?
+                        };
+
+                        let fields = fields::table
+                            .select((fields::id, fields::kind))
+                            .load::<(i32, String)>(&mut conn)
                             .await?;
 
-                        let mut contents: Vec<HashMap<String, Option<String>>> = vec![];
-                        let mut indices: Vec<i32> = vec![];
+                        let mut contents = BTreeMap::<i32, Value>::new();
 
-                        for (id, name, value) in values {
-                            if let Some(i) = indices
-                                .iter()
-                                .enumerate()
-                                .find(|(_, val)| **val == id)
-                                .map(|(i, _)| i)
-                            {
-                                contents[i].insert(name, value);
+                        for (id, field_id, multiple, key, val) in content_values.into_iter() {
+                            let Some(field) = fields.iter().find(|f| f.0 == field_id) else {
+                                log::error!("A content without a corresponding field is identified, field_id {field_id}");
+                                continue;
+                            };
+
+                            let values = contents.entry(id).or_insert_with(|| to_value(HashMap::<String, Value>::from([("id".to_string(), to_value(id).unwrap())])).unwrap()).as_object_mut().unwrap();
+
+                            if multiple && !values.contains_key(&key) {
+                                values.insert(key.clone(), to_value(Vec::<Value>::new()).unwrap());
+                            }
+
+                            let val = match field.1.as_ref() {
+                                "string" => to_value(val).unwrap(),
+                                "integer" => {
+                                    if let Ok(num) = str::parse::<i64>(val.as_ref().map(|s| s.as_str()).unwrap_or("")) {
+                                        to_value(num).unwrap()
+                                    } else {
+                                        log::warn!("failed to parse number value");
+
+                                        Value::Null
+                                    }
+                                },
+                                unknown => {
+                                    log::error!("Unhandled field kind is found, {unknown}");
+
+                                    Value::Null
+                                }
+                            };
+
+                            if multiple {
+                                values.get_mut(&key).unwrap().as_array_mut().unwrap().push(val);
                             } else {
-                                indices.push(id);
-                                contents.push(HashMap::from([
-                                    ("id".to_string(), Some(id.to_string())),
-                                    (name, value),
-                                ]));
+                                values.insert(key, to_value(val).unwrap());
                             }
                         }
 
@@ -299,11 +436,40 @@ fn build_renderer(
                     });
 
                 values
-                    .map(|v| to_value(v).unwrap())
+                    .map(|map| to_value(Vec::from_iter(map.into_iter().map(|(_, val)| val))).unwrap())
                     .map_err(|e| format!("failed to get content, {e:?}").into())
             },
         );
     }
+
+    renderer.register_function(
+        "get_enum_id",
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let (field, value) = match (
+                get_value::<String>(args, "field"),
+                get_value::<String>(args, "value"),
+            ) {
+                (Some(field), Some(value)) => (field, value),
+                _ => return Err("invalid args".into()),
+            };
+
+            let pool = pool.clone();
+
+            let id: Result<i32, HttpError> =
+                tokio::runtime::Handle::current().block_on(async move {
+                    Ok(enum_options::table
+                        .inner_join(fields::table)
+                        .filter(fields::name.eq(field))
+                        .filter(enum_options::value.eq(value))
+                        .select(enum_options::id)
+                        .first::<i32>(&mut pool.get().await?)
+                        .await?)
+                });
+
+            id.map(|id| to_value(id.to_string()).unwrap())
+                .map_err(|e| format!("failed to get content, {e:?}").into())
+        },
+    );
 
     {
         renderer.register_function(

@@ -8,6 +8,8 @@ drop table model_fields;
 
 drop table models;
 
+drop table enum_options;
+
 drop table fields;
 
 drop table locales;
