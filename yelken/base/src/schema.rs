@@ -72,9 +72,13 @@ diesel::table! {
     pages (id) {
         id -> Int4,
         #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
         path -> Varchar,
         #[max_length = 255]
         template -> Varchar,
+        #[max_length = 8]
+        locale -> Nullable<Varchar>,
         created_at -> Timestamp,
     }
 }
@@ -117,6 +121,7 @@ diesel::joinable!(contents -> models (model_id));
 diesel::joinable!(enum_options -> fields (field_id));
 diesel::joinable!(model_fields -> fields (field_id));
 diesel::joinable!(model_fields -> models (model_id));
+diesel::joinable!(pages -> locales (locale));
 
 diesel::allow_tables_to_appear_in_same_query!(
     content_values,

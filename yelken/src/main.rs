@@ -8,18 +8,22 @@ use axum::{
     response::Response,
     Extension, Router,
 };
-use base::{config::Config, crypto::Crypto, types::Pool, AppState};
+use base::{config::Config, crypto::Crypto, schema::locales, types::Pool, AppState};
 use config::ServerConfig;
+use diesel::prelude::*;
 use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
-    AsyncPgConnection,
+    AsyncPgConnection, RunQueryDsl,
 };
+use locale::Locale;
 use plugin::PluginHost;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
 mod config;
 mod handlers;
+mod locale;
+mod render;
 
 async fn logger(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_owned();
@@ -63,6 +67,27 @@ async fn main() {
             .unwrap()
     };
 
+    let locale = {
+        let mut conn = pool.get().await.unwrap();
+
+        let locales = locales::table
+            .select(locales::key)
+            .load::<String>(&mut conn)
+            .await
+            .unwrap();
+
+        let default = locales[0].parse().unwrap();
+
+        Locale::new(
+            locales
+                .into_iter()
+                .map(|locale| locale.parse().unwrap())
+                .collect(),
+            default,
+            &format!("{}/themes/{}/locales", config.storage_dir, config.theme),
+        )
+    };
+
     let crypto = Crypto::new(
         std::env::var("YELKEN_SECRET_KEY")
             .expect("YELKEN_SECRET_KEY is not provided in env")
@@ -90,8 +115,14 @@ async fn main() {
             &format!("{}/", state.config.app_root),
             management::router(state.clone()),
         )
-        .nest_service("/assets/static", ServeDir::new(format!("{}/assets", storage_dir)))
-        .nest_service("/assets/content", ServeDir::new(format!("{}/content", storage_dir)))
+        .nest_service(
+            "/assets/static",
+            ServeDir::new(format!("{}/assets", storage_dir)),
+        )
+        .nest_service(
+            "/assets/content",
+            ServeDir::new(format!("{}/content", storage_dir)),
+        )
         .fallback(handlers::default_handler)
         .with_state(state)
         .layer(
@@ -99,6 +130,7 @@ async fn main() {
                 .layer(Extension(plugin_host))
                 .layer(cors)
                 .layer(Extension(crypto))
+                .layer(Extension(locale))
                 .layer(axum::middleware::from_fn(logger)),
         );
 

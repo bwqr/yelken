@@ -79,7 +79,12 @@ create table content_values(
 
 create table pages(
     id         serial primary key not null,
+    name       varchar(255) not null,
     path       varchar(255) not null,
     template   varchar(255) not null,
-    created_at timestamp    not null default current_timestamp
+    locale     varchar(8)   default null,
+    created_at timestamp    not null default current_timestamp,
+    unique (name, locale),
+    unique (path),
+    constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
 );
