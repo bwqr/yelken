@@ -10,7 +10,7 @@ impl Locale {
     pub fn new<'a>(
         ids: Vec<LanguageIdentifier>,
         default: LanguageIdentifier,
-        locales_dir: &str
+        locales_dir: &str,
     ) -> Self {
         let supported_locales = ids.iter().cloned().collect();
 
@@ -18,8 +18,7 @@ impl Locale {
             let mut bundle = FluentBundle::new_concurrent(vec![id.clone(), default.clone()]);
 
             let resource = FluentResource::try_new(
-                std::fs::read_to_string(format!("{locales_dir}/{id}.ftl"))
-                    .unwrap(),
+                std::fs::read_to_string(format!("{locales_dir}/{id}.ftl")).unwrap(),
             )
             .unwrap();
 

@@ -26,10 +26,8 @@ pub async fn default_handler(
 ) -> Result<(StatusCode, Html<String>), HttpError> {
     let supported_locales = l10n.supported_locales();
 
-    let (path, mut current_locale) = match resolve_locale(&req, &supported_locales) {
-        Some(t) => t,
-        None => (req.uri().path(), l10n.default_locale()),
-    };
+    let (path, mut current_locale) = resolve_locale(&req, &supported_locales)
+        .unwrap_or_else(|| (req.uri().path(), l10n.default_locale()));
 
     // Resolve current locale
     let mut router = Router::new();
@@ -139,30 +137,25 @@ fn resolve_locale<'a>(
         return None;
     }
 
-    if let Some(id) = locales.iter().find(|id| {
-        let text = id.language.as_str();
+    // Path based resolution
+    let locale_segment = path.split_once('/').map(|split| split.1).unwrap();
+    let locale_segment = locale_segment
+        .split_once('/')
+        .map(|split| split.0)
+        .unwrap_or(locale_segment);
 
-        let Some(prefix) = path.get(1..text.len() + 1) else {
-            return false;
-        };
+    if let Ok(locale) = locale_segment.parse::<LanguageIdentifier>() {
+        if let Some(id) = locales.iter().find(|id| id.matches(&locale, true, true)) {
+            // Strip the locale from path
+            let path = path.get(locale_segment.len() + 1..).unwrap();
 
-        if prefix != text {
-            return false;
+            let path = if path.is_empty() { "/" } else { path };
+
+            return Some((path, id));
         }
-
-        // Ensure that locale is followed only by '/'
-        path.chars()
-            .nth(text.len() + 1)
-            .map(|ch| ch == '/')
-            .unwrap_or(true)
-    }) {
-        let path = path.get(id.language.as_str().len() + 1..).unwrap();
-
-        let path = if path.is_empty() { "/" } else { path };
-
-        return Some((path, id));
     }
 
+    // Cookie based resolution
     if let Some(cookie) = req
         .headers()
         .get(http::header::COOKIE)
@@ -179,6 +172,7 @@ fn resolve_locale<'a>(
         }
     }
 
+    // Header based resolution
     if let Some(accept_language) = req
         .headers()
         .get(http::header::ACCEPT_LANGUAGE)
@@ -238,6 +232,7 @@ mod tests {
 
         let cases = [
             ("/en", "en", "/"),
+            ("/en-US", "en", "/"),
             ("/tr/", "tr", "/"),
             // Weird cases
             ("/tr-", "en", "/tr-"),
