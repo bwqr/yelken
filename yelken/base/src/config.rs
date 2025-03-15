@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 
+#[derive(Default)]
 pub struct Config {
     pub storage_dir: String,
     pub api_origin: String,

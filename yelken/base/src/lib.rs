@@ -7,6 +7,7 @@ pub mod crypto;
 pub mod middlewares;
 pub mod models;
 pub mod schema;
+pub mod test;
 pub mod types;
 
 #[derive(Clone)]

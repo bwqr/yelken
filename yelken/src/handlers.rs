@@ -1,140 +1,35 @@
 use std::collections::HashMap;
 
 use axum::{
+    body::Body,
     extract::{Request, State},
     http::{self, StatusCode},
-    response::Html,
+    response::{Html, IntoResponse, Response},
     Extension,
 };
 use base::{models::HttpError, schema::pages, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
-use plugin::PluginHost;
+use tera::Context;
+// use plugin::PluginHost;
 use unic_langid::LanguageIdentifier;
 
-use crate::{
-    locale::Locale,
-    render::{register_functions, Render},
-};
-
-pub async fn default_handler(
-    State(state): State<AppState>,
-    Extension(plugin_host): Extension<PluginHost>,
-    Extension(l10n): Extension<Locale>,
-    req: Request,
-) -> Result<(StatusCode, Html<String>), HttpError> {
-    let supported_locales = l10n.supported_locales();
-
-    let (path, mut current_locale) = resolve_locale(&req, &supported_locales)
-        .unwrap_or_else(|| (req.uri().path(), l10n.default_locale()));
-
-    // Resolve current locale
-    let mut router = Router::new();
-
-    let pages = {
-        let mut conn = state.pool.get().await?;
-
-        let pages = pages::table
-            .select((pages::id, pages::path, pages::template, pages::locale))
-            .load::<(i32, String, String, Option<String>)>(&mut conn)
-            .await?;
-
-        pages
-    };
-
-    pages.into_iter().for_each(|(id, path, template, locale)| {
-        if let Err(e) = router.insert(&path, (template, locale)) {
-            log::warn!("Failed to add path {path} of page {id} due to {e:?}");
-        }
-    });
-
-    let mut renderer = Render::new(&format!(
-        "{}/themes/{}/**/*.html",
-        state.config.storage_dir, state.config.theme,
-    ))
-    .inspect_err(|e| log::warn!("Failed to parse templates, {e:?}"))
-    .map_err(|_| HttpError::internal_server_error("failed_parsing_templates"))?;
-
-    let mut context = tera::Context::new();
-    context.insert(
-        "locales",
-        &HashMap::<String, String>::from_iter(supported_locales.into_iter().map(|locale| {
-            (
-                locale.language.as_str().to_string(),
-                locale.language.as_str().to_string(),
-            )
-        })),
-    );
-
-    context.insert("locale", &format!("{current_locale}"));
-
-    let Ok(Match {
-        params,
-        value: (template, page_locale),
-    }) = router.at(path)
-    else {
-        let not_found = renderer
-            .render("__404__.html", &context)
-            .inspect_err(|e| log::warn!("Failed to render 404 template, {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("failed_render_template"))?;
-
-        return Ok((StatusCode::NOT_FOUND, Html(not_found)));
-    };
-
-    if let Some(page_locale) = page_locale {
-        if let Some(locale) = supported_locales
-            .iter()
-            .find(|id| id.language.as_str() == page_locale)
-        {
-            current_locale = locale;
-            context.insert("locale", &format!("{current_locale}"));
-        }
-    }
-
-    let params: HashMap<String, String> =
-        HashMap::from_iter(params.iter().map(|(k, v)| (k.to_string(), v.to_string())));
-    let template = template.clone();
-
-    register_functions(
-        &mut renderer,
-        l10n.clone(),
-        current_locale.clone(),
-        params,
-        state.pool.clone(),
-        plugin_host,
-    );
-
-    let res = tokio::runtime::Handle::current()
-        .spawn_blocking(move || renderer.render(&template, &context))
-        .await
-        .unwrap();
-
-    match res {
-        Ok(html) => Ok((StatusCode::OK, Html(html))),
-        Err(e) => Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Html(format!("Failed to render page, {e:?}")),
-        )),
-    }
-}
-
-fn match_route(pages: &[()]) -> Option<&str> {
-    todo!()
-}
+use crate::{locale::Locale, render::Render};
 
 fn resolve_locale<'a>(
     req: &'a Request,
     locales: &'a [LanguageIdentifier],
-) -> Option<(&'a str, &'a LanguageIdentifier)> {
+    default_locale: &'a LanguageIdentifier,
+) -> &'a LanguageIdentifier {
     if locales.len() == 0 {
-        return None;
+        return default_locale;
     }
 
     let path = req.uri().path();
 
     if !path.starts_with('/') {
-        return None;
+        return default_locale;
     }
 
     // Path based resolution
@@ -145,13 +40,8 @@ fn resolve_locale<'a>(
         .unwrap_or(locale_segment);
 
     if let Ok(locale) = locale_segment.parse::<LanguageIdentifier>() {
-        if let Some(id) = locales.iter().find(|id| id.matches(&locale, true, true)) {
-            // Strip the locale from path
-            let path = path.get(locale_segment.len() + 1..).unwrap();
-
-            let path = if path.is_empty() { "/" } else { path };
-
-            return Some((path, id));
+        if let Some(locale) = locales.iter().find(|id| id.matches(&locale, true, true)) {
+            return locale;
         }
     }
 
@@ -168,7 +58,7 @@ fn resolve_locale<'a>(
             .unwrap_or(cookie);
 
         if let Some(locale) = locales.iter().find(|id| locale == id.language.as_str()) {
-            return Some((path, locale));
+            return locale;
         }
     }
 
@@ -182,48 +72,335 @@ fn resolve_locale<'a>(
             let lang = lang.split_once(';').map(|split| split.0).unwrap_or(lang);
 
             if let Some(locale) = locales.iter().find(|id| lang == id.language.as_str()) {
-                return Some((path, locale));
+                return locale;
             }
         }
     }
 
-    Some((path, &locales[0]))
+    default_locale
+}
+
+pub async fn serve_page(
+    State(state): State<AppState>,
+    Extension(l10n): Extension<Locale>,
+    Extension(renderer): Extension<Render>,
+    req: Request,
+) -> Result<Response, HttpError> {
+    let mut router = Router::new();
+
+    let pages = pages::table
+        .select((pages::name, pages::path, pages::template, pages::locale))
+        .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
+        .await?;
+
+    let default_locale = l10n.default_locale();
+    let supported_locales = l10n.supported_locales();
+    let current_locale = resolve_locale(&req, &supported_locales, &default_locale);
+
+    pages
+        .into_iter()
+        .for_each(|(name, path, template, locale)| {
+            let Ok(locale) = locale.map(|l| l.parse::<LanguageIdentifier>()).transpose() else {
+                log::warn!("invalid language identifier is found in page {name}");
+                return;
+            };
+
+            let localized_path = match &locale {
+                Some(locale) => {
+                    if locale.matches(&default_locale, true, true) {
+                        path.to_string()
+                    } else if path == "/" {
+                        format!("/{locale}")
+                    } else {
+                        format!("/{locale}{path}")
+                    }
+                }
+                _ => path.to_string(),
+            };
+
+            if let Err(e) = router.insert(localized_path, (name.clone(), template, locale)) {
+                log::warn!("Failed to add path {path} of page {name} due to {e:?}");
+            }
+        });
+
+    let Ok(Match {
+        params,
+        value: (name, template, page_locale),
+    }) = router.at(req.uri().path())
+    else {
+        if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
+            if redirect.is_empty() || redirect.starts_with('/') {
+                let redirect = if redirect.starts_with('/') {
+                    redirect
+                } else {
+                    "/"
+                };
+
+                return Ok(Response::builder()
+                    .status(StatusCode::TEMPORARY_REDIRECT)
+                    .header(http::header::LOCATION, redirect)
+                    .body(Body::empty())
+                    .unwrap());
+            }
+        }
+
+        return match renderer.render("__404__.html", &Context::new()) {
+            Ok(html) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
+            Err(e) => Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Html(format!("Failed to render page, {e:?}")),
+            )
+                .into_response()),
+        };
+    };
+
+    if let Some(page_locale) = &page_locale {
+        let path = req.uri().path();
+
+        let localized_path = if path == "/" {
+            format!("/{current_locale}")
+        } else {
+            format!("/{current_locale}{}", path)
+        };
+
+        if !page_locale.matches(&current_locale, true, true)
+            && router
+                .at(&localized_path)
+                .map(|localized_route| localized_route.value.0 == *name)
+                .unwrap_or(false)
+        {
+            return Ok(Response::builder()
+                .status(StatusCode::TEMPORARY_REDIRECT)
+                .header(http::header::LOCATION, localized_path)
+                .body(Body::empty())
+                .unwrap());
+        }
+    }
+
+    let mut context = Context::new();
+    context.insert("locale", &format!("{current_locale}"));
+    context.insert(
+        "locales",
+        &HashMap::<String, String>::from_iter(
+            supported_locales
+                .iter()
+                .map(|l| (format!("{l}"), format!("{l}"))),
+        ),
+    );
+    context.insert(
+        "params",
+        &HashMap::<String, String>::from_iter(
+            params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
+        ),
+    );
+
+    let template = template.clone();
+    let res = tokio::runtime::Handle::current()
+        .spawn_blocking(move || renderer.render(&template, &context))
+        .await
+        .unwrap();
+
+    match res {
+        Ok(html) => Ok(Html(html).into_response()),
+        Err(e) => Ok((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Html(format!("Failed to render page, {e:?}")),
+        )
+            .into_response()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use axum::{
         body::Body,
-        http::{self, Request},
+        extract::State,
+        http::{self, Request, StatusCode},
+        response::IntoResponse,
+        Extension,
     };
+    use base::{
+        config::Config,
+        schema::{locales, pages},
+        test::create_pool,
+        types::Connection,
+        AppState,
+    };
+    use diesel::prelude::*;
+    use diesel_async::RunQueryDsl;
+    use unic_langid::LanguageIdentifier;
+
+    use crate::{locale::Locale, render::Render};
 
     use super::resolve_locale;
 
+    const DB_CONFIG: &'static str = "postgres://yelken:toor@127.0.0.1/yelken_test";
+
+    async fn init_params(
+        locales: &[&str],
+        templates: Vec<(String, String)>,
+    ) -> (AppState, Locale, Render) {
+        let config = Config::default();
+        let pool = create_pool(DB_CONFIG).await;
+        let state = AppState::new(config, pool);
+
+        diesel::insert_into(locales::table)
+            .values(
+                locales
+                    .into_iter()
+                    .map(|locale| (locales::key.eq(locale), locales::name.eq(locale)))
+                    .collect::<Vec<_>>(),
+            )
+            .execute(&mut state.pool.get().await.unwrap())
+            .await
+            .unwrap();
+
+        let l10n = Locale::new(
+            locales.into_iter().map(|l| l.parse().unwrap()).collect(),
+            "en".parse().unwrap(),
+            HashMap::new(),
+        );
+
+        let renderer = Render::new(templates).unwrap();
+
+        (state, l10n, renderer)
+    }
+
+    async fn create_pages(mut conn: Connection<'_>, pages: &[(&str, &str, &str, Option<&str>)]) {
+        diesel::insert_into(pages::table)
+            .values(
+                pages
+                    .into_iter()
+                    .map(|page| {
+                        (
+                            pages::name.eq(page.0),
+                            pages::path.eq(page.1),
+                            pages::template.eq(page.2),
+                            pages::locale.eq(page.3),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+    }
+    #[tokio::test]
+    async fn it_returns_page_with_correct_locale() {
+        let (state, l10n, renderer) = init_params(
+            &["en", "tr"],
+            vec![("contact.html".to_string(), "Contact Page".to_string())],
+        )
+        .await;
+
+        create_pages(
+            state.pool.get().await.unwrap(),
+            &[
+                ("contact", "/contact", "contact.html", Some("en")),
+                ("contact", "/iletisim", "contact.html", Some("tr")),
+            ],
+        )
+        .await;
+
+        let req = Request::builder()
+            .uri("/tr/iletisim")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = super::serve_page(
+            State(state.clone()),
+            Extension(l10n.clone()),
+            Extension(renderer.clone()),
+            req,
+        )
+        .await
+        .unwrap()
+        .into_response();
+
+        assert_eq!(StatusCode::OK, resp.status());
+    }
+
+    #[tokio::test]
+    async fn it_returns_307_when_two_pages_with_same_path_is_requested_and_user_has_non_default_locale(
+    ) {
+        let (state, l10n, renderer) =
+            init_params(&["en", "tr"], vec![("".to_string(), "".to_string())]).await;
+
+        create_pages(
+            state.pool.get().await.unwrap(),
+            &[("home", "/", "", Some("en")), ("home", "/", "", Some("tr"))],
+        )
+        .await;
+
+        let cases = [
+            ("/", StatusCode::TEMPORARY_REDIRECT, Some("/tr"), "tr"),
+            ("/", StatusCode::OK, None, "en"),
+            ("/en", StatusCode::TEMPORARY_REDIRECT, Some("/"), "en"),
+        ];
+
+        for (path, code, location, locale) in cases {
+            let req = Request::builder()
+                .uri(path)
+                .header(http::header::COOKIE, format!("yelken_locale={locale}"))
+                .body(Body::empty())
+                .unwrap();
+
+            let resp = super::serve_page(
+                State(state.clone()),
+                Extension(l10n.clone()),
+                Extension(renderer.clone()),
+                req,
+            )
+            .await
+            .unwrap()
+            .into_response();
+
+            assert_eq!(code, resp.status());
+
+            if let Some(location) = location {
+                assert_eq!(
+                    location,
+                    resp.headers().get(http::header::LOCATION).unwrap()
+                );
+            }
+        }
+    }
+
     #[test]
-    fn returns_none_when_no_locale_provided_or_path_not_start_with_slash() {
+    fn returns_default_when_no_locale_provided_or_path_not_start_with_slash() {
         // No locale case
-        assert!(resolve_locale(&Request::new(Body::empty()), &[]).is_none());
+        let default_locale = "en".parse().unwrap();
+
+        assert_eq!(
+            default_locale,
+            *resolve_locale(&Request::new(Body::empty()), &[], &default_locale)
+        );
 
         // Request that does not start with '/'
-        assert!(resolve_locale(
-            &Request::builder()
-                .uri("not-slash")
-                .body(Body::empty())
-                .unwrap(),
-            &[]
-        )
-        .is_none());
+        assert_eq!(
+            default_locale,
+            *resolve_locale(
+                &Request::builder()
+                    .uri("not-slash")
+                    .body(Body::empty())
+                    .unwrap(),
+                &["tr".parse().unwrap()],
+                &default_locale
+            )
+        );
     }
 
     #[test]
     fn root_url_resolves_to_default_locale() {
-        let locales = ["en".parse().unwrap(), "tr".parse().unwrap()];
+        let default_locale = "en".parse().unwrap();
+        let locales = ["tr".parse().unwrap()];
         let req = Request::builder().uri("/").body(Body::empty()).unwrap();
 
-        let (url, locale) = resolve_locale(&req, &locales).unwrap();
+        let locale = resolve_locale(&req, &locales, &default_locale);
 
-        assert_eq!("/", url);
-        assert_eq!("en", locale.language.as_str());
+        assert_eq!(default_locale, *locale);
     }
 
     #[test]
@@ -231,23 +408,22 @@ mod tests {
         let locales = ["en".parse().unwrap(), "tr".parse().unwrap()];
 
         let cases = [
-            ("/en", "en", "/"),
-            ("/en-US", "en", "/"),
-            ("/tr/", "tr", "/"),
+            ("/en", "en"),
+            ("/en-US", "en"),
+            ("/tr/", "tr"),
             // Weird cases
-            ("/tr-", "en", "/tr-"),
-            ("/tr?test", "tr", "/"),
-            ("/tr/test", "tr", "/test"),
+            ("/tr-", "en"),
+            ("/tr?test", "tr"),
+            ("/tr/test", "tr"),
             // Unknown maps to default locale
-            ("/es", "en", "/es"),
+            ("/es", "en"),
         ];
 
-        for (path, expected_locale, expected_path) in cases {
+        for (path, expected_locale) in cases {
             let req = Request::builder().uri(path).body(Body::empty()).unwrap();
 
-            let (url, locale) = resolve_locale(&req, &locales).unwrap();
+            let locale = resolve_locale(&req, &locales, &locales[0]);
 
-            assert_eq!(expected_path, url);
             assert_eq!(expected_locale, locale.language.as_str());
         }
     }
@@ -257,28 +433,30 @@ mod tests {
         let locales = ["en".parse().unwrap(), "tr".parse().unwrap()];
 
         let cases = [
-            ("/", "yelken_locale=en", "en", "/"),
-            ("/", "yelken_locale=tr", "tr", "/"),
-            ("/test", "yelken_locale=en", "en", "/test"),
+            ("/", "yelken_locale=en", "en"),
+            ("/", "yelken_locale=tr", "tr"),
+            ("/test", "yelken_locale=en", "en"),
             // Weird cases
-            ("/", "test;yelken_locale=tr", "tr", "/"),
-            ("/", "test;yelken_locale=tr", "tr", "/"),
-            ("/", "test=test;yelken_locale=tr;key=val", "tr", "/"),
+            ("/", "test;yelken_locale=tr", "tr"),
+            ("/", "test;yelken_locale=tr", "tr"),
+            ("/", "test=test;yelken_locale=tr;key=val", "tr"),
             // Unknown maps to default locale
-            ("/", "yelken_locale=es", "en", "/"),
+            ("/", "yelken_locale=es", "en"),
         ];
 
-        for (path, cookie, expected_locale, expected_path) in cases {
+        for (path, cookie, expected_locale) in cases {
             let req = Request::builder()
                 .uri(path)
                 .header(http::header::COOKIE, cookie)
                 .body(Body::empty())
                 .unwrap();
 
-            let (url, locale) = resolve_locale(&req, &locales).unwrap();
+            let locale = resolve_locale(&req, &locales, &locales[0]);
 
-            assert_eq!(expected_path, url);
-            assert_eq!(expected_locale, locale.language.as_str());
+            assert_eq!(
+                expected_locale.parse::<LanguageIdentifier>().unwrap(),
+                *locale
+            );
         }
     }
 
@@ -287,24 +465,23 @@ mod tests {
         let locales = ["en".parse().unwrap(), "tr".parse().unwrap()];
 
         let cases = [
-            ("/", "en,zh-CN", "en", "/"),
-            ("/", "tr,zh-CN", "tr", "/"),
+            ("/", "en,zh-CN", "en"),
+            ("/", "tr,zh-CN", "tr"),
             // Weird cases
-            ("/", "tr;q=0.4,zh-CN", "tr", "/"),
+            ("/", "tr;q=0.4,zh-CN", "tr"),
             // Unknown maps to default locale
-            ("/", "es", "en", "/"),
+            ("/", "es", "en"),
         ];
 
-        for (path, accept_language, expected_locale, expected_path) in cases {
+        for (path, accept_language, expected_locale) in cases {
             let req = Request::builder()
                 .uri(path)
                 .header(http::header::ACCEPT_LANGUAGE, accept_language)
                 .body(Body::empty())
                 .unwrap();
 
-            let (url, locale) = resolve_locale(&req, &locales).unwrap();
+            let locale = resolve_locale(&req, &locales, &locales[0]);
 
-            assert_eq!(expected_path, url);
             assert_eq!(expected_locale, locale.language.as_str());
         }
     }

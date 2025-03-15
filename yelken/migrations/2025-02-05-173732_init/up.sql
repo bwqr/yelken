@@ -85,6 +85,6 @@ create table pages(
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
     unique (name, locale),
-    unique (path),
+    unique (path, locale),
     constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
 );

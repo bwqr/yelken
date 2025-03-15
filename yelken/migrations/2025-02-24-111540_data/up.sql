@@ -12,4 +12,4 @@ insert into contents (model_id, name) values (1, 'good days');
 
 insert into content_values (content_id, model_field_id, value) values (1, 1, 'Good Old Days'), (1, 2, 'Such a good content'), (1, 3, 'article-test');
 
-insert into pages (path, template) values ('/', 'index.html'), ('/article/{slug}', 'article.html');
+insert into pages (name, path, template) values ('home', '/', 'index.html'), ('article', '/article/{slug}', 'article.html');

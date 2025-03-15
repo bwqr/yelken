@@ -1,4 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
+use std::fs;
+use std::ops::Deref;
+use std::sync::Arc;
 
 use base::models::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
@@ -7,24 +10,91 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use plugin::PluginHost;
 use serde::de::DeserializeOwned;
-use tera::{from_value, to_value, Context, Tera, Value};
+use tera::{from_value, to_value, Context, Error, Tera, Value};
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
 use crate::locale::Locale;
 
-pub struct Render {
+#[derive(Clone)]
+pub struct Render(Arc<Inner>);
+
+impl Render {
+    pub fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
+        Inner::new(templates).map(|inner| Render(Arc::new(inner)))
+    }
+
+    pub fn from_dir(dir: &str, register_fns: Option<(Locale, Pool)>) -> Result<Self, Error> {
+        let mut inner = Inner::from_dir(dir)?;
+
+        if let Some((l10n, pool)) = register_fns {
+            register_functions(&mut inner.tera, l10n, pool);
+        }
+
+        Ok(Render(Arc::new(inner)))
+    }
+}
+
+impl Deref for Render {
+    type Target = Inner;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
+pub struct Inner {
     tera: Tera,
 }
 
-impl Render {
-    pub fn new(glob: &str) -> Result<Self, &'static str> {
-        let tera = Tera::new(glob).map_err(|_| "failed_building_renderer")?;
-
-        Ok(Self { tera })
+impl Inner {
+    pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
+        self.tera.render(template, ctx)
     }
 
-    pub fn render(&self, template: &str, ctx: &Context) -> tera::Result<String> {
-        self.tera.render(template, ctx)
+    fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
+        let mut tera = Tera::default();
+
+        tera.add_raw_templates(templates)?;
+
+        Ok(Inner { tera })
+    }
+
+    fn from_dir(root: &str) -> Result<Self, Error> {
+        let mut stack = vec![fs::read_dir(root).unwrap()];
+        let mut templates = vec![];
+
+        while let Some(dir) = stack.pop() {
+            for entry in dir {
+                let entry = entry.unwrap();
+                let path = entry.path();
+
+                if path.is_symlink() {
+                    continue;
+                }
+
+                if path.is_dir() {
+                    stack.push(fs::read_dir(path).unwrap());
+                } else if path.is_file()
+                    && path
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .map(|ext| ext == "html")
+                        .unwrap_or(false)
+                {
+                    let template = fs::read_to_string(&path).unwrap();
+
+                    templates.push((
+                        path.strip_prefix(root)
+                            .unwrap()
+                            .to_string_lossy()
+                            .to_string(),
+                        template,
+                    ));
+                }
+            }
+        }
+
+        Self::new(templates)
     }
 }
 
@@ -41,14 +111,12 @@ fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Opt
 }
 
 pub fn register_functions(
-    render: &mut Render,
+    tera: &mut Tera,
     l10n: Locale,
-    current_locale: LanguageIdentifier,
-    params: HashMap<String, String>,
     pool: Pool,
     plugin_host: PluginHost,
 ) {
-    render.tera.register_function(
+    tera.register_function(
         "localize_url",
         |args: &HashMap<String, Value>| -> tera::Result<Value> {
             let path = get_value::<String>(args, "path").ok_or_else(invalid_args)?;
@@ -57,40 +125,34 @@ pub fn register_functions(
         },
     );
 
-    {
-        let current_locale = current_locale.clone();
+    tera.register_function(
+        "localize",
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let key = get_value::<String>(args, "key").ok_or_else(invalid_args)?;
+            let locale = get_value::<String>(args, "locale")
+                .map(|locale| locale.parse::<LanguageIdentifier>())
+                .ok_or_else(invalid_args)?
+                .map_err(invalid_locale)?;
 
-        render.tera.register_function(
-            "localize",
-            move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-                let key = get_value::<String>(args, "key").ok_or_else(invalid_args)?;
-                let locale = get_value::<String>(args, "locale")
-                    .map(|locale| locale.parse())
-                    .transpose()
-                    .map_err(invalid_locale)?;
+            let text = l10n
+                .localize(
+                    &locale,
+                    &key,
+                    args.into_iter().filter_map(|(key, val)| {
+                        if key == "key" || key == "locale" {
+                            return None;
+                        };
 
-                let locale = locale.as_ref().unwrap_or(&current_locale);
+                        Some((key.as_str(), val.as_str()?))
+                    }),
+                )
+                .ok_or_else(|| -> tera::Error { format!("Unknown key {key}").into() })?;
 
-                let text = l10n
-                    .localize(
-                        locale,
-                        &key,
-                        args.into_iter().filter_map(|(key, val)| {
-                            if key == "key" || key == "locale" {
-                                return None;
-                            };
+            Ok(to_value(text).unwrap())
+        },
+    );
 
-                            Some((key.as_str(), val.as_str()?))
-                        }),
-                    )
-                    .ok_or_else(|| -> tera::Error { format!("Unknown key {key}").into() })?;
-
-                Ok(to_value(text).unwrap())
-            },
-        );
-    }
-
-    render.tera.register_function(
+    tera.register_function(
         "asset_url",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
             let path = get_value::<String>(args, "path").ok_or_else(invalid_args)?;
@@ -106,20 +168,10 @@ pub fn register_functions(
         },
     );
 
-    render.tera.register_function(
-        "route_param",
-        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let param = get_value::<String>(args, "param").ok_or_else(invalid_args)?;
-
-            Ok(to_value(params.get(&param)).unwrap())
-        },
-    );
-
     {
         let pool = pool.clone();
-        let current_locale = current_locale.clone();
 
-        render.tera.register_function(
+        tera.register_function(
             "get_content",
             move |args: &HashMap<String, Value>| -> tera::Result<Value> {
                 let model = get_value::<String>(args, "model").ok_or_else(invalid_args)?;
@@ -127,11 +179,9 @@ pub fn register_functions(
                 let value = get_value::<String>(args, "value").ok_or_else(invalid_args)?;
 
                 let locale = get_value::<String>(args, "locale")
-                    .map(|locale| locale.parse())
-                    .transpose()
+                    .map(|locale| locale.parse::<LanguageIdentifier>())
+                    .ok_or_else(invalid_args)?
                     .map_err(invalid_locale)?;
-
-                let locale = locale.as_ref().unwrap_or(&current_locale);
 
                 let pool = pool.clone();
 
@@ -241,19 +291,17 @@ pub fn register_functions(
 
     {
         let pool = pool.clone();
-        let current_locale = current_locale.clone();
 
-        render.tera.register_function(
+        tera.register_function(
             "get_contents",
             move |args: &HashMap<String, Value>| -> tera::Result<Value> {
                 let model = get_value::<String>(args, "model").ok_or_else(invalid_args)?;
                 let fields = get_value::<Vec<String>>(args, "fields").ok_or_else(invalid_args)?;
 
                 let locale = get_value::<String>(args, "locale")
-                    .map(|locale| locale.parse())
-                    .transpose()
+                    .map(|locale| locale.parse::<LanguageIdentifier>())
+                    .ok_or_else(invalid_args)?
                     .map_err(invalid_locale)?;
-                let locale = locale.as_ref().unwrap_or(&current_locale);
 
                 let filter = get_value::<(String, String)>(args, "filter");
 
@@ -372,7 +420,7 @@ pub fn register_functions(
         );
     }
 
-    render.tera.register_function(
+    tera.register_function(
         "get_enum_id",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
             let (field, value) = match (
@@ -401,7 +449,7 @@ pub fn register_functions(
         },
     );
 
-    render.tera.register_function(
+    tera.register_function(
         "call_plugin",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
             let (plugin, fn_id, opts) = match (
