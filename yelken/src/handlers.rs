@@ -93,6 +93,27 @@ pub async fn serve_page(
         .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
         .await?;
 
+    let template_pages: Vec<HashMap<&'static str, String>> = pages
+        .iter()
+        .map(|page| {
+            HashMap::<&'static str, String>::from_iter(
+                [
+                    ("name", page.0.clone()),
+                    ("path", page.1.clone()),
+                    ("template", page.2.clone()),
+                    (
+                        "locale",
+                        page.3
+                            .as_ref()
+                            .map(|l| l.to_string())
+                            .unwrap_or("".to_string()),
+                    ),
+                ]
+                .into_iter(),
+            )
+        })
+        .collect();
+
     let default_locale = l10n.default_locale();
     let supported_locales = l10n.supported_locales();
     let current_locale = resolve_locale(&req, &supported_locales, &default_locale);
@@ -178,6 +199,7 @@ pub async fn serve_page(
     }
 
     let mut context = Context::new();
+    context.insert("default_locale", &format!("{default_locale}"));
     context.insert("locale", &format!("{current_locale}"));
     context.insert(
         "locales",
@@ -192,6 +214,10 @@ pub async fn serve_page(
         &HashMap::<String, String>::from_iter(
             params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
         ),
+    );
+    context.insert(
+        "pages",
+        &template_pages,
     );
 
     let template = template.clone();
@@ -330,14 +356,25 @@ mod tests {
 
         create_pages(
             state.pool.get().await.unwrap(),
-            &[("home", "/", "", Some("en")), ("home", "/", "", Some("tr"))],
+            &[
+                ("home", "/", "", Some("en")),
+                ("home", "/", "", Some("tr")),
+                ("test", "/test", "", Some("tr")),
+            ],
         )
         .await;
 
         let cases = [
             ("/", StatusCode::TEMPORARY_REDIRECT, Some("/tr"), "tr"),
-            ("/", StatusCode::OK, None, "en"),
             ("/en", StatusCode::TEMPORARY_REDIRECT, Some("/"), "en"),
+            (
+                "/en/test",
+                StatusCode::TEMPORARY_REDIRECT,
+                Some("/test"),
+                "en",
+            ),
+            ("/", StatusCode::OK, None, "en"),
+            ("/tr/test", StatusCode::OK, None, "tr"),
         ];
 
         for (path, code, location, locale) in cases {

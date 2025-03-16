@@ -19,6 +19,7 @@ use crate::locale::Locale;
 pub struct Render(Arc<Inner>);
 
 impl Render {
+    #[cfg(test)]
     pub fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
         Inner::new(templates).map(|inner| Render(Arc::new(inner)))
     }
@@ -106,30 +107,88 @@ fn invalid_locale(_: LanguageIdentifierError) -> tera::Error {
     "invalid locale".into()
 }
 
-fn get_value<T: DeserializeOwned>(args: &HashMap<String, Value>, k: &str) -> Option<T> {
-    args.get(k).cloned().and_then(|v| from_value::<T>(v).ok())
-}
-
 pub fn register_functions(
     tera: &mut Tera,
     l10n: Locale,
     pool: Pool,
-    plugin_host: PluginHost,
+    // plugin_host: PluginHost,
 ) {
     tera.register_function(
         "localize_url",
         |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let path = get_value::<String>(args, "path").ok_or_else(invalid_args)?;
+            let locale = args
+                .get("locale")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
 
-            Ok(to_value(path).unwrap())
+            let default_locale = args
+                .get("default_locale")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
+
+            if let Some(name) = args.get("page").and_then(|v| v.as_str()) {
+                let pages: Vec<&tera::Map<String, Value>> = args
+                    .get("pages")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.iter().flat_map(|f| f.as_object()).collect())
+                    .ok_or_else(invalid_args)?;
+
+                let path_params: Vec<&str> = args.get("params")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.iter().flat_map(|f| f.as_str()).collect())
+                    .ok_or_else(invalid_args)?;
+
+                for p in pages {
+                    let Some(page_name) = p.get("name").and_then(|v| v.as_str()) else {
+                        log::error!("Invalid page is encountered in localize_url, name is missing from the page");
+
+                        return Err(invalid_args());
+                    };
+
+                    let Some(page_locale) = p.get("locale").and_then(|v| v.as_str()) else {
+                        log::error!("Invalid page is encountered in localize_url, locale is missing from the page");
+
+                        return Err(invalid_args());
+                    };
+
+                    if name != page_name || locale != page_locale {
+                        continue;
+                    }
+
+                    let Some(path) = p.get("path").and_then(|v| v.as_str()) else {
+                        log::error!("Invalid page is encountered in localize_url, path is missing from the page");
+
+                        return Err(invalid_args());
+                    };
+
+                    let Some(path) = replace_params(path, &path_params) else {
+                        log::warn!("Invalid path or param is received while in localize_url, {path}, {path_params:?}");
+                        return Err(invalid_args());
+                    };
+
+                    return Ok(to_value(append_locale_to_path(&locale, &default_locale, &path)).unwrap());
+                }
+
+                return Err("unknown page".into());
+            } else if let Some(path) = args.get("path").and_then(|v| v.as_str()) {
+                return Ok(to_value(append_locale_to_path(locale, default_locale, path)).unwrap());
+            } else {
+                return Err(invalid_args());
+            }
         },
     );
 
     tera.register_function(
         "localize",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let key = get_value::<String>(args, "key").ok_or_else(invalid_args)?;
-            let locale = get_value::<String>(args, "locale")
+            let key = args
+                .get("key")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
+
+            let locale = args
+                .get("locale")
+                .and_then(|v| v.as_str())
                 .map(|locale| locale.parse::<LanguageIdentifier>())
                 .ok_or_else(invalid_args)?
                 .map_err(invalid_locale)?;
@@ -155,12 +214,12 @@ pub fn register_functions(
     tera.register_function(
         "asset_url",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let path = get_value::<String>(args, "path").ok_or_else(invalid_args)?;
+            let path = args
+                .get("path")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
 
-            match get_value::<String>(args, "kind")
-                .as_ref()
-                .map(|kind| kind.as_str())
-            {
+            match args.get("kind").and_then(|v| v.as_str()) {
                 Some("content") => Ok(to_value(format!("/assets/content/{path}")).unwrap()),
                 None => Ok(to_value(format!("/assets/static/{path}")).unwrap()),
                 _ => Err("unhandled asset kind".into()),
@@ -174,14 +233,13 @@ pub fn register_functions(
         tera.register_function(
             "get_content",
             move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-                let model = get_value::<String>(args, "model").ok_or_else(invalid_args)?;
-                let field = get_value::<String>(args, "field").ok_or_else(invalid_args)?;
-                let value = get_value::<String>(args, "value").ok_or_else(invalid_args)?;
+                let model = args.get("model").and_then(|v| v.as_str()).ok_or_else(invalid_args)?;
+                let field = args.get("field").and_then(|v| v.as_str()).ok_or_else(invalid_args)?;
+                let value = args.get("value").and_then(|v| v.as_str()).ok_or_else(invalid_args)?;
 
-                let locale = get_value::<String>(args, "locale")
-                    .map(|locale| locale.parse::<LanguageIdentifier>())
-                    .ok_or_else(invalid_args)?
-                    .map_err(invalid_locale)?;
+                let locale = args.get("locale")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(invalid_args)?;
 
                 let pool = pool.clone();
 
@@ -234,7 +292,7 @@ pub fn register_functions(
                             .filter(content_values::content_id.eq(content))
                             .filter(
                                 content_values::locale
-                                    .eq(format!("{locale}"))
+                                    .eq(locale)
                                     .or(content_values::locale.is_null()),
                             )
                             .order((content_values::content_id.asc(), content_values::id.asc()))
@@ -295,15 +353,20 @@ pub fn register_functions(
         tera.register_function(
             "get_contents",
             move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-                let model = get_value::<String>(args, "model").ok_or_else(invalid_args)?;
-                let fields = get_value::<Vec<String>>(args, "fields").ok_or_else(invalid_args)?;
+                let model = args.get("model").and_then(|v| v.as_str()).ok_or_else(invalid_args)?;
+                let fields: Vec<&str> = args
+                    .get("fields")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.iter().filter_map(|f| f.as_str()).collect())
+                    .ok_or_else(invalid_args)?;
 
-                let locale = get_value::<String>(args, "locale")
-                    .map(|locale| locale.parse::<LanguageIdentifier>())
-                    .ok_or_else(invalid_args)?
-                    .map_err(invalid_locale)?;
+                let locale = args.get("locale")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(invalid_args)?;
 
-                let filter = get_value::<(String, String)>(args, "filter");
+                let filter = args.get("filter")
+                    .cloned()
+                    .and_then(|v| from_value::<(String, String)>(v).ok());
 
                 if filter.is_none() && args.contains_key("filter") {
                     return Err("invalid args".into());
@@ -328,7 +391,7 @@ pub fn register_functions(
                                 .filter(mf1.field(model_fields::name).eq_any(&fields))
                                 .filter(
                                     cv1.field(content_values::locale)
-                                        .eq(format!("{locale}"))
+                                        .eq(locale)
                                         .or(cv1.field(content_values::locale).is_null()),
                                 )
                                 .filter(
@@ -357,7 +420,7 @@ pub fn register_functions(
                                 .filter(model_fields::name.eq_any(&fields))
                                 .filter(
                                     content_values::locale
-                                        .eq(format!("{locale}"))
+                                        .eq(locale)
                                         .or(content_values::locale.is_null()),
                                 )
                                 .order((content_values::content_id.asc(), content_values::id.asc()))
@@ -423,13 +486,15 @@ pub fn register_functions(
     tera.register_function(
         "get_enum_id",
         move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let (field, value) = match (
-                get_value::<String>(args, "field"),
-                get_value::<String>(args, "value"),
-            ) {
-                (Some(field), Some(value)) => (field, value),
-                _ => return Err("invalid args".into()),
-            };
+            let field = args
+                .get("field")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
+
+            let value = args
+                .get("value")
+                .and_then(|v| v.as_str())
+                .ok_or_else(invalid_args)?;
 
             let pool = pool.clone();
 
@@ -479,4 +544,90 @@ pub fn register_functions(
                 .map_err(|e| format!("failed to get content, {e:?}").into())
         },
     );
+}
+
+fn replace_params(mut path: &str, mut params: &[&str]) -> Option<String> {
+    let mut path_with_params = String::with_capacity(path.len());
+
+    while !path.is_empty() {
+        let Some((start, end)) = path.split_once('{') else {
+            path_with_params.push_str(path);
+            break;
+        };
+
+        path_with_params.push_str(start);
+
+        let (_, end) = end.split_once('}')?;
+
+        let param = params.get(0)?;
+
+        path_with_params.push_str(param);
+
+        path = end;
+        params = &params[1..];
+    }
+
+    Some(path_with_params)
+}
+
+fn append_locale_to_path<'a>(locale: &str, default_locale: &str, path: &str) -> String {
+    if locale == default_locale {
+        return path.to_string();
+    }
+
+    if path == "/" {
+        format!("/{locale}")
+    } else if path.starts_with('/') {
+        format!("/{locale}{path}")
+    } else {
+        format!("/{locale}/{path}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{append_locale_to_path, replace_params};
+
+    #[test]
+    fn it_replaces_parameters_inside_path_with_values_from_params() {
+        assert_eq!(
+            "/path/with/params",
+            replace_params("/path/{key}/params", &["with"]).unwrap()
+        );
+
+        assert_eq!(
+            "/random/url",
+            replace_params("/random/{key}", &["url"]).unwrap()
+        );
+
+        assert_eq!(
+            "/random/url",
+            replace_params("/{key1}/{key2}", &["random", "url"]).unwrap()
+        );
+    }
+
+    #[test]
+    fn it_returns_none_if_given_path_is_invalid_or_insufficient_params() {
+        assert!(replace_params("/{/invalid", &[]).is_none());
+
+        assert!(replace_params("/{}/valid-path-with-missing-param", &[]).is_none());
+    }
+
+    #[test]
+    fn it_appends_locale_to_path() {
+        assert_eq!("/tr/path", append_locale_to_path("tr", "en", "/path"));
+
+        assert_eq!("/tr", append_locale_to_path("tr", "en", "/"));
+
+        assert_eq!("/tr/test", append_locale_to_path("tr", "en", "test"));
+    }
+
+    #[test]
+    fn it_does_not_append_locale_to_path_if_it_is_default_one() {
+        assert_eq!("/", append_locale_to_path("en", "en", "/"));
+
+        assert_eq!("test", append_locale_to_path("en", "en", "test"));
+
+        assert_eq!("/path", append_locale_to_path("en", "en", "/path"));
+    }
 }
