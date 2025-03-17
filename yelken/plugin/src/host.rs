@@ -302,13 +302,13 @@ impl Inner {
         &self,
         plugin_id: &str,
         fn_id: &str,
-        opts: &[String],
+        opts: &[&str],
     ) -> Result<String> {
         let Some(handler) = self.handlers.iter().find(|h| h.plugin.1.id == plugin_id) else {
             return Err(anyhow!("Plugin not found"));
         };
 
-        call::<(&str, &[String]), (String,)>(
+        call::<(&str, &[&str]), (String,)>(
             &handler.plugin.0,
             &self.engine,
             &self.linker,

@@ -4,17 +4,15 @@ mod render;
 
 use std::{collections::HashMap, sync::Arc};
 
+use axum::{middleware, routing::post, Router};
 use fluent::{concurrent::FluentBundle, FluentResource};
 pub use handlers::serve_page;
 
-use base::{
-    schema::locales,
-    types::{Connection, Pool},
-};
+use base::{middlewares::auth, schema::locales, types::Connection, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use l10n::Locale;
-use render::Render;
+use render::{FnResources, Render};
 use unic_langid::LanguageIdentifier;
 
 pub async fn build_locale(locales_dir: &str, mut conn: Connection<'_>) -> Locale {
@@ -61,6 +59,12 @@ pub async fn build_locale(locales_dir: &str, mut conn: Connection<'_>) -> Locale
     Locale::new(supported_locales, default, bundles)
 }
 
-pub fn build_render(templates_dir: &str, l10n: Locale, pool: Pool) -> Render {
-    Render::from_dir(templates_dir, Some((l10n, pool))).unwrap()
+pub fn build_render(templates_dir: &str, resources: FnResources) -> Render {
+    Render::from_dir(templates_dir, Some(resources)).unwrap()
+}
+
+pub fn router(state: AppState) -> Router<AppState> {
+    Router::new()
+        .route("/templates/refresh", post(handlers::refresh_templates))
+        .layer(middleware::from_fn_with_state(state, auth))
 }

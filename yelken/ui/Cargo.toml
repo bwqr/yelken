@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 base.path = "../base"
+plugin = { path = "../plugin", optional = true }
 
 anyhow.workspace = true
 axum.workspace = true
@@ -18,3 +19,6 @@ fluent = { version = "0.16.1", default-features = false }
 matchit = "0.8.4"
 tera = { version = "1.20.0", default-features = false }
 unic-langid = "0.9.5"
+
+[features]
+plugin = ["dep:plugin"]

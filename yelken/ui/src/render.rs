@@ -14,6 +14,11 @@ use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
 use crate::l10n::Locale;
 
+#[cfg(feature = "plugin")]
+pub type FnResources = (Locale, Pool, plugin::PluginHost);
+#[cfg(not(feature = "plugin"))]
+pub type FnResources = (Locale, Pool);
+
 #[derive(Clone)]
 pub struct Render(Arc<ArcSwap<Inner>>);
 
@@ -23,11 +28,11 @@ impl Render {
         Inner::new(templates).map(|inner| Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
     }
 
-    pub fn from_dir(dir: &str, register_fns: Option<(Locale, Pool)>) -> Result<Self, Error> {
+    pub fn from_dir(dir: &str, register_fns: Option<FnResources>) -> Result<Self, Error> {
         let mut inner = Inner::from_dir(dir)?;
 
-        if let Some((l10n, pool)) = register_fns {
-            register_functions(&mut inner.tera, l10n, pool);
+        if let Some(resources) = register_fns {
+            register_functions(&mut inner.tera, resources);
         }
 
         Ok(Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
@@ -37,11 +42,11 @@ impl Render {
         Access::<Inner>::load(&*self.0).tera.render(template, ctx)
     }
 
-    pub fn refresh(&self, dir: &str, register_fns: Option<(Locale, Pool)>) -> Result<(), Error> {
+    pub fn refresh(&self, dir: &str, register_fns: Option<FnResources>) -> Result<(), Error> {
         let mut inner = Inner::from_dir(dir)?;
 
-        if let Some((l10n, pool)) = register_fns {
-            register_functions(&mut inner.tera, l10n, pool);
+        if let Some(resources) = register_fns {
+            register_functions(&mut inner.tera, resources);
         }
 
         self.0.store(Arc::new(inner));
@@ -110,12 +115,12 @@ fn invalid_locale(_: LanguageIdentifierError) -> tera::Error {
     "invalid locale".into()
 }
 
-pub fn register_functions(
-    tera: &mut Tera,
-    l10n: Locale,
-    pool: Pool,
-    // plugin_host: PluginHost,
-) {
+pub fn register_functions(tera: &mut Tera, resources: FnResources) {
+    #[cfg(feature = "plugin")]
+    let (l10n, pool, plugin_host) = resources;
+    #[cfg(not(feature = "plugin"))]
+    let (l10n, pool) = resources;
+
     tera.register_function(
         "localize_url",
         |args: &HashMap<String, Value>| -> tera::Result<Value> {
@@ -517,36 +522,46 @@ pub fn register_functions(
         },
     );
 
-    // tera.register_function(
-    //     "call_plugin",
-    //     move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-    //         let (plugin, fn_id, opts) = match (
-    //             get_value::<String>(args, "plugin"),
-    //             get_value::<String>(args, "fn_id"),
-    //             get_value::<Vec<String>>(args, "opts"),
-    //         ) {
-    //             (Some(plugin), Some(fn_id), Some(opts)) => (plugin, fn_id, opts),
-    //             _ => return Err("invalid args".into()),
-    //         };
+    #[cfg(feature = "plugin")]
+    {
+        tera.register_function(
+            "call_plugin",
+            move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+                let plugin = args
+                    .get("plugin")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(invalid_args)?;
 
-    //         let plugin_host = plugin_host.clone();
+                let fn_id = args
+                    .get("fn_id")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(invalid_args)?;
 
-    //         let values: Result<String, HttpError> =
-    //             tokio::runtime::Handle::current().block_on(async move {
-    //                 plugin_host
-    //                     .run_render_handler(&plugin, &fn_id, &opts)
-    //                     .await
-    //                     .inspect_err(|e| log::warn!("failed to run render handler, {e:?}"))
-    //                     .map_err(|_| {
-    //                         HttpError::internal_server_error("failed_running_render_plugin")
-    //                     })
-    //             });
+                let opts: Vec<&str> = args
+                    .get("opts")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.iter().flat_map(|f| f.as_str()).collect())
+                    .ok_or_else(invalid_args)?;
 
-    //         values
-    //             .map(|v| to_value(v).unwrap())
-    //             .map_err(|e| format!("failed to get content, {e:?}").into())
-    //     },
-    // );
+                let plugin_host = plugin_host.clone();
+
+                let values: Result<String, HttpError> =
+                    tokio::runtime::Handle::current().block_on(async move {
+                        plugin_host
+                            .run_render_handler(&plugin, &fn_id, &opts)
+                            .await
+                            .inspect_err(|e| log::warn!("failed to run render handler, {e:?}"))
+                            .map_err(|_| {
+                                HttpError::internal_server_error("failed_running_render_plugin")
+                            })
+                    });
+
+                values
+                    .map(|v| to_value(v).unwrap())
+                    .map_err(|e| format!("failed to get content, {e:?}").into())
+            },
+        );
+    }
 }
 
 fn replace_params(mut path: &str, mut params: &[&str]) -> Option<String> {

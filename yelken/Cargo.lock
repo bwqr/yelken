@@ -4287,6 +4287,7 @@ dependencies = [
  "fluent",
  "log",
  "matchit",
+ "plugin",
  "tera",
  "tokio",
  "unic-langid",

@@ -12,7 +12,6 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
 use tera::Context;
-// use plugin::PluginHost;
 use unic_langid::LanguageIdentifier;
 
 use crate::{l10n::Locale, render::Render};
@@ -247,6 +246,29 @@ pub async fn serve_page(
         )
             .into_response()),
     }
+}
+
+pub async fn refresh_templates(
+    State(state): State<AppState>,
+    Extension(l10n): Extension<Locale>,
+    Extension(renderer): Extension<Render>,
+    #[cfg(feature = "plugin")] Extension(plugin_host): Extension<plugin::PluginHost>,
+) -> Result<(), HttpError> {
+    #[cfg(feature = "plugin")]
+    let resources = (l10n, state.pool.clone(), plugin_host);
+    #[cfg(not(feature = "plugin"))]
+    let resources = (l10n, state.pool.clone());
+
+    renderer
+        .refresh(
+            &format!(
+                "{}/themes/{}/templates",
+                state.config.storage_dir, state.config.theme
+            ),
+            Some(resources),
+        )
+        .inspect_err(|e| log::warn!("Failed to refresh templates, {e:?}"))
+        .map_err(|_| HttpError::internal_server_error("failed_refreshing_templates"))
 }
 
 #[cfg(test)]

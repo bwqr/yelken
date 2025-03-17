@@ -83,102 +83,64 @@ async fn main() {
             ServeDir::new(format!("{}/content", storage_dir)),
         );
 
-    let app = {
-        #[cfg(feature = "app")]
-        {
-            app.nest("/yk/app", app_server::router(state.clone()))
-        }
-        #[cfg(not(feature = "app"))]
-        {
-            app
-        }
+    #[cfg(feature = "app")]
+    let app = app.nest("/yk/app", app_server::router(state.clone()));
+
+    #[cfg(feature = "auth")]
+    let app = app.nest("/api/auth", auth::router());
+
+    #[cfg(feature = "content")]
+    let app = app.nest("/api/content", content::router(state.clone()));
+
+    #[cfg(feature = "plugin")]
+    let (app, layers, plugin_host) = {
+        let plugin_host = plugin::PluginHost::new(
+            &format!("{storage_dir}/plugins"),
+            state.pool.get().await.unwrap(),
+        )
+        .await
+        .unwrap();
+
+        (
+            app.nest("/api/plugin", plugin::router(state.clone())),
+            layers.layer(Extension(plugin_host.clone())),
+            plugin_host,
+        )
     };
 
-    let app = {
-        #[cfg(feature = "auth")]
-        {
-            app.nest("/api/auth", auth::router())
-        }
-        #[cfg(not(feature = "auth"))]
-        {
-            app
-        }
-    };
-
-    let app = {
-        #[cfg(feature = "content")]
-        {
-            app.nest("/api/content", content::router(state.clone()))
-        }
-        #[cfg(not(feature = "content"))]
-        {
-            app
-        }
-    };
-
+    #[cfg(feature = "ui")]
     let (app, layers) = {
+        let l10n = ui::build_locale(
+            &format!(
+                "{}/themes/{}/locales",
+                state.config.storage_dir, state.config.theme
+            ),
+            state.pool.get().await.unwrap(),
+        )
+        .await;
+
         #[cfg(feature = "plugin")]
-        {
-            let plugin_host = plugin::PluginHost::new(
-                &format!("{storage_dir}/plugins"),
-                state.pool.get().await.unwrap(),
-            )
-            .await
-            .unwrap();
-
-            (
-                app.nest("/api/plugin", plugin::router(state.clone())),
-                layers.layer(Extension(plugin_host)),
-            )
-        }
+        let resources = (l10n.clone(), state.pool.clone(), plugin_host);
         #[cfg(not(feature = "plugin"))]
-        {
-            (app, layers)
-        }
+        let resources = (l10n.clone(), state.pool.clone());
+
+        let render = ui::build_render(
+            &format!(
+                "{}/themes/{}/templates",
+                state.config.storage_dir, state.config.theme
+            ),
+            resources,
+        );
+
+        (
+            app.nest("/api/ui", ui::router(state.clone()))
+                .fallback(ui::serve_page),
+            layers.layer(Extension(l10n)).layer(Extension(render)),
+        )
     };
 
-    let (app, layers) = {
-        #[cfg(feature = "ui")]
-        {
-            let l10n = ui::build_locale(
-                &format!(
-                    "{}/themes/{}/locales",
-                    state.config.storage_dir, state.config.theme
-                ),
-                state.pool.get().await.unwrap(),
-            )
-            .await;
-
-            let render = ui::build_render(
-                &format!(
-                    "{}/themes/{}/templates",
-                    state.config.storage_dir, state.config.theme
-                ),
-                l10n.clone(),
-                state.pool.clone(),
-            );
-
-            (
-                app.fallback(ui::serve_page),
-                layers.layer(Extension(l10n)).layer(Extension(render)),
-            )
-        }
-        #[cfg(not(feature = "ui"))]
-        {
-            (app, layers)
-        }
-    };
-
-    let app = {
-        #[cfg(feature = "user")]
-        {
-            app.nest("/api/user", user::router(state.clone()))
-        }
-        #[cfg(not(feature = "user"))]
-        {
-            app
-        }
-    };
+    #[cfg(feature = "user")]
+    let app = app.nest("/api/user", user::router(state.clone()));
 
     let app = app
         .with_state(state)
