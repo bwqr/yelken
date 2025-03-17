@@ -1,5 +1,5 @@
 [package]
-name = "management"
+name = "app_server"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ base.path = "../base"
 content.path = "../content"
 plugin.path = "../plugin"
 shared = { path = "../shared", features = ["user"] }
-ui.path = "../ui"
+app.path = "../app"
 
 anyhow.workspace = true
 axum.workspace = true

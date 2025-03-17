@@ -13,12 +13,14 @@ use hydration_context::{SharedContext, SsrSharedContext};
 use leptos::prelude::{provide_context, Owner, RenderHtml};
 use leptos_router::location::RequestUrl;
 
+use app::Config;
 use base::{models::AuthUser, AppState};
 use plugin::PluginHost;
 use resources::{ContentContext, PluginContext, UserContext};
-use ui::Config;
 
 mod resources;
+
+const APP_ROOT: &str = "/yk/app";
 
 struct IndexHtml {
     head: String,
@@ -65,18 +67,12 @@ async fn handle_auth_req(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let config = Config::new(
-        state.config.app_root.clone(),
-        state.config.api_origin.clone(),
-    );
+    let config = Config::new(APP_ROOT.to_string(), state.config.api_origin.clone());
 
     let body = Owner::new_root(None).with(move || {
-        provide_context(RequestUrl::new(&format!(
-            "{}/auth{}",
-            state.config.app_root, url
-        )));
+        provide_context(RequestUrl::new(&format!("{}/auth{}", APP_ROOT, url)));
 
-        ui::Auth(ui::AuthProps { config }).to_html()
+        app::Auth(app::AuthProps { config }).to_html()
     });
 
     Html(format!(
@@ -98,7 +94,7 @@ async fn handle_req(
     }
 
     let Some(auth_user) = auth_user else {
-        return Redirect::to(&format!("{}/auth/login", state.config.app_root)).into_response();
+        return Redirect::to(&format!("{}/auth/login", APP_ROOT)).into_response();
     };
 
     let url = req
@@ -107,10 +103,7 @@ async fn handle_req(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let config = Config::new(
-        state.config.app_root.clone(),
-        state.config.api_origin.clone(),
-    );
+    let config = Config::new(APP_ROOT.to_string(), state.config.api_origin.clone());
 
     let shared_context = Arc::new(SsrSharedContext::new());
 
@@ -118,12 +111,9 @@ async fn handle_req(
         Arc::clone(&shared_context) as Arc<dyn SharedContext + Send + Sync>
     ))
     .with(move || {
-        provide_context(RequestUrl::new(&format!(
-            "{}{}",
-            state.config.app_root, url
-        )));
+        provide_context(RequestUrl::new(&format!("{}{}", APP_ROOT, url)));
 
-        ui::App(ui::AppProps {
+        app::App(app::AppProps {
             config,
             user_resource: UserContext::new(auth_user),
             plugin_resource: PluginContext::new(plugin_host, state.clone()),

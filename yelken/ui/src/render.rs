@@ -1,27 +1,26 @@
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::ops::Deref;
 use std::sync::Arc;
 
+use arc_swap::{access::Access, ArcSwap};
 use base::models::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use base::types::Pool;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use plugin::PluginHost;
-use serde::de::DeserializeOwned;
+// use plugin::PluginHost;
 use tera::{from_value, to_value, Context, Error, Tera, Value};
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
-use crate::locale::Locale;
+use crate::l10n::Locale;
 
 #[derive(Clone)]
-pub struct Render(Arc<Inner>);
+pub struct Render(Arc<ArcSwap<Inner>>);
 
 impl Render {
     #[cfg(test)]
     pub fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
-        Inner::new(templates).map(|inner| Render(Arc::new(inner)))
+        Inner::new(templates).map(|inner| Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
     }
 
     pub fn from_dir(dir: &str, register_fns: Option<(Locale, Pool)>) -> Result<Self, Error> {
@@ -31,15 +30,23 @@ impl Render {
             register_functions(&mut inner.tera, l10n, pool);
         }
 
-        Ok(Render(Arc::new(inner)))
+        Ok(Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
     }
-}
 
-impl Deref for Render {
-    type Target = Inner;
+    pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
+        Access::<Inner>::load(&*self.0).tera.render(template, ctx)
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &*self.0
+    pub fn refresh(&self, dir: &str, register_fns: Option<(Locale, Pool)>) -> Result<(), Error> {
+        let mut inner = Inner::from_dir(dir)?;
+
+        if let Some((l10n, pool)) = register_fns {
+            register_functions(&mut inner.tera, l10n, pool);
+        }
+
+        self.0.store(Arc::new(inner));
+
+        Ok(())
     }
 }
 
@@ -48,10 +55,6 @@ pub struct Inner {
 }
 
 impl Inner {
-    pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
-        self.tera.render(template, ctx)
-    }
-
     fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
         let mut tera = Tera::default();
 
@@ -514,36 +517,36 @@ pub fn register_functions(
         },
     );
 
-    tera.register_function(
-        "call_plugin",
-        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let (plugin, fn_id, opts) = match (
-                get_value::<String>(args, "plugin"),
-                get_value::<String>(args, "fn_id"),
-                get_value::<Vec<String>>(args, "opts"),
-            ) {
-                (Some(plugin), Some(fn_id), Some(opts)) => (plugin, fn_id, opts),
-                _ => return Err("invalid args".into()),
-            };
+    // tera.register_function(
+    //     "call_plugin",
+    //     move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+    //         let (plugin, fn_id, opts) = match (
+    //             get_value::<String>(args, "plugin"),
+    //             get_value::<String>(args, "fn_id"),
+    //             get_value::<Vec<String>>(args, "opts"),
+    //         ) {
+    //             (Some(plugin), Some(fn_id), Some(opts)) => (plugin, fn_id, opts),
+    //             _ => return Err("invalid args".into()),
+    //         };
 
-            let plugin_host = plugin_host.clone();
+    //         let plugin_host = plugin_host.clone();
 
-            let values: Result<String, HttpError> =
-                tokio::runtime::Handle::current().block_on(async move {
-                    plugin_host
-                        .run_render_handler(&plugin, &fn_id, &opts)
-                        .await
-                        .inspect_err(|e| log::warn!("failed to run render handler, {e:?}"))
-                        .map_err(|_| {
-                            HttpError::internal_server_error("failed_running_render_plugin")
-                        })
-                });
+    //         let values: Result<String, HttpError> =
+    //             tokio::runtime::Handle::current().block_on(async move {
+    //                 plugin_host
+    //                     .run_render_handler(&plugin, &fn_id, &opts)
+    //                     .await
+    //                     .inspect_err(|e| log::warn!("failed to run render handler, {e:?}"))
+    //                     .map_err(|_| {
+    //                         HttpError::internal_server_error("failed_running_render_plugin")
+    //                     })
+    //             });
 
-            values
-                .map(|v| to_value(v).unwrap())
-                .map_err(|e| format!("failed to get content, {e:?}").into())
-        },
-    );
+    //         values
+    //             .map(|v| to_value(v).unwrap())
+    //             .map_err(|e| format!("failed to get content, {e:?}").into())
+    //     },
+    // );
 }
 
 fn replace_params(mut path: &str, mut params: &[&str]) -> Option<String> {
@@ -577,10 +580,8 @@ fn append_locale_to_path<'a>(locale: &str, default_locale: &str, path: &str) -> 
 
     if path == "/" {
         format!("/{locale}")
-    } else if path.starts_with('/') {
-        format!("/{locale}{path}")
     } else {
-        format!("/{locale}/{path}")
+        format!("/{locale}{path}")
     }
 }
 
@@ -619,7 +620,7 @@ mod tests {
 
         assert_eq!("/tr", append_locale_to_path("tr", "en", "/"));
 
-        assert_eq!("/tr/test", append_locale_to_path("tr", "en", "test"));
+        assert_eq!("/trtest", append_locale_to_path("tr", "en", "test"));
     }
 
     #[test]

@@ -15,7 +15,7 @@ use tera::Context;
 // use plugin::PluginHost;
 use unic_langid::LanguageIdentifier;
 
-use crate::{locale::Locale, render::Render};
+use crate::{l10n::Locale, render::Render};
 
 fn resolve_locale<'a>(
     req: &'a Request,
@@ -100,7 +100,6 @@ pub async fn serve_page(
                 [
                     ("name", page.0.clone()),
                     ("path", page.1.clone()),
-                    ("template", page.2.clone()),
                     (
                         "locale",
                         page.3
@@ -139,14 +138,17 @@ pub async fn serve_page(
                 _ => path.to_string(),
             };
 
-            if let Err(e) = router.insert(localized_path, (name.clone(), template, locale)) {
+            if let Err(e) = router.insert(
+                localized_path,
+                (name.clone(), path.clone(), template, locale),
+            ) {
                 log::warn!("Failed to add path {path} of page {name} due to {e:?}");
             }
         });
 
     let Ok(Match {
         params,
-        value: (name, template, page_locale),
+        value: (name, path, template, page_locale),
     }) = router.at(req.uri().path())
     else {
         if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
@@ -215,9 +217,20 @@ pub async fn serve_page(
             params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
         ),
     );
+    context.insert("pages", &template_pages);
     context.insert(
-        "pages",
-        &template_pages,
+        "page",
+        &HashMap::<&'static str, String>::from_iter([
+            ("name", name.clone()),
+            ("path", path.clone()),
+            (
+                "locale",
+                page_locale
+                    .as_ref()
+                    .map(|l| l.to_string())
+                    .unwrap_or("".to_string()),
+            ),
+        ]),
     );
 
     let template = template.clone();
@@ -258,7 +271,7 @@ mod tests {
     use diesel_async::RunQueryDsl;
     use unic_langid::LanguageIdentifier;
 
-    use crate::{locale::Locale, render::Render};
+    use crate::{l10n::Locale, render::Render};
 
     use super::resolve_locale;
 

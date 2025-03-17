@@ -1,6 +1,6 @@
 use leptos::prelude::IntoAny;
 use resources::{ContentResources, PluginResources, UserResources};
-use ui::{App, AppProps, Auth, AuthProps, Config};
+use app::{App, AppProps, Auth, AuthProps, Config};
 
 mod log;
 mod resources;

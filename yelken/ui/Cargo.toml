@@ -4,21 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared", features = ["auth", "content", "plugin", "user"] }
+base.path = "../base"
 
-leptos.workspace = true
-leptos_i18n = { workspace = true, features = ["json_files"] }
-leptos_router.workspace = true
+anyhow.workspace = true
+axum.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
 log.workspace = true
-reqwest = { workspace = true, optional = true }
-serde.workspace = true
-wasm-bindgen = { workspace = true, optional = true }
-web-sys = { workspace = true, features = ["Document", "HtmlDocument", "Storage", "Window"], optional = true }
+tokio.workspace = true
 
-[features]
-web = ["dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]
-
-[package.metadata.leptos-i18n]
-default = "en"
-locales = ["en", "tr"]
-namespaces = ["sidenav"]
+arc-swap = "1.7.1"
+fluent = { version = "0.16.1", default-features = false }
+matchit = "0.8.4"
+tera = { version = "1.20.0", default-features = false }
+unic-langid = "0.9.5"

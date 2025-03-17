@@ -8,7 +8,7 @@ use shared::{
     plugin::Plugin,
     user::User,
 };
-use ui::{ContentResource, PluginResource, UserResource};
+use app::{ContentResource, PluginResource, UserResource};
 
 #[derive(Clone)]
 pub struct PluginContext {

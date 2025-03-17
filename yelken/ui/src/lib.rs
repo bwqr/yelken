@@ -1,100 +1,66 @@
-use std::sync::Arc;
+mod handlers;
+mod l10n;
+mod render;
 
-use content::ContentStore;
-use leptos::prelude::*;
-use leptos_router::components::*;
-use leptos_router::path;
+use std::{collections::HashMap, sync::Arc};
 
-mod auth;
-mod config;
-mod content;
-mod dashboard;
-mod nav;
-mod plugin;
-mod settings;
-mod user;
+use fluent::{concurrent::FluentBundle, FluentResource};
+pub use handlers::serve_page;
 
-pub use auth::{Auth, AuthProps};
-pub use config::Config;
-pub use content::ContentResource;
-use content::Models;
-use plugin::PluginManager;
-pub use plugin::PluginResource;
-use settings::Settings;
-pub use user::UserResource;
+use base::{
+    schema::locales,
+    types::{Connection, Pool},
+};
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+use l10n::Locale;
+use render::Render;
+use unic_langid::LanguageIdentifier;
 
-use crate::i18n::I18nContextProvider;
-use dashboard::Dashboard;
-use nav::{SideNav, TopBar};
-use plugin::Plugin;
-use user::UserStore;
+pub async fn build_locale(locales_dir: &str, mut conn: Connection<'_>) -> Locale {
+    let locales = locales::table
+        .select(locales::key)
+        .load::<String>(&mut conn)
+        .await
+        .unwrap();
 
-// Load i18n
-leptos_i18n::load_locales!();
+    let default: LanguageIdentifier = match locales.get(0).map(|locale| locale.parse()) {
+        Some(Ok(locale)) => locale,
+        _ => {
+            log::warn!("Either there is no locale in database or an invalid one exists, using default locale \"en\"");
 
-#[component(transparent)]
-fn BackgroundServices(children: ChildrenFn) -> impl IntoView {
-    let content_resource = expect_context::<Arc<dyn ContentResource>>();
-    let user_resource = expect_context::<Arc<dyn UserResource>>();
+            "en".parse().unwrap()
+        }
+    };
 
-    let fields = OnceResource::new(content_resource.fetch_fields());
-    let user = OnceResource::new(user_resource.fetch_user());
-    let children = StoredValue::new(children);
+    let supported_locales: Arc<[LanguageIdentifier]> = locales
+        .into_iter()
+        .flat_map(|locale| {
+            locale
+                .parse()
+                .inspect_err(|e| log::warn!("Failed to parse locale {locale} due to {e:?}"))
+                .ok()
+        })
+        .collect();
 
-    view! {
-        <Suspense fallback=move || view! { <p>"Loading"</p> }>
-            {move || Suspend::new(async move {
-                let (user, fields) = match (user.await, fields.await) {
-                    (Ok(user), Ok(fields)) => (user, fields),
-                    _ => return view! { <p>"Failed to load user "</p> }.into_any()
-                };
+    let bundles = HashMap::from_iter(supported_locales.iter().cloned().map(|id| {
+        let mut bundle = FluentBundle::new_concurrent(vec![id.clone(), default.clone()]);
 
-                provide_context(ContentStore::new(fields));
-                provide_context(UserStore::new(user));
+        let resource = FluentResource::try_new(
+            std::fs::read_to_string(format!("{locales_dir}/{id}.ftl")).unwrap(),
+        )
+        .unwrap();
 
-                view! {{children.read_value()()}}.into_any()
-            })}
-        </Suspense>
-    }
+        if let Err(e) = bundle.add_resource(resource) {
+            log::warn!("Failed to add resource to localization bundle, {e:?}");
+        }
+
+        (id, bundle)
+    }));
+
+    Locale::new(supported_locales, default, bundles)
 }
 
-#[component]
-pub fn App<U: UserResource, P: PluginResource, C: ContentResource>(
-    config: Config,
-    user_resource: U,
-    plugin_resource: P,
-    content_resource: C,
-) -> impl IntoView {
-    let base = config.base.clone();
-
-    provide_context(config);
-    provide_context::<Arc<dyn UserResource>>(Arc::new(user_resource));
-    provide_context::<Arc<dyn PluginResource>>(Arc::new(plugin_resource));
-    provide_context::<Arc<dyn ContentResource>>(Arc::new(content_resource));
-
-    view! {
-        <I18nContextProvider>
-            <Router base>
-                <div class="d-flex">
-                    <SideNav/>
-
-                    <main class="flex-grow-1">
-                        <BackgroundServices>
-                            <TopBar/>
-
-                            <Routes fallback=|| "Not found.">
-                                <ParentRoute path=path!("") view=Outlet>
-                                    <Route path=path!("") view=Dashboard/>
-                                    <Route path=path!("models") view=Models/>
-                                    <Route path=path!("plugin-manager") view=PluginManager/>
-                                    <Route path=path!("settings") view=Settings/>
-                                    <Route path=path!("plugin/:plugin") view=Plugin/>
-                                </ParentRoute>
-                            </Routes>
-                        </BackgroundServices>
-                    </main>
-                </div>
-            </Router>
-        </I18nContextProvider>
-    }
+pub fn build_render(templates_dir: &str, l10n: Locale, pool: Pool) -> Render {
+    Render::from_dir(templates_dir, Some((l10n, pool))).unwrap()
 }

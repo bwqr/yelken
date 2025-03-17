@@ -1,11 +1,11 @@
 [package]
-name = "web"
+name = "app_client"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 shared = { path = "../shared", features = ["user"] }
-ui = { path = "../ui", features = ["web"] }
+app = { path = "../app", features = ["web"] }
 
 console_error_panic_hook = "0.1.7"
 leptos_i18n.workspace = true

@@ -1,14 +1,15 @@
 [workspace]
 members = [
+  "app",
+  "app-client",
+  "app-server",
   "auth",
   "base",
   "content",
-  "management",
   "plugin",
   "shared",
   "ui",
   "user",
-  "web",
 ]
 
 [package]
@@ -35,12 +36,13 @@ wasm-bindgen = "0.2.100"
 web-sys = "0.3.77"
 
 [dependencies]
-auth.path = "./auth"
+auth = { path = "./auth", optional = true }
 base.path = "./base"
-content.path = "./content"
-management.path = "./management"
-plugin.path = "./plugin"
-user.path = "./user"
+content = { path = "./content", optional = true }
+app_server = { path = "./app-server", optional = true }
+plugin = { path = "./plugin", optional = true }
+ui = { path = "./ui", optional = true }
+user = { path = "./user", optional = true }
 
 anyhow.workspace = true
 axum.workspace = true
@@ -53,10 +55,6 @@ serde.workspace = true
 tokio.workspace = true
 tower = "0.5.2"
 tower-http = { version = "0.6.2", features = ["cors", "fs"] }
-tera = { version = "1.20.0", default-features = false }
-matchit = "0.8.4"
-fluent = { version = "0.16.1", default-features = false }
-unic-langid = "0.9.5"
 
 [profile.dev]
 debug = false
@@ -69,3 +67,12 @@ inherits = "dev"
 
 [profile.release]
 lto = true
+
+[features]
+default = ["app", "auth", "content", "ui", "user"]
+auth = ["dep:auth"]
+content = ["dep:content"]
+app = ["dep:app_server"]
+plugin = ["dep:plugin"]
+ui = ["dep:ui"]
+user = ["dep:user"]
