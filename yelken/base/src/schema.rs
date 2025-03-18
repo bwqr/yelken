@@ -40,6 +40,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    form_submissions (id) {
+        id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        values -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     locales (key) {
         #[max_length = 8]
         key -> Varchar,
@@ -128,6 +138,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     contents,
     enum_options,
     fields,
+    form_submissions,
     locales,
     model_fields,
     models,

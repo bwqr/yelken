@@ -88,3 +88,10 @@ create table pages(
     unique (path, locale),
     constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
 );
+
+create table form_submissions(
+    id         serial primary key not null,
+    name       varchar(255) not null,
+    values     text         not null,
+    created_at timestamp    not null default current_timestamp
+);

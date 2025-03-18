@@ -1,0 +1,13 @@
+[package]
+name = "form"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base.path = "../base"
+
+anyhow.workspace = true
+axum.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
+log.workspace = true

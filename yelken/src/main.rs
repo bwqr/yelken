@@ -92,6 +92,9 @@ async fn main() {
     #[cfg(feature = "content")]
     let app = app.nest("/api/content", content::router(state.clone()));
 
+    #[cfg(feature = "form")]
+    let app = app.nest("/yk/form", form::router());
+
     #[cfg(feature = "plugin")]
     let (app, layers, plugin_host) = {
         let plugin_host = plugin::PluginHost::new(
