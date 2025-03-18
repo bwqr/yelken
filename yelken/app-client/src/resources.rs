@@ -1,12 +1,12 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
+use app::{Config, ContentResource, PluginResource, UserResource};
 use send_wrapper::SendWrapper;
 use shared::{
     content::{Field, Model},
     plugin::Plugin,
     user::User,
 };
-use app::{Config, ContentResource, PluginResource, UserResource};
 
 #[derive(Clone)]
 pub struct PluginResources {
@@ -19,6 +19,7 @@ impl PluginResources {
     }
 }
 
+#[cfg(feature = "plugin")]
 impl PluginResource for PluginResources {
     fn fetch_plugins(&self) -> Pin<Box<dyn Future<Output = Result<Vec<Plugin>, String>> + Send>> {
         let url = format!("{}/api/plugin/plugins", self.config.api_url);
@@ -50,6 +51,13 @@ impl PluginResource for PluginResources {
 
             resp.json().await.map_err(|err| format!("{err:?}"))
         }))
+    }
+}
+
+#[cfg(not(feature = "plugin"))]
+impl PluginResource for PluginResources {
+    fn fetch_plugins(&self) -> Pin<Box<dyn Future<Output = Result<Vec<Plugin>, String>> + Send>> {
+        Box::pin(async { Err("Feature is not enabled".to_string()) })
     }
 }
 
