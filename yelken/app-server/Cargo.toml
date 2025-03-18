@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 base.path = "../base"
 content.path = "../content"
-plugin.path = "../plugin"
+plugin = { path = "../plugin", optional = true }
 shared = { path = "../shared", features = ["user"] }
 app.path = "../app"
 
@@ -24,3 +24,6 @@ tokio.workspace = true
 any_spawner = { version = "0.2.0", features = ["tokio"] }
 
 hydration_context = "0.2.1"
+
+[features]
+plugin = ["dep:plugin"]

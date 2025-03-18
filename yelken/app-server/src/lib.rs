@@ -15,7 +15,6 @@ use leptos_router::location::RequestUrl;
 
 use app::Config;
 use base::{models::AuthUser, AppState};
-use plugin::PluginHost;
 use resources::{ContentContext, PluginContext, UserContext};
 
 mod resources;
@@ -84,7 +83,7 @@ async fn handle_auth_req(
 
 async fn handle_req(
     State(state): State<AppState>,
-    Extension(plugin_host): Extension<PluginHost>,
+    #[cfg(feature = "plugin")] Extension(plugin_host): Extension<plugin::PluginHost>,
     Extension(index_html): Extension<Arc<IndexHtml>>,
     auth_user: Option<AuthUser>,
     req: Request,
@@ -113,10 +112,15 @@ async fn handle_req(
     .with(move || {
         provide_context(RequestUrl::new(&format!("{}{}", APP_ROOT, url)));
 
+        #[cfg(feature = "plugin")]
+        let plugin_resource = PluginContext::new(plugin_host, state.clone());
+        #[cfg(not(feature = "plugin"))]
+        let plugin_resource = PluginContext;
+
         app::App(app::AppProps {
             config,
             user_resource: UserContext::new(auth_user),
-            plugin_resource: PluginContext::new(plugin_host, state.clone()),
+            plugin_resource,
             content_resource: ContentContext::new(state.clone()),
         })
         .to_html_stream_in_order()

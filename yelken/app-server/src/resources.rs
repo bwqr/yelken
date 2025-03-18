@@ -1,38 +1,70 @@
 use std::{future::Future, pin::Pin, sync::Arc};
 
-use axum::{extract::State, Extension};
+use app::{ContentResource, UserResource};
+use axum::extract::State;
 use base::{models::AuthUser, AppState};
-use plugin::PluginHost;
 use shared::{
     content::{Field, Model},
-    plugin::Plugin,
     user::User,
 };
-use app::{ContentResource, PluginResource, UserResource};
 
-#[derive(Clone)]
-pub struct PluginContext {
-    plugin_host: PluginHost,
-    state: AppState,
-}
+pub use plugin::PluginContext;
 
-impl PluginContext {
-    pub fn new(plugin_host: PluginHost, state: AppState) -> Self {
-        Self { plugin_host, state }
+#[cfg(feature = "plugin")]
+mod plugin {
+    use std::{future::Future, pin::Pin};
+
+    use app::PluginResource;
+    use axum::{extract::State, Extension};
+    use base::AppState;
+    use plugin::PluginHost;
+    use shared::plugin::Plugin;
+
+    #[derive(Clone)]
+    pub struct PluginContext {
+        plugin_host: PluginHost,
+        state: AppState,
+    }
+
+    impl PluginContext {
+        pub fn new(plugin_host: PluginHost, state: AppState) -> Self {
+            Self { plugin_host, state }
+        }
+    }
+
+    impl PluginResource for PluginContext {
+        fn fetch_plugins(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<Plugin>, String>> + Send>> {
+            let state = self.state.clone();
+            let plugin_host = self.plugin_host.clone();
+
+            Box::pin(async move {
+                plugin::fetch_plugins(State(state), Extension(plugin_host))
+                    .await
+                    .map(|json| json.0)
+                    .map_err(|e| e.error.to_string())
+            })
+        }
     }
 }
 
-impl PluginResource for PluginContext {
-    fn fetch_plugins(&self) -> Pin<Box<dyn Future<Output = Result<Vec<Plugin>, String>> + Send>> {
-        let state = self.state.clone();
-        let plugin_host = self.plugin_host.clone();
+#[cfg(not(feature = "plugin"))]
+mod plugin {
+    use std::{future::Future, pin::Pin};
 
-        Box::pin(async move {
-            plugin::fetch_plugins(State(state), Extension(plugin_host))
-                .await
-                .map(|json| json.0)
-                .map_err(|e| e.error.to_string())
-        })
+    use app::PluginResource;
+    use shared::plugin::Plugin;
+
+    #[derive(Clone)]
+    pub struct PluginContext;
+
+    impl PluginResource for PluginContext {
+        fn fetch_plugins(
+            &self,
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<Plugin>, String>> + Send>> {
+            Box::pin(async { Ok(vec![]) })
+        }
     }
 }
 
