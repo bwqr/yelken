@@ -27,14 +27,10 @@ struct IndexHtml {
     tail: String,
 }
 
-pub fn router(state: AppState) -> Router<AppState> {
+pub fn router(state: AppState, app_assets_dir: &str) -> Router<AppState> {
     any_spawner::Executor::init_tokio().unwrap();
 
-    let index_html = std::fs::read_to_string(format!(
-        "{}/assets/yelken/index.html",
-        state.config.storage_dir
-    ))
-    .unwrap();
+    let index_html = std::fs::read_to_string(format!("{}/index.html", app_assets_dir,)).unwrap();
 
     let (head, body) = index_html.split_once("<!--YELKEN_META-->").unwrap();
     let (body, tail) = body.split_once("<!--YELKEN_SCRIPTS-->").unwrap();

@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use anyhow::Context;
 use axum::{
     extract::Request,
     http::{self, HeaderValue},
@@ -38,11 +37,9 @@ async fn logger(req: Request, next: Next) -> Response {
 
 #[tokio::main]
 async fn main() {
-    env_logger::builder().parse_filters("info").init();
+    dotenvy::from_path("./.env").ok();
 
-    dotenvy::from_path("./.env")
-        .context("could not load environment variables from file ./.env")
-        .unwrap();
+    env_logger::init();
 
     let config = Config::from_env().unwrap();
     let storage_dir = config.storage_dir.clone();
@@ -84,7 +81,15 @@ async fn main() {
         );
 
     #[cfg(feature = "app")]
-    let app = app.nest("/yk/app", app_server::router(state.clone()));
+    let app = app.nest(
+        "/yk/app",
+        app_server::router(state.clone(), &server_config.app_assets_dir),
+    );
+    #[cfg(feature = "app")]
+    let app = app.nest_service(
+        "/assets/yelken",
+        ServeDir::new(server_config.app_assets_dir),
+    );
 
     #[cfg(feature = "auth")]
     let app = app.nest("/api/auth", auth::router());

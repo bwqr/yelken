@@ -5,6 +5,7 @@ use anyhow::{Context, Result};
 pub struct ServerConfig {
     pub address: SocketAddrV4,
     pub database_url: String,
+    pub app_assets_dir: String,
 }
 
 impl ServerConfig {
@@ -19,9 +20,13 @@ impl ServerConfig {
         let database_url =
             std::env::var("YELKEN_DATABASE_URL").context("YELKEN_DATABASE_URL is not defined")?;
 
+        let app_assets_dir = std::env::var("YELKEN_APP_ASSETS_DIR")
+            .context("YELKEN_APP_ASSETS_DIR is not defined")?;
+
         Ok(Self {
             address,
             database_url,
+            app_assets_dir,
         })
     }
 }

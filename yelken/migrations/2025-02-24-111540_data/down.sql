@@ -8,6 +8,8 @@ delete from model_fields;
 
 delete from models;
 
+delete from enum_options;
+
 delete from fields;
 
 delete from locales;
