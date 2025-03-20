@@ -1,10 +1,17 @@
 # Yelken
 
-[!NOTE]
-Yelken is in its early stages where most of its functionalities are not implemented, it has missing documentation and lacks necessary guidance.
+> [!NOTE]
+> Yelken is in its early stages where most of its functionalities are not implemented, it has missing documentation and lacks necessary guidance. Organization of this repository is a little bit clumsy at the moment.
 
 Yelken is a Content Management System (CMS) that aims to be secure by design, extendable with plugins while staying speedy.
 It utilizes Rust programming language and libraries developed around it to achieve its goals.
+
+The main goals of Yelken can be described as
+* Stay secure against plugins and malicious user requests
+* Require very low compute resources and be very fast
+* Have an extendable architecture with plugins and themes
+* Keep deployment to anywhere very easy
+
 
 ## Features
 
@@ -19,7 +26,6 @@ It utilizes Rust programming language and libraries developed around it to achie
   * Implemented as a PoC, needs required capabilities of plugins to be identified
 * [ ] Observability (exposes various metrics as time series data)
 * [ ] Permission System (for users and also plugins)
-* [ ] Easy to deploy and setup (support different databases, e.g. sqlite, mysql, postgresql)
 
 ## Documentation
 
