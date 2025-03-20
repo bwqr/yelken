@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block init %}
+  {% set article = get_content(model="article", field="slug", value=params.slug, locale=locale) %}
+{% endblock init %}
+
+{% block title %}{{ super() }} - {{ article.title }}{% endblock title %}
+
+{% block body %}
+  <h1>{{ article.title }}</h1>
+  <p>{{ article.content }}</p>
+{% endblock body %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block body %}
+  <ul>
+  {% for article in get_contents(model="article", fields=["title", "slug"], locale=locale) %}
+    <li><a href="/article/{{ article.slug }}">{{ article.title }}</a></li>
+  {% endfor %}
+  <ul>
+{% endblock body %}

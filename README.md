@@ -5,6 +5,7 @@
 
 Yelken is a Content Management System (CMS) that aims to be secure by design, extendable with plugins while staying speedy.
 It utilizes Rust programming language and libraries developed around it to achieve its goals.
+Literary, Yelken is Turkish word that means **sail** in English.
 
 The main goals of Yelken can be described as
 * Stay secure against plugins and malicious user requests
@@ -15,11 +16,11 @@ The main goals of Yelken can be described as
 
 ## Features
 
-* [ ] Content management (define your own model to have different kind of contents)
+* [ ] Content management with built in localization support (define your own model to have different kind of contents)
   * Implemented as a Proof of Concept (PoC)
 * [ ] Admin UI
   * implemented as a PoC
-* [ ] Templating (based on Jinja2, enables theming your website)
+* [ ] Templating to manage look of your website (based on Jinja2, enables theming your website)
   * Implemented as a PoC, functions exposed to templates will change
 * [ ] Receiving input from users (form handling)
 * [ ] Powerful plugin system (supports plugins written in other programming languages thanks to WebAssembly, e.g., Rust, C, Go, Javascript, Python, etc.)
