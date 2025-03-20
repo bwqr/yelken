@@ -1,25 +1,25 @@
 # Yelken
 
-Yelken is a Content Management System (CMS) that aims being secure by design, extendable with plugins while staying speedy.
+[!NOTE]
+Yelken is in its early stages where most of its functionalities are not implemented, it has missing documentation and lacks necessary guidance.
+
+Yelken is a Content Management System (CMS) that aims to be secure by design, extendable with plugins while staying speedy.
+It utilizes Rust programming language and libraries developed around it to achieve its goals.
 
 ## Features
 
-* [ ] Content Management
-  * Asset
-* [ ] Powerful template system
-  * Enables theming
-* [ ] Form handling
-* [ ] Advanced plugin system
-  * Supports plugins written in many different programming languages thanks to WebAssembly (e.g., C, Go, Javascript, Python, etc.)
-* [ ] Observability
-  * [ ] Expose various metrics about system as time series data (e.g. to be collected by Prometheus)
-* [ ] Permission System
-  * [ ] For users
-  * [ ] For plugins
-* Easy to deploy and setup
-  * Supporting different databases (sqlite, mysql, postgresql)
-  * Import or export contents
-* SEO Optimized
+* [ ] Content management (define your own model to have different kind of contents)
+  * Implemented as a Proof of Concept (PoC)
+* [ ] Admin UI
+  * implemented as a PoC
+* [ ] Templating (based on Jinja2, enables theming your website)
+  * Implemented as a PoC, functions exposed to templates will change
+* [ ] Receiving input from users (form handling)
+* [ ] Powerful plugin system (supports plugins written in other programming languages thanks to WebAssembly, e.g., Rust, C, Go, Javascript, Python, etc.)
+  * Implemented as a PoC, needs required capabilities of plugins to be identified
+* [ ] Observability (exposes various metrics as time series data)
+* [ ] Permission System (for users and also plugins)
+* [ ] Easy to deploy and setup (support different databases, e.g. sqlite, mysql, postgresql)
 
 ## Documentation
 
@@ -27,11 +27,11 @@ Right now, [Yelken's Wiki](https://github.com/bwqr/yelken/wiki) is the correct p
 
 ## Getting Started
 
-Best way to get started with Yelken is checking out *Hello World* example located under [examples](examples/hello-world) directory.
+Best way to get started with Yelken is checking out *Hello World* example located under [examples](examples/hello-world) directory
 
 ## Roadmap
 
-Yelken has an ambitious goal to change the CMS world by providing a software that requires low compute resources and provide many essential features as built in to its core while enabling extending itself with a powerful plugin ecosystem.
+Yelken has an ambitious goal to change the CMS world by providing a software that requires low compute resources and provide many essential features as built in to its core while enabling its extension with a powerful plugin ecosystem.
 To achieve its goal, it needs to
 
 * [ ] Complete planned features
@@ -52,7 +52,7 @@ Contributions are welcome to Yelken. There is no contribution guideline at the m
 
 Yelken prioritizes Security among other items in its list.
 A Yelken instance should sustain its defined functionality without disclosing any private information to public, such as having a remote code execution caused by an unauthorized user.
-Since Yelken is in its early ages, feel free to open an issue or discussion if you have a security concern.
+Since Yelken is in its early stages, feel free to open an issue or discussion if you have a security concern.
 
 ## License
 
