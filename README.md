@@ -5,7 +5,7 @@
 
 Yelken is a Content Management System (CMS) that aims to be secure by design, extendable with plugins while staying speedy.
 It utilizes Rust programming language and libraries developed around it to achieve its goals.
-Literary, Yelken is Turkish word that means **sail** in English.
+Literary, Yelken is a Turkish word that means **sail** in English.
 
 The main goals of Yelken can be described as
 * Stay secure against plugins and malicious user requests
