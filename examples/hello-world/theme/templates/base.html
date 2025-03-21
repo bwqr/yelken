@@ -1,0 +1,19 @@
+{%- block init %}{% endblock init -%}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{% block title %}{{ localize(key="site-title", locale=locale) }}{% endblock title%}</title>
+  </head>
+  <body>
+    <div>
+      <p style="display: inline">{{ localize(key="locales", locale=locale) }}</p>
+      <ul style="display: inline">
+        {% for key, name in locales %}
+          <li style="display: inline"><a href="{{ "/" ~ key }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    {%- block body %}{% endblock body -%}
+  </body>
+</html>
