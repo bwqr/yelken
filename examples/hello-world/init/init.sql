@@ -104,14 +104,17 @@ insert into fields (name, kind) values ('text', 'string'), ('multiline text', 's
 
 insert into models (name) values ('article');
 
-insert into model_fields (field_id, model_id, name) values (1, 1, 'title'), (2, 1, 'content'), (1, 1, 'slug');
+insert into model_fields (field_id, model_id, name, localized) values (1, 1, 'title', true), (2, 1, 'content', true), (1, 1, 'slug', true);
 
 insert into contents (model_id, name) values (1, 'Hello World');
 
 insert into contents (model_id, name) values (1, 'Nice Day');
 
-insert into content_values (content_id, model_field_id, value) values (1, 1, 'Hello World'), (1, 2, 'Content of the article'), (1, 3, 'hello-world');
+insert into content_values (content_id, model_field_id, value, locale) values (1, 1, 'Hello World', 'en'), (1, 2, 'Content of the article', 'en'), (1, 3, 'hello-world', 'en');
+insert into content_values (content_id, model_field_id, value, locale) values (1, 1, 'Merhaba Dünya', 'tr'), (1, 2, 'Makalenin içeriği', 'tr'), (1, 3, 'merhaba-dunya', 'tr');
 
-insert into content_values (content_id, model_field_id, value) values (2, 1, 'Nice Day'), (2, 2, 'Content of nice day article'), (2, 3, 'nice-day');
+insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Nice Day', 'en'), (2, 2, 'Content of nice day article', 'en'), (2, 3, 'nice-day', 'en');
+insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Hoş Gün', 'tr'), (2, 2, 'Hoş gün makalesinin içeriği', 'tr'), (2, 3, 'hos-gun', 'tr');
 
-insert into pages (name, path, template) values ('home', '/', 'index.html'), ('article', '/article/{slug}', 'article.html');
+insert into pages (name, path, template, locale) values ('home', '/', 'index.html', 'en'), ('article', '/article/{slug}', 'article.html', 'en');
+insert into pages (name, path, template, locale) values ('home', '/', 'index.html', 'tr'), ('article', '/makale/{slug}', 'article.html', 'tr');
