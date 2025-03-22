@@ -46,6 +46,8 @@ To achieve its goal, it needs to
 * [ ] Make its deployment to any environment an easy task
 * [ ] Provide Yelken as SaaS
 
+As a first step, Yelken targets reaching `0.1.0` version that should provide a good base to continue building on. You can check the roadmap of `0.1.0` version from [Yelken 0.1.0](https://github.com/users/bwqr/projects/3/views/1) project.
+
 ## Community
 
 There is no official channel for Yelken yet. However, you can express your ideas and questions in Issues or Discussions.
