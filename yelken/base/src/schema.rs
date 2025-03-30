@@ -94,6 +94,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    permissions (id) {
+        id -> Int4,
+        user_id -> Nullable<Int4>,
+        role_id -> Nullable<Int4>,
+        #[max_length = 32]
+        name -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     plugins (id) {
         #[max_length = 255]
         id -> Varchar,
@@ -108,8 +119,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    roles (id) {
+        id -> Int4,
+        #[max_length = 32]
+        name -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Int4,
+        role_id -> Nullable<Int4>,
         #[max_length = 255]
         username -> Varchar,
         #[max_length = 255]
@@ -132,6 +153,9 @@ diesel::joinable!(enum_options -> fields (field_id));
 diesel::joinable!(model_fields -> fields (field_id));
 diesel::joinable!(model_fields -> models (model_id));
 diesel::joinable!(pages -> locales (locale));
+diesel::joinable!(permissions -> roles (role_id));
+diesel::joinable!(permissions -> users (user_id));
+diesel::joinable!(users -> roles (role_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     content_values,
@@ -143,6 +167,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     model_fields,
     models,
     pages,
+    permissions,
     plugins,
+    roles,
     users,
 );

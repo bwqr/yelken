@@ -80,6 +80,9 @@ async fn main() {
             ServeDir::new(format!("{}/content", storage_dir)),
         );
 
+    #[cfg(feature = "admin")]
+    let app = app.nest("/api/admin", admin::router(state.clone()));
+
     #[cfg(feature = "app")]
     let app = app.nest(
         "/yk/app",

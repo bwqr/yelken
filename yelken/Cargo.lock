@@ -18,6 +18,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
+name = "admin"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "base",
+ "chrono",
+ "diesel",
+ "diesel-async",
+ "log",
+ "shared",
+ "tokio",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -363,6 +378,8 @@ dependencies = [
  "log",
  "ring",
  "serde",
+ "shared",
+ "tower",
 ]
 
 [[package]]
@@ -657,6 +674,7 @@ dependencies = [
  "log",
  "serde",
  "shared",
+ "tower",
 ]
 
 [[package]]
@@ -5260,6 +5278,7 @@ checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
 name = "yelken"
 version = "0.1.0"
 dependencies = [
+ "admin",
  "anyhow",
  "app_server",
  "auth",

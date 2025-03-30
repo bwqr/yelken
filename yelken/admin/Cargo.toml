@@ -1,16 +1,16 @@
 [package]
-name = "content"
+name = "admin"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 base.path = "../base"
-shared = { path = "../shared", features = ["content", "permission"] }
+shared = { path = "../shared", features = ["permission"] }
 
 anyhow.workspace = true
 axum.workspace = true
+chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
-serde.workspace = true
-tower.workspace = true
+tokio.workspace = true

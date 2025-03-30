@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "admin",
   "app",
   "app-client",
   "app-server",
@@ -33,10 +34,12 @@ rand = "0.9.0"
 reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1.0.217", features = ["rc", "serde_derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
+tower = "0.5.2"
 wasm-bindgen = "0.2.100"
 web-sys = "0.3.77"
 
 [dependencies]
+admin = { path = "./admin", optional = true }
 app_server = { path = "./app-server", optional = true }
 auth = { path = "./auth", optional = true }
 base.path = "./base"
@@ -55,7 +58,7 @@ env_logger = "0.11.6"
 log.workspace = true
 serde.workspace = true
 tokio.workspace = true
-tower = "0.5.2"
+tower.workspace = true
 tower-http = { version = "0.6.2", features = ["cors", "fs"] }
 
 [profile.dev]
@@ -71,7 +74,8 @@ inherits = "dev"
 lto = true
 
 [features]
-default = ["app", "auth", "content", "form", "ui", "user"]
+default = ["admin", "app", "auth", "content", "form", "ui", "user"]
+admin = ["dep:admin"]
 app = ["dep:app_server"]
 auth = ["dep:auth"]
 content = ["dep:content"]

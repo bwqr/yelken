@@ -14,14 +14,32 @@ create table plugins(
     created_at timestamp    not null default current_timestamp
 );
 
+create table roles(
+    id    serial primary key not null,
+    name  varchar(32)        not null,
+    created_at timestamp     not null default current_timestamp
+);
+
 create table users(
-    id         serial  primary key  not null,
+    id         serial  primary key not null,
+    role_id    int             default null,
     username   varchar(255)    not null unique,
     name       varchar(255)    not null,
     email      varchar(255)    not null unique,
     password   varchar(88)     not null,
     salt       varchar(32)     not null,
-    created_at timestamp       not null default current_timestamp
+    created_at timestamp       not null default current_timestamp,
+    constraint fk_users_role_id foreign key (role_id) references roles (id) on delete no action on update no action
+);
+
+create table permissions(
+    id         serial  primary key not null,
+    user_id    int default null,
+    role_id    int default null,
+    name       varchar(32) not null,
+    created_at timestamp   not null default current_timestamp,
+    constraint fk_permissions_user_id foreign key (user_id) references users (id) on delete no action on update no action,
+    constraint fk_permissions_role_id foreign key (role_id) references roles (id) on delete no action on update no action
 );
 
 create table locales(

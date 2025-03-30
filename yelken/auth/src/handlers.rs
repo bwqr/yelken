@@ -12,7 +12,16 @@ use rand::{distr::Alphanumeric, rng, Rng};
 
 use shared::auth::{Login, Token};
 
-type UserRow = (i32, String, String, String, String, String, NaiveDateTime);
+type UserRow = (
+    i32,
+    Option<i32>,
+    String,
+    String,
+    String,
+    String,
+    String,
+    NaiveDateTime,
+);
 
 pub async fn login(
     State(state): State<AppState>,

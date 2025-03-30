@@ -18,6 +18,10 @@ drop table locales;
 
 drop table plugins;
 
+drop table permissions;
+
 drop table users;
+
+drop table roles;
 
 drop function update_timestamp;

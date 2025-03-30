@@ -9,5 +9,6 @@ serde.workspace = true
 [features]
 auth = []
 content = []
+permission = []
 plugin = []
 user = []

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+shared = { path = "../shared", features = ["permission"] }
+
 anyhow.workspace = true
 axum.workspace = true
 chrono.workspace = true
@@ -11,6 +13,7 @@ diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
 serde.workspace = true
+tower.workspace = true
 
 base64 = "0.22.1"
 jsonwebtoken = { version = "9.3.1", default-features = false }
