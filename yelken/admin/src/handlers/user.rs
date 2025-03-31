@@ -17,10 +17,7 @@ use diesel::{
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
-use crate::{
-    requests::{CreateUser, UpdateUserRole},
-    responses::CreatedUser,
-};
+use crate::{requests::CreateUser, responses::CreatedUser};
 
 fn generate_username(name: &str) -> String {
     name.chars()
@@ -82,17 +79,24 @@ pub async fn update_user_role(
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
     user: AuthUser,
-    Json(req): Json<UpdateUserRole>,
+    Json(role_id): Json<Option<i32>>,
 ) -> Result<(), HttpError> {
     if user_id == user.id {
         return Err(HttpError::conflict("self_update_not_possible"));
     }
 
-    let effected_row: usize = diesel::update(users::table)
+    let effected_row = diesel::update(users::table)
         .filter(users::id.eq(user_id))
-        .set(users::role_id.eq(req.role_id))
+        .set(users::role_id.eq(role_id))
         .execute(&mut state.pool.get().await?)
-        .await?;
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) = &e {
+                return HttpError::conflict("role_not_found");
+            }
+
+            e.into()
+        })?;
 
     if effected_row == 0 {
         return Err(HttpError::not_found("user_not_found"));
@@ -101,40 +105,19 @@ pub async fn update_user_role(
     Ok(())
 }
 
-pub async fn enable_user(
+pub async fn update_user_state(
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
     user: AuthUser,
+    Json(user_state): Json<UserState>,
 ) -> Result<(), HttpError> {
     if user_id == user.id {
         return Err(HttpError::conflict("self_update_not_possible"));
     }
 
-    let effected_row: usize = diesel::update(users::table)
+    let effected_row = diesel::update(users::table)
         .filter(users::id.eq(user_id))
-        .set(users::state.eq(UserState::Enabled))
-        .execute(&mut state.pool.get().await?)
-        .await?;
-
-    if effected_row == 0 {
-        return Err(HttpError::not_found("user_not_found"));
-    }
-
-    Ok(())
-}
-
-pub async fn disable_user(
-    State(state): State<AppState>,
-    Path(user_id): Path<i32>,
-    user: AuthUser,
-) -> Result<(), HttpError> {
-    if user_id == user.id {
-        return Err(HttpError::conflict("self_update_not_possible"));
-    }
-
-    let effected_row: usize = diesel::update(users::table)
-        .filter(users::id.eq(user_id))
-        .set(users::state.eq(UserState::Disabled))
+        .set(users::state.eq(user_state))
         .execute(&mut state.pool.get().await?)
         .await?;
 
@@ -164,9 +147,9 @@ mod tests {
     use diesel::prelude::*;
     use diesel_async::RunQueryDsl;
 
-    use crate::requests::{CreateUser, UpdateUserRole};
+    use crate::requests::CreateUser;
 
-    use super::{create_user, disable_user, enable_user, update_user_role};
+    use super::{create_user, update_user_role, update_user_state};
 
     async fn init_state() -> (AppState, AuthUser) {
         let config = Config::default();
@@ -236,9 +219,14 @@ mod tests {
             .await
             .unwrap();
 
-        disable_user(State(state.clone()), Path(user.id), auth_user)
-            .await
-            .unwrap();
+        update_user_state(
+            State(state.clone()),
+            Path(user.id),
+            auth_user,
+            Json(UserState::Disabled),
+        )
+        .await
+        .unwrap();
 
         let state = users::table
             .filter(users::id.eq(user.id))
@@ -277,9 +265,7 @@ mod tests {
             State(state.clone()),
             Path(user.id),
             auth_user,
-            Json(UpdateUserRole {
-                role_id: Some(role.0),
-            }),
+            Json(Some(role.0)),
         )
         .await
         .unwrap();
@@ -311,9 +297,14 @@ mod tests {
             .await
             .unwrap();
 
-        enable_user(State(state.clone()), Path(user.id), auth_user)
-            .await
-            .unwrap();
+        update_user_state(
+            State(state.clone()),
+            Path(user.id),
+            auth_user,
+            Json(UserState::Enabled),
+        )
+        .await
+        .unwrap();
 
         let state = users::table
             .filter(users::id.eq(user.id))
@@ -326,7 +317,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn it_does_not_disable_another_user() {
+    async fn it_does_not_update_another_user_state() {
         let (state, auth_user) = init_state().await;
 
         let user = diesel::insert_into(users::table)
@@ -336,6 +327,7 @@ mod tests {
                 users::email.eq("email1"),
                 users::password.eq("password"),
                 users::salt.eq("salt"),
+                users::state.eq(UserState::Enabled),
             ))
             .get_result::<User>(&mut state.pool.get().await.unwrap())
             .await
@@ -348,14 +340,20 @@ mod tests {
                 users::email.eq("email2"),
                 users::password.eq("password"),
                 users::salt.eq("salt"),
+                users::state.eq(UserState::Enabled),
             ))
             .get_result::<User>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
-        disable_user(State(state.clone()), Path(user.id), auth_user)
-            .await
-            .unwrap();
+        update_user_state(
+            State(state.clone()),
+            Path(user.id),
+            auth_user,
+            Json(UserState::Disabled),
+        )
+        .await
+        .unwrap();
 
         let another_user_state = users::table
             .filter(users::id.eq(another_user.id))
@@ -368,54 +366,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn it_does_not_enable_another_user() {
-        let (state, auth_user) = init_state().await;
-
-        let user = diesel::insert_into(users::table)
-            .values((
-                users::username.eq("username1"),
-                users::name.eq("name"),
-                users::email.eq("email1"),
-                users::password.eq("password"),
-                users::salt.eq("salt"),
-                users::state.eq(UserState::Disabled),
-            ))
-            .get_result::<User>(&mut state.pool.get().await.unwrap())
-            .await
-            .unwrap();
-
-        let another_user = diesel::insert_into(users::table)
-            .values((
-                users::username.eq("username2"),
-                users::name.eq("name"),
-                users::email.eq("email2"),
-                users::password.eq("password"),
-                users::salt.eq("salt"),
-                users::state.eq(UserState::Disabled),
-            ))
-            .get_result::<User>(&mut state.pool.get().await.unwrap())
-            .await
-            .unwrap();
-
-        enable_user(State(state.clone()), Path(user.id), auth_user)
-            .await
-            .unwrap();
-
-        let another_user_state = users::table
-            .filter(users::id.eq(another_user.id))
-            .select(users::state)
-            .first::<UserState>(&mut state.pool.get().await.unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(UserState::Disabled, another_user_state);
-    }
-
-    #[tokio::test]
     async fn it_prevents_users_disabling_themselves() {
         let (state, auth_user) = init_state().await;
 
-        let resp = disable_user(State(state), Path(auth_user.id), auth_user).await;
+        let resp = update_user_state(
+            State(state),
+            Path(auth_user.id),
+            auth_user,
+            Json(UserState::Disabled),
+        )
+        .await;
 
         assert!(resp.is_err());
 
@@ -427,31 +387,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn it_returns_user_not_found_error_if_given_user_id_does_not_exist_when_disable_user_is_called(
-    ) {
+    async fn it_returns_user_not_found_error_if_given_user_id_does_not_exist() {
         let (state, auth_user) = init_state().await;
 
         let unknown_user_id = auth_user.id + 10;
 
-        let resp = disable_user(State(state), Path(unknown_user_id), auth_user).await;
-
-        assert!(resp.is_err());
-
-        let resp = resp.unwrap_err();
-
-        assert_eq!(404, resp.code);
-
-        assert_eq!("user_not_found", resp.error);
-    }
-
-    #[tokio::test]
-    async fn it_returns_user_not_found_error_if_given_user_id_does_not_exist_when_enable_user_is_called(
-    ) {
-        let (state, auth_user) = init_state().await;
-
-        let unknown_user_id = auth_user.id + 10;
-
-        let resp = enable_user(State(state), Path(unknown_user_id), auth_user).await;
+        let resp = update_user_state(
+            State(state),
+            Path(unknown_user_id),
+            auth_user,
+            Json(UserState::Disabled),
+        )
+        .await;
 
         assert!(resp.is_err());
 

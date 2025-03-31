@@ -9,28 +9,25 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 
-use crate::{requests::CreateRole, responses::CreatedRole};
+use crate::requests::CreateRole;
 
 pub async fn create_role(
     State(state): State<AppState>,
     Json(req): Json<CreateRole>,
-) -> Result<Json<CreatedRole>, HttpError> {
+) -> Result<Json<Role>, HttpError> {
     let role = diesel::insert_into(roles::table)
         .values(roles::name.eq(req.name))
         .get_result::<Role>(&mut state.pool.get().await?)
         .await?;
 
-    Ok(Json(CreatedRole {
-        id: role.id,
-        name: role.name,
-    }))
+    Ok(Json(role))
 }
 
 pub async fn delete_role(
     State(state): State<AppState>,
     Path(role_id): Path<i32>,
 ) -> Result<(), HttpError> {
-    let effected_row: usize = diesel::delete(roles::table)
+    let effected_row = diesel::delete(roles::table)
         .filter(roles::id.eq(role_id))
         .execute(&mut state.pool.get().await?)
         .await

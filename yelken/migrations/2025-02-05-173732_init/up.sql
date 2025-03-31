@@ -16,7 +16,7 @@ create table plugins(
 
 create table roles(
     id    serial primary key not null,
-    name  varchar(32)        not null,
+    name  varchar(32)        not null unique,
     created_at timestamp     not null default current_timestamp
 );
 
@@ -44,8 +44,9 @@ create table permissions(
 );
 
 create table locales(
-    key  varchar(8) primary key not null,
-    name varchar(64) not null
+    key      varchar(8)  primary key not null,
+    name     varchar(64) not null,
+    disabled bool        not null default false
 );
 
 create table fields(

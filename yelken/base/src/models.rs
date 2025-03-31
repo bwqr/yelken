@@ -9,9 +9,11 @@ use diesel::{
     serialize::{IsNull, Output, ToSql},
     sql_types::Text,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, AsExpression, FromSqlRow)]
+#[derive(Clone, Debug, Deserialize, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
 pub enum UserState {
     Enabled,
     Disabled,
@@ -51,9 +53,16 @@ pub struct User {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Role {
     pub id: i32,
     pub name: String,
     pub created_at: NaiveDateTime,
+}
+
+#[derive(Queryable, Serialize)]
+pub struct Locale {
+    pub key: String,
+    pub name: String,
+    pub disabled: bool,
 }

@@ -8,11 +8,17 @@ pub struct CreateUser {
 }
 
 #[derive(Deserialize)]
-pub struct UpdateUserRole {
-    pub role_id: Option<i32>,
+pub struct CreateRole {
+    pub name: String,
 }
 
 #[derive(Deserialize)]
-pub struct CreateRole {
+pub struct CreateLocale {
+    pub key: String,
     pub name: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateLocaleState {
+    pub disabled: bool,
 }

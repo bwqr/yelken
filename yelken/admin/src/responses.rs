@@ -7,9 +7,3 @@ pub struct CreatedUser {
     pub name: String,
     pub email: String,
 }
-
-#[derive(Serialize)]
-pub struct CreatedRole {
-    pub id: i32,
-    pub name: String,
-}

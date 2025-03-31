@@ -55,6 +55,7 @@ diesel::table! {
         key -> Varchar,
         #[max_length = 64]
         name -> Varchar,
+        disabled -> Bool,
     }
 }
 
