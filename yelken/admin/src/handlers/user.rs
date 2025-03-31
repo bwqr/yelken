@@ -1,6 +1,6 @@
 use axum::{
-    extract::{Json, Path, State},
-    Extension,
+    extract::{Path, State},
+    Extension, Json,
 };
 use base::{
     crypto::Crypto,
@@ -10,11 +10,17 @@ use base::{
     schema::users,
     AppState,
 };
-use diesel::prelude::*;
+use diesel::{
+    prelude::*,
+    result::{DatabaseErrorKind, Error},
+};
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
-use crate::{requests::CreateUser, responses::CreatedUser};
+use crate::{
+    requests::{CreateUser, UpdateUserRole},
+    responses::CreatedUser,
+};
 
 fn generate_username(name: &str) -> String {
     name.chars()
@@ -31,7 +37,7 @@ pub async fn create_user(
     State(state): State<AppState>,
     Extension(crypto): Extension<Crypto>,
     Json(req): Json<CreateUser>,
-) -> Result<axum::response::Json<CreatedUser>, HttpError> {
+) -> Result<Json<CreatedUser>, HttpError> {
     let salt: String = (0..32)
         .map(|_| rng().sample(Alphanumeric) as char)
         .collect();
@@ -51,11 +57,7 @@ pub async fn create_user(
         .get_result::<User>(&mut conn)
         .await
         .map_err(|e| {
-            if let diesel::result::Error::DatabaseError(
-                diesel::result::DatabaseErrorKind::UniqueViolation,
-                info,
-            ) = &e
-            {
+            if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) = &e {
                 if let Some(constraint_name) = info.constraint_name() {
                     if constraint_name.contains("email") {
                         return HttpError::conflict("email_already_used");
@@ -68,7 +70,7 @@ pub async fn create_user(
             e.into()
         })?;
 
-    Ok(axum::response::Json(CreatedUser {
+    Ok(Json(CreatedUser {
         id: user.id,
         username: user.username,
         name: user.name,
@@ -76,10 +78,38 @@ pub async fn create_user(
     }))
 }
 
+pub async fn update_user_role(
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+    user: AuthUser,
+    Json(req): Json<UpdateUserRole>,
+) -> Result<(), HttpError> {
+    if user_id == user.id {
+        return Err(HttpError::conflict("self_update_not_possible"));
+    }
+
+    let effected_row: usize = diesel::update(users::table)
+        .filter(users::id.eq(user_id))
+        .set(users::role_id.eq(req.role_id))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("user_not_found"));
+    }
+
+    Ok(())
+}
+
 pub async fn enable_user(
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
+    user: AuthUser,
 ) -> Result<(), HttpError> {
+    if user_id == user.id {
+        return Err(HttpError::conflict("self_update_not_possible"));
+    }
+
     let effected_row: usize = diesel::update(users::table)
         .filter(users::id.eq(user_id))
         .set(users::state.eq(UserState::Enabled))
@@ -98,8 +128,6 @@ pub async fn disable_user(
     Path(user_id): Path<i32>,
     user: AuthUser,
 ) -> Result<(), HttpError> {
-    // Only admins are allowed to update a user's permission.
-    // Since they are admin, they do not need update their own permissions.
     if user_id == user.id {
         return Err(HttpError::conflict("self_update_not_possible"));
     }
@@ -128,16 +156,17 @@ mod tests {
         crypto::Crypto,
         middlewares::auth::AuthUser,
         models::{User, UserState},
-        schema::users,
+        schema::{roles, users},
         test::{create_pool, DB_CONFIG},
         AppState,
     };
+    use chrono::NaiveDateTime;
     use diesel::prelude::*;
     use diesel_async::RunQueryDsl;
 
-    use crate::requests::CreateUser;
+    use crate::requests::{CreateUser, UpdateUserRole};
 
-    use super::{create_user, disable_user, enable_user};
+    use super::{create_user, disable_user, enable_user, update_user_role};
 
     async fn init_state() -> (AppState, AuthUser) {
         let config = Config::default();
@@ -157,10 +186,7 @@ mod tests {
 
         let auth_user = AuthUser {
             id: auth_user.id,
-            username: auth_user.username,
             name: auth_user.name,
-            email: auth_user.email,
-            created_at: auth_user.created_at,
         };
 
         (AppState::new(config, pool), auth_user)
@@ -225,8 +251,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn it_updates_user_role() {
+        let (state, auth_user) = init_state().await;
+
+        let role = diesel::insert_into(roles::table)
+            .values(roles::name.eq("admin"))
+            .get_result::<(i32, String, NaiveDateTime)>(&mut state.pool.get().await.unwrap())
+            .await
+            .unwrap();
+
+        let user = diesel::insert_into(users::table)
+            .values((
+                users::username.eq("username1"),
+                users::name.eq("name"),
+                users::email.eq("email1"),
+                users::password.eq("password"),
+                users::salt.eq("salt"),
+                users::role_id.eq(Option::<i32>::None),
+            ))
+            .get_result::<User>(&mut state.pool.get().await.unwrap())
+            .await
+            .unwrap();
+
+        update_user_role(
+            State(state.clone()),
+            Path(user.id),
+            auth_user,
+            Json(UpdateUserRole {
+                role_id: Some(role.0),
+            }),
+        )
+        .await
+        .unwrap();
+
+        let role_id = users::table
+            .filter(users::id.eq(user.id))
+            .select(users::role_id)
+            .first::<Option<i32>>(&mut state.pool.get().await.unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(Some(role.0), role_id);
+    }
+
+    #[tokio::test]
     async fn it_enables_given_user() {
-        let (state, _) = init_state().await;
+        let (state, auth_user) = init_state().await;
 
         let user = diesel::insert_into(users::table)
             .values((
@@ -241,7 +311,7 @@ mod tests {
             .await
             .unwrap();
 
-        enable_user(State(state.clone()), Path(user.id))
+        enable_user(State(state.clone()), Path(user.id), auth_user)
             .await
             .unwrap();
 
@@ -299,7 +369,7 @@ mod tests {
 
     #[tokio::test]
     async fn it_does_not_enable_another_user() {
-        let (state, _) = init_state().await;
+        let (state, auth_user) = init_state().await;
 
         let user = diesel::insert_into(users::table)
             .values((
@@ -327,7 +397,7 @@ mod tests {
             .await
             .unwrap();
 
-        enable_user(State(state.clone()), Path(user.id))
+        enable_user(State(state.clone()), Path(user.id), auth_user)
             .await
             .unwrap();
 
@@ -381,7 +451,7 @@ mod tests {
 
         let unknown_user_id = auth_user.id + 10;
 
-        let resp = enable_user(State(state), Path(unknown_user_id)).await;
+        let resp = enable_user(State(state), Path(unknown_user_id), auth_user).await;
 
         assert!(resp.is_err());
 

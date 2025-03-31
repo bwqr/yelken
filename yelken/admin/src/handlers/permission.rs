@@ -179,10 +179,7 @@ mod tests {
 
         let auth_user = AuthUser {
             id: auth_user.id,
-            username: auth_user.username,
             name: auth_user.name,
-            email: auth_user.email,
-            created_at: auth_user.created_at,
         };
 
         (AppState::new(config, pool), auth_user)

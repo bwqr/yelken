@@ -71,6 +71,9 @@ impl Serialize for HttpError {
         let mut state = serializer.serialize_struct("HttpError", 2)?;
         state.serialize_field("code", &StatusCode::as_u16(&self.code))?;
         state.serialize_field("error", &self.error)?;
+        if let Some(context) = &self.context {
+            state.serialize_field("context", context)?;
+        }
         state.end()
     }
 }

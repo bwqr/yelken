@@ -10,7 +10,7 @@ use diesel::{
     sql_types::Text,
 };
 
-#[derive(Debug, PartialEq, AsExpression, FromSqlRow)]
+#[derive(Clone, Debug, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 pub enum UserState {
     Enabled,
@@ -48,5 +48,12 @@ pub struct User {
     pub password: String,
     pub salt: String,
     pub state: UserState,
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Queryable)]
+pub struct Role {
+    pub id: i32,
+    pub name: String,
     pub created_at: NaiveDateTime,
 }

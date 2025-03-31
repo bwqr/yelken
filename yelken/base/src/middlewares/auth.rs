@@ -4,11 +4,10 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel_async::{pooled_connection::bb8::PooledConnection, AsyncPgConnection, RunQueryDsl};
 
-use crate::{crypto::Crypto, responses::HttpError, schema::users, AppState};
+use crate::{crypto::Crypto, models::UserState, responses::HttpError, schema::users, AppState};
 
 use axum::{
     extract::{FromRequestParts, OptionalFromRequestParts},
@@ -49,10 +48,7 @@ impl Token {
 #[derive(Clone)]
 pub struct AuthUser {
     pub id: i32,
-    pub username: String,
     pub name: String,
-    pub email: String,
-    pub created_at: NaiveDateTime,
 }
 
 impl<S> FromRequestParts<S> for AuthUser
@@ -136,30 +132,32 @@ async fn fetch_user(
     conn: &mut PooledConnection<'_, AsyncPgConnection>,
     user_id: i32,
 ) -> Result<AuthUser, HttpError> {
-    users::table
-        .select((
-            users::id,
-            users::username,
-            users::name,
-            users::email,
-            users::created_at,
-        ))
+    let Some(user) = users::table
+        .select((users::id, users::name, users::state))
         .filter(users::id.eq(user_id))
-        .first::<(i32, String, String, String, NaiveDateTime)>(conn)
+        .first::<(i32, String, UserState)>(conn)
         .await
         .optional()?
-        .map(|(id, username, name, email, created_at)| AuthUser {
-            id,
-            username,
-            name,
-            email,
-            created_at,
-        })
-        .ok_or_else(|| HttpError {
+    else {
+        return Err(HttpError {
             code: StatusCode::UNAUTHORIZED,
-            error: "invalid_token",
+            error: "failed_authorization",
             context: Some("User not found in the database".to_string()),
-        })
+        });
+    };
+
+    if UserState::Enabled != user.2 {
+        return Err(HttpError {
+            code: StatusCode::UNAUTHORIZED,
+            error: "failed_authorization",
+            context: Some("User is not enabled".to_string()),
+        });
+    }
+
+    Ok(AuthUser {
+        id: user.0,
+        name: user.1,
+    })
 }
 
 fn parse_token(req: &Request) -> Result<Option<Token>, HttpError> {

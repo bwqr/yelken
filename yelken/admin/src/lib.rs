@@ -29,6 +29,12 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/user/{user_id}/disable",
             delete(handlers::user::disable_user),
         )
+        .route(
+            "/user/{user_id}/role",
+            put(handlers::user::update_user_role),
+        )
+        .route("/role", post(handlers::role::create_role))
+        .route("/role/{role_id}", delete(handlers::role::delete_role))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Admin,

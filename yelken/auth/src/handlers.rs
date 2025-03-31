@@ -4,7 +4,13 @@ use axum::{
     response::Json as RespJson,
     Extension,
 };
-use base::{crypto::Crypto, models::User, responses::HttpError, schema::users, AppState};
+use base::{
+    crypto::Crypto,
+    models::{User, UserState},
+    responses::HttpError,
+    schema::users,
+    AppState,
+};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
@@ -22,10 +28,10 @@ pub async fn login(
         context: None,
     };
 
-    let Some((user_id, password, salt)) = users::table
+    let Some((user_id, password, salt, user_state)) = users::table
         .filter(users::email.eq(&request.email))
-        .select((users::id, users::password, users::salt))
-        .first::<(i32, String, String)>(&mut state.pool.get().await?)
+        .select((users::id, users::password, users::salt, users::state))
+        .first::<(i32, String, String, UserState)>(&mut state.pool.get().await?)
         .await
         .optional()?
     else {
@@ -35,6 +41,14 @@ pub async fn login(
     // TODO use verify
     if crypto.sign512((request.password + salt.as_str()).as_bytes()) != password {
         return Err(INVALID_CREDENTIALS);
+    }
+
+    if UserState::Enabled != user_state {
+        return Err(HttpError {
+            code: StatusCode::UNAUTHORIZED,
+            error: "user_not_enabled",
+            context: None,
+        });
     }
 
     Ok(RespJson(Token {

@@ -16,7 +16,7 @@ pub enum Permission {
 impl Permission {
     pub fn as_str(&self) -> &'static str {
         match self {
-            Permission::Admin => "content",
+            Permission::Admin => "admin",
             Permission::Content(Mode::Read) => "content.read",
             Permission::Content(Mode::Write) => "content.write",
             Permission::User(Mode::Read) => "user.read",

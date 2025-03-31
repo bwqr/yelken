@@ -6,3 +6,13 @@ pub struct CreateUser {
     pub email: String,
     pub password: String,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateUserRole {
+    pub role_id: Option<i32>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateRole {
+    pub name: String,
+}
