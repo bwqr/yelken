@@ -10,7 +10,7 @@ use diesel::{
     sql_types::Text,
 };
 
-#[derive(Debug, AsExpression, FromSqlRow)]
+#[derive(Debug, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 pub enum UserState {
     Enabled,

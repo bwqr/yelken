@@ -10,6 +10,8 @@ use base::{
 use shared::permission::Permission;
 
 mod handlers;
+mod requests;
+mod responses;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
@@ -20,6 +22,12 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route(
             "/permission/user/{user_id}",
             post(handlers::permission::update_user_permissions),
+        )
+        .route("/user", post(handlers::user::create_user))
+        .route("/user/{user_id}/enable", put(handlers::user::enable_user))
+        .route(
+            "/user/{user_id}/disable",
+            delete(handlers::user::disable_user),
         )
         .layer(PermissionLayer {
             pool: state.pool.clone(),

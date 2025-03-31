@@ -13,4 +13,6 @@ chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
+rand.workspace = true
+serde.workspace = true
 tokio.workspace = true

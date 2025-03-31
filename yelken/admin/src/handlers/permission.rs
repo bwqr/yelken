@@ -83,7 +83,7 @@ pub async fn update_user_permissions(
     // Only admins are allowed to update a user's permission.
     // Since they are admin, they do not need update their own permissions.
     if user_id == user.id {
-        return Err(HttpError::conflict("admin_not_able_to_update_self"));
+        return Err(HttpError::conflict("self_update_not_possible"));
     }
 
     let perms: Result<Vec<Permission>, &'static str> = perms
@@ -152,7 +152,7 @@ mod tests {
         middlewares::auth::AuthUser,
         models::User,
         schema::{permissions, roles, users},
-        test::create_pool,
+        test::{create_pool, DB_CONFIG},
         AppState,
     };
     use chrono::NaiveDateTime;
@@ -160,8 +160,6 @@ mod tests {
     use diesel_async::RunQueryDsl;
 
     use super::{update_role_permissions, update_user_permissions};
-
-    const DB_CONFIG: &'static str = "postgres://yelken:toor@127.0.0.1/yelken_test";
 
     async fn init_state() -> (AppState, AuthUser) {
         let config = Config::default();
@@ -429,7 +427,7 @@ mod tests {
 
         assert_eq!(409, resp.code);
 
-        assert_eq!("admin_not_able_to_update_self", resp.error);
+        assert_eq!("self_update_not_possible", resp.error);
     }
 
     #[tokio::test]

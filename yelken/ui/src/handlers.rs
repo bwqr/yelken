@@ -285,7 +285,7 @@ mod tests {
     use base::{
         config::Config,
         schema::{locales, pages},
-        test::create_pool,
+        test::{create_pool, DB_CONFIG},
         types::Connection,
         AppState,
     };
@@ -296,8 +296,6 @@ mod tests {
     use crate::{l10n::Locale, render::Render};
 
     use super::resolve_locale;
-
-    const DB_CONFIG: &'static str = "postgres://yelken:toor@127.0.0.1/yelken_test";
 
     async fn init_params(
         locales: &[&str],

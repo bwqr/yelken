@@ -4,6 +4,12 @@ use diesel_async::{
 
 use crate::types::Pool;
 
+pub const DB_CONFIG: &'static str = if let Some(env) = option_env!("YELKEN_TEST_DATABASE_URL") {
+    env
+} else {
+    "postgres://yelken:toor@127.0.0.1/yelken_test"
+};
+
 pub async fn create_pool(conn_str: &str) -> Pool {
     let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(conn_str);
 

@@ -28,6 +28,8 @@ dependencies = [
  "diesel",
  "diesel-async",
  "log",
+ "rand 0.9.0",
+ "serde",
  "shared",
  "tokio",
 ]
