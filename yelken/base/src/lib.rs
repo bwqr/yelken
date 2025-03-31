@@ -6,6 +6,7 @@ pub mod config;
 pub mod crypto;
 pub mod middlewares;
 pub mod models;
+pub mod responses;
 pub mod schema;
 pub mod test;
 pub mod types;

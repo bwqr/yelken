@@ -1,6 +1,6 @@
 use axum::{extract::State, Json};
 use base::{
-    models::HttpError,
+    responses::HttpError,
     schema::{fields, models},
     AppState,
 };

@@ -8,7 +8,7 @@ use axum::{middleware, routing::post, Router};
 use fluent::{concurrent::FluentBundle, FluentResource};
 pub use handlers::serve_page;
 
-use base::{middlewares::auth, schema::locales, types::Connection, AppState};
+use base::{schema::locales, types::Connection, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use l10n::Locale;
@@ -66,5 +66,8 @@ pub fn build_render(templates_dir: &str, resources: FnResources) -> Render {
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/templates/refresh", post(handlers::refresh_templates))
-        .layer(middleware::from_fn_with_state(state, auth))
+        .layer(middleware::from_fn_with_state(
+            state,
+            base::middlewares::auth::from_token,
+        ))
 }

@@ -13,6 +13,6 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/plugins", get(handlers::fetch_plugins))
         .layer(middleware::from_fn_with_state(
             state,
-            base::middlewares::auth,
+            base::middlewares::auth::from_token,
         ))
 }

@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin, sync::Arc};
 
 use app::{ContentResource, UserResource};
 use axum::extract::State;
-use base::{models::AuthUser, AppState};
+use base::{middlewares::auth::AuthUser, AppState};
 use shared::{
     content::{Field, Model},
     user::User,

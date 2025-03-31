@@ -141,6 +141,8 @@ diesel::table! {
         password -> Varchar,
         #[max_length = 32]
         salt -> Varchar,
+        #[max_length = 8]
+        state -> Varchar,
         created_at -> Timestamp,
     }
 }

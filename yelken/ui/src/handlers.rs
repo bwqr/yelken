@@ -7,7 +7,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Extension,
 };
-use base::{models::HttpError, schema::pages, AppState};
+use base::{responses::HttpError, schema::pages, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};

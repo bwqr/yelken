@@ -1,5 +1,5 @@
 use axum::{extract::State, Extension, Json};
-use base::{models::HttpError, schema::plugins, AppState};
+use base::{responses::HttpError, schema::plugins, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use shared::plugin::Plugin;

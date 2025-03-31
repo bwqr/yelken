@@ -1,6 +1,10 @@
-use axum::{middleware, routing::post, Router};
+use axum::{
+    middleware,
+    routing::{delete, post, put},
+    Router,
+};
 use base::{
-    middlewares::{auth, PermissionLayer},
+    middlewares::{auth::from_token, permission::PermissionLayer},
     AppState,
 };
 use shared::permission::Permission;
@@ -21,5 +25,5 @@ pub fn router(state: AppState) -> Router<AppState> {
             pool: state.pool.clone(),
             perm: Permission::Admin,
         })
-        .layer(middleware::from_fn_with_state(state, auth))
+        .layer(middleware::from_fn_with_state(state, from_token))
 }

@@ -5,7 +5,8 @@ use axum::{
     Json,
 };
 use base::{
-    models::{AuthUser, HttpError},
+    middlewares::auth::AuthUser,
+    responses::HttpError,
     schema::{permissions, roles, users},
     AppState,
 };
@@ -148,7 +149,8 @@ mod tests {
     };
     use base::{
         config::Config,
-        models::AuthUser,
+        middlewares::auth::AuthUser,
+        models::User,
         schema::{permissions, roles, users},
         test::create_pool,
         AppState,
@@ -160,17 +162,6 @@ mod tests {
     use super::{update_role_permissions, update_user_permissions};
 
     const DB_CONFIG: &'static str = "postgres://yelken:toor@127.0.0.1/yelken_test";
-
-    type UserColumns = (
-        i32,
-        Option<i32>,
-        String,
-        String,
-        String,
-        String,
-        String,
-        NaiveDateTime,
-    );
 
     async fn init_state() -> (AppState, AuthUser) {
         let config = Config::default();
@@ -184,16 +175,16 @@ mod tests {
                 users::password.eq("password"),
                 users::salt.eq("salt"),
             ))
-            .get_result::<UserColumns>(&mut pool.get().await.unwrap())
+            .get_result::<User>(&mut pool.get().await.unwrap())
             .await
             .unwrap();
 
         let auth_user = AuthUser {
-            id: auth_user.0,
-            username: auth_user.2,
-            name: auth_user.3,
-            email: auth_user.4,
-            created_at: auth_user.7,
+            id: auth_user.id,
+            username: auth_user.username,
+            name: auth_user.name,
+            email: auth_user.email,
+            created_at: auth_user.created_at,
         };
 
         (AppState::new(config, pool), auth_user)
@@ -211,18 +202,18 @@ mod tests {
                 users::password.eq("password"),
                 users::salt.eq("salt"),
             ))
-            .get_result::<UserColumns>(&mut state.pool.get().await.unwrap())
+            .get_result::<User>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
         diesel::insert_into(permissions::table)
             .values([
                 (
-                    permissions::user_id.eq(user.0),
+                    permissions::user_id.eq(user.id),
                     permissions::name.eq("content.read"),
                 ),
                 (
-                    permissions::user_id.eq(user.0),
+                    permissions::user_id.eq(user.id),
                     permissions::name.eq("self.read"),
                 ),
             ])
@@ -232,7 +223,7 @@ mod tests {
 
         update_user_permissions(
             State(state.clone()),
-            Path(user.0),
+            Path(user.id),
             auth_user,
             Json(vec!["content.write".to_string()]),
         )
@@ -240,14 +231,14 @@ mod tests {
         .unwrap();
 
         let perms = permissions::table
-            .filter(permissions::user_id.eq(user.0))
+            .filter(permissions::user_id.eq(user.id))
             .select((permissions::user_id, permissions::name))
             .load::<(Option<i32>, String)>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
         assert_eq!(1, perms.len());
-        assert_eq!(Some(user.0), perms[0].0);
+        assert_eq!(Some(user.id), perms[0].0);
         assert_eq!("content.write", perms[0].1);
     }
 
@@ -342,7 +333,7 @@ mod tests {
                 users::password.eq("password"),
                 users::salt.eq("salt"),
             ))
-            .get_result::<UserColumns>(&mut state.pool.get().await.unwrap())
+            .get_result::<User>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
@@ -354,32 +345,32 @@ mod tests {
                 users::password.eq("password"),
                 users::salt.eq("salt"),
             ))
-            .get_result::<UserColumns>(&mut state.pool.get().await.unwrap())
+            .get_result::<User>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
         diesel::insert_into(permissions::table)
             .values((
-                permissions::user_id.eq(another_user.0),
+                permissions::user_id.eq(another_user.id),
                 permissions::name.eq("content.read"),
             ))
             .execute(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
-        update_user_permissions(State(state.clone()), Path(user.0), auth_user, Json(vec![]))
+        update_user_permissions(State(state.clone()), Path(user.id), auth_user, Json(vec![]))
             .await
             .unwrap();
 
         let perms = permissions::table
-            .filter(permissions::user_id.eq(another_user.0))
+            .filter(permissions::user_id.eq(another_user.id))
             .select((permissions::user_id, permissions::name))
             .load::<(Option<i32>, String)>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap();
 
         assert_eq!(1, perms.len());
-        assert_eq!(Some(another_user.0), perms[0].0);
+        assert_eq!(Some(another_user.id), perms[0].0);
         assert_eq!("content.read", perms[0].1);
     }
 

@@ -6,7 +6,7 @@ use axum::{
     routing::post,
     Form, Router,
 };
-use base::{models::HttpError, schema::form_submissions, AppState};
+use base::{responses::HttpError, schema::form_submissions, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 

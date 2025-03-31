@@ -3,7 +3,7 @@ use std::fs;
 use std::sync::Arc;
 
 use arc_swap::{access::Access, ArcSwap};
-use base::models::HttpError;
+use base::responses::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use base::types::Pool;
 use diesel::prelude::*;

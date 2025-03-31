@@ -4,24 +4,12 @@ use axum::{
     response::Json as RespJson,
     Extension,
 };
-use base::{crypto::Crypto, models::HttpError, schema::users, AppState};
-use chrono::NaiveDateTime;
+use base::{crypto::Crypto, models::User, responses::HttpError, schema::users, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
 use shared::auth::{Login, Token};
-
-type UserRow = (
-    i32,
-    Option<i32>,
-    String,
-    String,
-    String,
-    String,
-    String,
-    NaiveDateTime,
-);
 
 pub async fn login(
     State(state): State<AppState>,
@@ -50,7 +38,7 @@ pub async fn login(
     }
 
     Ok(RespJson(Token {
-        token: crypto.encode(&base::models::Token::new(user_id))?,
+        token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,
     }))
 }
 
@@ -81,7 +69,7 @@ pub async fn sign_up(
             users::password.eq(password),
             users::salt.eq(salt),
         ))
-        .get_result::<UserRow>(&mut conn)
+        .get_result::<User>(&mut conn)
         .await
         .map_err(|e| {
             if let diesel::result::Error::DatabaseError(
@@ -100,10 +88,10 @@ pub async fn sign_up(
 
             e.into()
         })?
-        .0;
+        .id;
 
     Ok(RespJson(Token {
-        token: crypto.encode(&base::models::Token::new(user_id))?,
+        token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,
     }))
 }
 

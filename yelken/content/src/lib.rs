@@ -1,5 +1,5 @@
 use axum::{middleware, routing::get, Router};
-use base::{middlewares::PermissionLayer, AppState};
+use base::{middlewares::permission::PermissionLayer, AppState};
 
 mod handlers;
 
@@ -25,6 +25,6 @@ pub fn router(state: AppState) -> Router<AppState> {
         .merge(content_write)
         .layer(middleware::from_fn_with_state(
             state.clone(),
-            base::middlewares::auth,
+            base::middlewares::auth::from_token,
         ))
 }

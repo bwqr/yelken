@@ -28,6 +28,7 @@ create table users(
     email      varchar(255)    not null unique,
     password   varchar(88)     not null,
     salt       varchar(32)     not null,
+    state      varchar(8)      not null default 'enabled' check (state in ('enabled', 'disabled')),
     created_at timestamp       not null default current_timestamp,
     constraint fk_users_role_id foreign key (role_id) references roles (id) on delete no action on update no action
 );

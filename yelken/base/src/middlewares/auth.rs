@@ -1,28 +1,21 @@
-use std::{
-    future::Future,
-    pin::Pin,
-    task::{Context, Poll},
-};
-
 use axum::{
     extract::{Request, State},
     http::{self, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
 };
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel_async::{pooled_connection::bb8::PooledConnection, AsyncPgConnection, RunQueryDsl};
-use shared::permission::Permission;
-use tower::{Layer, Service};
 
-use crate::{
-    crypto::Crypto,
-    models::{AuthUser, HttpError, Token},
-    schema::{permissions, users},
-    types::Pool,
-    AppState,
+use crate::{crypto::Crypto, responses::HttpError, schema::users, AppState};
+
+use axum::{
+    extract::{FromRequestParts, OptionalFromRequestParts},
+    http::request::Parts,
 };
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 
 const TOKEN_NOT_FOUND_ERROR: HttpError = HttpError {
     code: StatusCode::UNAUTHORIZED,
@@ -30,96 +23,68 @@ const TOKEN_NOT_FOUND_ERROR: HttpError = HttpError {
     context: None,
 };
 
-#[derive(Clone)]
-pub struct PermissionLayer {
-    pub pool: Pool,
-    pub perm: Permission,
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Token {
+    // issued at
+    pub iat: i64,
+    // expire time
+    pub exp: i64,
+    pub id: i32,
 }
 
-impl<S> Layer<S> for PermissionLayer {
-    type Service = PermissionService<S>;
+impl Token {
+    pub fn new(id: i32) -> Token {
+        const TIMEOUT: i64 = 60 * 60 * 24 * 7;
 
-    fn layer(&self, inner: S) -> Self::Service {
-        PermissionService {
-            inner,
-            layer: self.clone(),
+        let now = Utc::now().timestamp();
+
+        Self {
+            iat: now,
+            exp: now + TIMEOUT,
+            id,
         }
     }
 }
 
 #[derive(Clone)]
-pub struct PermissionService<S> {
-    inner: S,
-    layer: PermissionLayer,
+pub struct AuthUser {
+    pub id: i32,
+    pub username: String,
+    pub name: String,
+    pub email: String,
+    pub created_at: NaiveDateTime,
 }
 
-impl<S> Service<Request> for PermissionService<S>
+impl<S> FromRequestParts<S> for AuthUser
 where
-    S: Clone + Service<Request> + Send + 'static,
-    S::Response: IntoResponse,
-    S::Future: Send + 'static,
+    S: Send + Sync,
 {
-    type Response = Response;
-    type Error = S::Error;
-    type Future =
-        Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
+    type Rejection = HttpError;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.inner.poll_ready(cx)
-    }
-
-    fn call(&mut self, req: Request) -> Self::Future {
-        let layer = self.layer.clone();
-        let user = req.extensions().get::<AuthUser>().cloned();
-        let fut = self.inner.call(req);
-
-        Box::pin(async move {
-            let Some(user) = user else {
-                return Ok(HttpError {
-                    code: StatusCode::INTERNAL_SERVER_ERROR,
-                    error: "auth_user_missing_from_request",
-                    context: None,
-                }
-                .into_response());
-            };
-
-            {
-                let mut conn = layer.pool.get().await.unwrap();
-
-                let has_perm = diesel::dsl::select(diesel::dsl::exists(
-                    permissions::table
-                        .inner_join(
-                            users::table.on(users::id
-                                .nullable()
-                                .eq(permissions::user_id)
-                                .or(users::role_id.eq(permissions::role_id))),
-                        )
-                        .filter(
-                            users::id
-                                .eq(user.id)
-                                .and(permissions::name.eq(*&layer.perm.as_str())),
-                        ),
-                ))
-                .get_result::<bool>(&mut conn)
-                .await
-                .unwrap();
-
-                if !has_perm {
-                    return Ok(HttpError {
-                        code: StatusCode::FORBIDDEN,
-                        error: "access_denied",
-                        context: None,
-                    }
-                    .into_response());
-                }
-            }
-
-            fut.await.map(|resp| resp.into_response())
-        })
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+        match parts.extensions.remove::<Self>() {
+            Some(user) => Ok(user),
+            None => Err(HttpError {
+                code: StatusCode::UNAUTHORIZED,
+                error: "token_not_found_for_user",
+                context: None,
+            }),
+        }
     }
 }
 
-pub async fn auth(
+impl<S> OptionalFromRequestParts<S> for AuthUser
+where
+    S: Send + Sync,
+{
+    type Rejection = HttpError;
+
+    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Option<Self>, Self::Rejection> {
+        Ok(parts.extensions.remove::<Self>())
+    }
+}
+
+pub async fn from_token(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
@@ -135,7 +100,7 @@ pub async fn auth(
     Ok(next.run(req).await)
 }
 
-pub async fn try_auth(
+pub async fn try_from_token(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,
@@ -151,7 +116,7 @@ pub async fn try_auth(
     Ok(next.run(req).await)
 }
 
-pub async fn try_auth_from_cookie(
+pub async fn try_from_cookie(
     State(state): State<AppState>,
     mut req: Request,
     next: Next,

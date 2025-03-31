@@ -14,7 +14,7 @@ use leptos::prelude::{provide_context, Owner, RenderHtml};
 use leptos_router::location::RequestUrl;
 
 use app::Config;
-use base::{models::AuthUser, AppState};
+use base::{middlewares::auth::AuthUser, AppState};
 use resources::{ContentContext, PluginContext, UserContext};
 
 mod resources;
@@ -47,7 +47,7 @@ pub fn router(state: AppState, app_assets_dir: &str) -> Router<AppState> {
         .layer(Extension(Arc::new(index_html)))
         .layer(middleware::from_fn_with_state(
             state,
-            base::middlewares::try_auth_from_cookie,
+            base::middlewares::auth::try_from_cookie,
         ))
 }
 
