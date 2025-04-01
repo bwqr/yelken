@@ -2,61 +2,54 @@ mod handlers;
 mod l10n;
 mod render;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, sync::Arc};
 
 use axum::{middleware, routing::post, Router};
 use fluent::{concurrent::FluentBundle, FluentResource};
 pub use handlers::serve_page;
 
-use base::{schema::locales, types::Connection, AppState};
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-use l10n::Locale;
+use base::AppState;
+use l10n::L10n;
 use render::{FnResources, Render};
 use unic_langid::LanguageIdentifier;
 
-pub async fn build_locale(locales_dir: &str, mut conn: Connection<'_>) -> Locale {
-    let locales = locales::table
-        .select(locales::key)
-        .load::<String>(&mut conn)
-        .await
-        .unwrap();
+pub async fn build_l10n(
+    supported_locales: Arc<[LanguageIdentifier]>,
+    default_locale: LanguageIdentifier,
+    locations: &[String],
+) -> L10n {
+    // TODO move blocking operation inside block_on
+    let bundles = supported_locales.iter().cloned().map(|id| {
+        let mut bundle = FluentBundle::new_concurrent(vec![id.clone(), default_locale.clone()]);
 
-    let default: LanguageIdentifier = match locales.get(0).map(|locale| locale.parse()) {
-        Some(Ok(locale)) => locale,
-        _ => {
-            log::warn!("Either there is no locale in database or an invalid one exists, using default locale \"en\"");
+        for location in locations.iter() {
+            let path = format!("{location}/{id}.ftl");
+            let ftl = match read_to_string(&path) {
+                Ok(ftl) => ftl,
+                Err(e) => {
+                    log::warn!("Failed to read fluent file at path {path}, {e:?}");
+                    continue;
+                }
+            };
 
-            "en".parse().unwrap()
-        }
-    };
+            let resource = match FluentResource::try_new(ftl) {
+                Ok(resource) => resource,
+                Err(e) => {
+                    log::warn!("Failed to parse fluent file as resource, {e:?}");
 
-    let supported_locales: Arc<[LanguageIdentifier]> = locales
-        .into_iter()
-        .flat_map(|locale| {
-            locale
-                .parse()
-                .inspect_err(|e| log::warn!("Failed to parse locale {locale} due to {e:?}"))
-                .ok()
-        })
-        .collect();
+                    continue;
+                }
+            };
 
-    let bundles = HashMap::from_iter(supported_locales.iter().cloned().map(|id| {
-        let mut bundle = FluentBundle::new_concurrent(vec![id.clone(), default.clone()]);
-
-        let resource = FluentResource::try_new(
-            std::fs::read_to_string(format!("{locales_dir}/{id}.ftl")).unwrap(),
-        )
-        .unwrap();
-
-        if let Err(e) = bundle.add_resource(resource) {
-            log::warn!("Failed to add resource to localization bundle, {e:?}");
+            bundle.add_resource_overriding(resource);
         }
 
         (id, bundle)
-    }));
+    });
 
-    Locale::new(supported_locales, default, bundles)
+    let bundles = HashMap::from_iter(bundles);
+
+    L10n::new(supported_locales, default_locale, bundles)
 }
 
 pub fn build_render(templates_dir: &str, resources: FnResources) -> Render {

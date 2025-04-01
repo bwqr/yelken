@@ -35,6 +35,7 @@ reqwest = { version = "0.12.12", features = ["json"] }
 serde = { version = "1.0.217", features = ["rc", "serde_derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tower = "0.5.2"
+unic-langid = "0.9.5"
 wasm-bindgen = "0.2.100"
 web-sys = "0.3.77"
 
@@ -60,6 +61,7 @@ serde.workspace = true
 tokio.workspace = true
 tower.workspace = true
 tower-http = { version = "0.6.2", features = ["cors", "fs"] }
+unic-langid.workspace = true
 
 [profile.dev]
 debug = false

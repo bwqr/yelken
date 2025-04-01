@@ -32,6 +32,7 @@ dependencies = [
  "serde",
  "shared",
  "tokio",
+ "unic-langid",
 ]
 
 [[package]]
@@ -5300,6 +5301,7 @@ dependencies = [
  "tower",
  "tower-http",
  "ui",
+ "unic-langid",
  "user",
 ]
 

@@ -18,7 +18,7 @@ arc-swap = "1.7.1"
 fluent = { version = "0.16.1", default-features = false }
 matchit = "0.8.4"
 tera = { version = "1.20.0", default-features = false }
-unic-langid = "0.9.5"
+unic-langid.workspace = true
 
 [features]
 plugin = ["dep:plugin"]

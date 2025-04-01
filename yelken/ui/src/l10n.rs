@@ -4,9 +4,9 @@ use fluent::{concurrent::FluentBundle, FluentArgs, FluentResource, FluentValue};
 use unic_langid::LanguageIdentifier;
 
 #[derive(Clone)]
-pub struct Locale(Arc<Inner>);
+pub struct L10n(Arc<Inner>);
 
-impl Locale {
+impl L10n {
     pub fn new<'a>(
         supported_locales: Arc<[LanguageIdentifier]>,
         default: LanguageIdentifier,
@@ -20,7 +20,7 @@ impl Locale {
     }
 }
 
-impl Deref for Locale {
+impl Deref for L10n {
     type Target = Inner;
 
     fn deref(&self) -> &Self::Target {

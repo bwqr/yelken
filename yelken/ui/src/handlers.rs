@@ -14,7 +14,7 @@ use matchit::{Match, Router};
 use tera::Context;
 use unic_langid::LanguageIdentifier;
 
-use crate::{l10n::Locale, render::Render};
+use crate::{l10n::L10n, render::Render};
 
 fn resolve_locale<'a>(
     req: &'a Request,
@@ -81,7 +81,7 @@ fn resolve_locale<'a>(
 
 pub async fn serve_page(
     State(state): State<AppState>,
-    Extension(l10n): Extension<Locale>,
+    Extension(l10n): Extension<L10n>,
     Extension(renderer): Extension<Render>,
     req: Request,
 ) -> Result<Response, HttpError> {
@@ -250,7 +250,7 @@ pub async fn serve_page(
 
 pub async fn refresh_templates(
     State(state): State<AppState>,
-    Extension(l10n): Extension<Locale>,
+    Extension(l10n): Extension<L10n>,
     Extension(renderer): Extension<Render>,
     #[cfg(feature = "plugin")] Extension(plugin_host): Extension<plugin::PluginHost>,
 ) -> Result<(), HttpError> {
@@ -293,14 +293,14 @@ mod tests {
     use diesel_async::RunQueryDsl;
     use unic_langid::LanguageIdentifier;
 
-    use crate::{l10n::Locale, render::Render};
+    use crate::{l10n::L10n, render::Render};
 
     use super::resolve_locale;
 
     async fn init_params(
         locales: &[&str],
         templates: Vec<(String, String)>,
-    ) -> (AppState, Locale, Render) {
+    ) -> (AppState, L10n, Render) {
         let config = Config::default();
         let pool = create_pool(DB_CONFIG).await;
         let state = AppState::new(config, pool);
@@ -316,7 +316,7 @@ mod tests {
             .await
             .unwrap();
 
-        let l10n = Locale::new(
+        let l10n = L10n::new(
             locales.into_iter().map(|l| l.parse().unwrap()).collect(),
             "en".parse().unwrap(),
             HashMap::new(),

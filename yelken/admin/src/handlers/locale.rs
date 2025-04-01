@@ -8,6 +8,7 @@ use diesel::{
     result::{DatabaseErrorKind, Error},
 };
 use diesel_async::RunQueryDsl;
+use unic_langid::LanguageIdentifier;
 
 use crate::requests::{CreateLocale, UpdateLocaleState};
 
@@ -15,10 +16,21 @@ pub async fn create_locale(
     State(state): State<AppState>,
     Json(req): Json<CreateLocale>,
 ) -> Result<Json<Locale>, HttpError> {
+    if req.key.parse::<LanguageIdentifier>().is_err() {
+        return Err(HttpError::unprocessable_entity("invalid_locale_key"));
+    }
+
     let locale = diesel::insert_into(locales::table)
         .values((locales::key.eq(req.key), locales::name.eq(req.name)))
         .get_result::<Locale>(&mut state.pool.get().await?)
-        .await?;
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) = &e {
+                return HttpError::conflict("locale_key_already_exists");
+            }
+
+            e.into()
+        })?;
 
     Ok(Json(locale))
 }

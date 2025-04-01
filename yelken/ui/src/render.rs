@@ -12,12 +12,12 @@ use diesel_async::RunQueryDsl;
 use tera::{from_value, to_value, Context, Error, Tera, Value};
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
-use crate::l10n::Locale;
+use crate::l10n::L10n;
 
 #[cfg(feature = "plugin")]
-pub type FnResources = (Locale, Pool, plugin::PluginHost);
+pub type FnResources = (L10n, Pool, plugin::PluginHost);
 #[cfg(not(feature = "plugin"))]
-pub type FnResources = (Locale, Pool);
+pub type FnResources = (L10n, Pool);
 
 #[derive(Clone)]
 pub struct Render(Arc<ArcSwap<Inner>>);

@@ -7,7 +7,7 @@ use axum::{
     response::Response,
     Extension, Router,
 };
-use base::{config::Config, crypto::Crypto, types::Pool, AppState};
+use base::{config::Config, crypto::Crypto, schema::locales, types::Pool, AppState};
 use config::ServerConfig;
 use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
@@ -121,12 +121,47 @@ async fn main() {
 
     #[cfg(feature = "ui")]
     let (app, layers) = {
-        let l10n = ui::build_locale(
-            &format!(
-                "{}/themes/{}/locales",
-                state.config.storage_dir, state.config.theme
-            ),
-            state.pool.get().await.unwrap(),
+        use diesel::prelude::*;
+        use diesel_async::RunQueryDsl;
+        use std::sync::Arc;
+        use unic_langid::LanguageIdentifier;
+
+        let locales = locales::table
+            .select(locales::key)
+            .load::<String>(&mut state.pool.get().await.unwrap())
+            .await
+            .unwrap()
+            .into_iter()
+            .flat_map(|key| {
+                key.parse()
+                    .inspect_err(|e| log::warn!("Failed to parse locale {key} due to {e:?}"))
+                    .ok()
+            })
+            .collect::<Arc<[LanguageIdentifier]>>();
+
+        let default_locale = locales.get(0).cloned().unwrap_or_else(|| {
+            log::error!("Either there is no locale in database or an invalid one exists, using default locale \"en\"");
+
+            "en".parse().unwrap()
+        });
+
+        let l10n = ui::build_l10n(
+            locales,
+            default_locale,
+            &[
+                // Theme provided localizations
+                format!(
+                    "{}/themes/{}/locales",
+                    state.config.storage_dir, state.config.theme
+                ),
+                // Global scoped, user provided localizations
+                format!("{}/locales/global", state.config.storage_dir),
+                // Theme scoped, user provided localizations
+                format!(
+                    "{}/locales/themes/{}",
+                    state.config.storage_dir, state.config.theme
+                ),
+            ],
         )
         .await;
 

@@ -57,7 +57,7 @@ pub async fn create_user(
             if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, info) = &e {
                 if let Some(constraint_name) = info.constraint_name() {
                     if constraint_name.contains("email") {
-                        return HttpError::conflict("email_already_used");
+                        return HttpError::conflict("email_already_exists");
                     } else if constraint_name.contains("username") {
                         return HttpError::conflict("non_unique_username");
                     }
