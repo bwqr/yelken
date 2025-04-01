@@ -34,6 +34,14 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/locale/{locale_key}/state",
             put(locale::update_locale_state),
         )
+        .route(
+            "/locale/{locale_key}/resource",
+            put(locale::update_locale_resource),
+        )
+        .route(
+            "/locale/{locale_key}/resource",
+            delete(locale::delete_locale_resource),
+        )
         .route("/locale/{locale_key}", delete(locale::delete_locale))
         .layer(PermissionLayer {
             pool: state.pool.clone(),

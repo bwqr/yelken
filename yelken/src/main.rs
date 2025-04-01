@@ -128,6 +128,7 @@ async fn main() {
 
         let locales = locales::table
             .select(locales::key)
+            .filter(locales::disabled.eq(false))
             .load::<String>(&mut state.pool.get().await.unwrap())
             .await
             .unwrap()

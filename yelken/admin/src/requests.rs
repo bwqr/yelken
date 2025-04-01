@@ -22,3 +22,14 @@ pub struct CreateLocale {
 pub struct UpdateLocaleState {
     pub disabled: bool,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateLocaleResource {
+    pub theme_scoped: bool,
+    pub resource: String,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteLocaleResource {
+    pub theme_scoped: bool,
+}
