@@ -7,7 +7,7 @@ use base::{
     middlewares::{auth::from_token, permission::PermissionLayer},
     AppState,
 };
-use handlers::{locale, permission, role, user};
+use handlers::{install, locale, permission, role, user};
 use shared::permission::Permission;
 
 mod handlers;
@@ -43,6 +43,7 @@ pub fn router(state: AppState) -> Router<AppState> {
             delete(locale::delete_locale_resource),
         )
         .route("/locale/{locale_key}", delete(locale::delete_locale))
+        .route("/install/theme", post(install::install_theme))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Admin,

@@ -74,6 +74,8 @@ diesel::table! {
 diesel::table! {
     models (id) {
         id -> Int4,
+        #[max_length = 32]
+        namespace -> Nullable<Varchar>,
         #[max_length = 128]
         name -> Varchar,
     }
@@ -82,6 +84,8 @@ diesel::table! {
 diesel::table! {
     pages (id) {
         id -> Int4,
+        #[max_length = 32]
+        namespace -> Nullable<Varchar>,
         #[max_length = 255]
         name -> Varchar,
         #[max_length = 255]
@@ -123,6 +127,18 @@ diesel::table! {
     roles (id) {
         id -> Int4,
         #[max_length = 32]
+        name -> Varchar,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    themes (id) {
+        #[max_length = 255]
+        id -> Varchar,
+        #[max_length = 32]
+        version -> Varchar,
+        #[max_length = 255]
         name -> Varchar,
         created_at -> Timestamp,
     }
@@ -173,5 +189,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     permissions,
     plugins,
     roles,
+    themes,
     users,
 );

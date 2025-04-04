@@ -14,6 +14,13 @@ create table plugins(
     created_at timestamp    not null default current_timestamp
 );
 
+create table themes(
+    id      varchar(255) primary key not null,
+    version varchar(32)  not null,
+    name    varchar(255) not null,
+    created_at timestamp    not null default current_timestamp
+);
+
 create table roles(
     id    serial primary key not null,
     name  varchar(32)        not null unique,
@@ -63,8 +70,9 @@ create table enum_options(
 );
 
 create table models(
-    id   serial primary key  not null,
-    name varchar(128) unique not null
+    id        serial primary key  not null,
+    namespace varchar(32)  default null,
+    name      varchar(128) not null
 );
 
 create table model_fields(
@@ -99,13 +107,12 @@ create table content_values(
 
 create table pages(
     id         serial primary key not null,
+    namespace  varchar(32)  default null,
     name       varchar(255) not null,
     path       varchar(255) not null,
     template   varchar(255) not null,
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
-    unique (name, locale),
-    unique (path, locale),
     constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
 );
 
