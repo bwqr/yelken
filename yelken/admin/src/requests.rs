@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::SafePath;
+
 #[derive(Deserialize)]
 pub struct CreateUser {
     pub name: String,
@@ -32,4 +34,17 @@ pub struct UpdateLocaleResource {
 #[derive(Deserialize)]
 pub struct DeleteLocaleResource {
     pub theme_scoped: bool,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateTemplate {
+    pub theme_scoped: bool,
+    pub path: SafePath<3>,
+    pub template: String,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteTemplate {
+    pub theme_scoped: bool,
+    pub path: SafePath<3>,
 }

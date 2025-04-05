@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, HashMap};
-use std::fs;
 use std::sync::Arc;
 
 use arc_swap::{access::Access, ArcSwap};
@@ -23,35 +22,30 @@ pub type FnResources = (L10n, Pool);
 pub struct Render(Arc<ArcSwap<Inner>>);
 
 impl Render {
-    #[cfg(test)]
-    pub fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
-        Inner::new(templates).map(|inner| Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
-    }
+    pub fn new(templates: Vec<(String, String)>, resources: Option<FnResources>) -> Result<Self, Error> {
+        let mut inner = Inner::new(templates)?;
 
-    pub fn from_dir(dir: &str, register_fns: Option<FnResources>) -> Result<Self, Error> {
-        let mut inner = Inner::from_dir(dir)?;
-
-        if let Some(resources) = register_fns {
+        if let Some(resources) = resources {
             register_functions(&mut inner.tera, resources);
         }
 
         Ok(Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
     }
 
-    pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
-        Access::<Inner>::load(&*self.0).tera.render(template, ctx)
-    }
+    pub fn refresh(&self, templates: Vec<(String, String)>, resources: Option<FnResources>) -> Result<(), Error> {
+        let mut inner = Inner::new(templates)?;
 
-    pub fn refresh(&self, dir: &str, register_fns: Option<FnResources>) -> Result<(), Error> {
-        let mut inner = Inner::from_dir(dir)?;
-
-        if let Some(resources) = register_fns {
+        if let Some(resources) = resources {
             register_functions(&mut inner.tera, resources);
         }
 
         self.0.store(Arc::new(inner));
 
         Ok(())
+    }
+
+    pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
+        Access::<Inner>::load(&*self.0).tera.render(template, ctx)
     }
 }
 
@@ -66,44 +60,6 @@ impl Inner {
         tera.add_raw_templates(templates)?;
 
         Ok(Inner { tera })
-    }
-
-    fn from_dir(root: &str) -> Result<Self, Error> {
-        let mut stack = vec![fs::read_dir(root).unwrap()];
-        let mut templates = vec![];
-
-        while let Some(dir) = stack.pop() {
-            for entry in dir {
-                let entry = entry.unwrap();
-                let path = entry.path();
-
-                if path.is_symlink() {
-                    continue;
-                }
-
-                if path.is_dir() {
-                    stack.push(fs::read_dir(path).unwrap());
-                } else if path.is_file()
-                    && path
-                        .extension()
-                        .and_then(|ext| ext.to_str())
-                        .map(|ext| ext == "html")
-                        .unwrap_or(false)
-                {
-                    let template = fs::read_to_string(&path).unwrap();
-
-                    templates.push((
-                        path.strip_prefix(root)
-                            .unwrap()
-                            .to_string_lossy()
-                            .to_string(),
-                        template,
-                    ));
-                }
-            }
-        }
-
-        Self::new(templates)
     }
 }
 

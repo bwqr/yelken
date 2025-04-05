@@ -172,10 +172,20 @@ async fn main() {
         let resources = (l10n.clone(), state.pool.clone());
 
         let render = ui::build_render(
-            &format!(
-                "{}/themes/{}/templates",
-                state.config.storage_dir, state.config.theme
-            ),
+            &[
+                // Theme provided templates
+                format!(
+                    "{}/themes/{}/templates",
+                    state.config.storage_dir, state.config.theme
+                ),
+                // Global scoped, user provided templates
+                format!("{}/templates/global", state.config.storage_dir),
+                // Theme scoped, user provided templates
+                format!(
+                    "{}/templates/themes/{}",
+                    state.config.storage_dir, state.config.theme
+                ),
+            ],
             resources,
         );
 

@@ -322,7 +322,7 @@ mod tests {
             HashMap::new(),
         );
 
-        let renderer = Render::new(templates).unwrap();
+        let renderer = Render::new(templates, None).unwrap();
 
         (state, l10n, renderer)
     }

@@ -1,3 +1,8 @@
+use std::{
+    path::{Component, PathBuf},
+    str::FromStr,
+};
+
 use axum::{
     middleware,
     routing::{delete, post, put},
@@ -7,12 +12,66 @@ use base::{
     middlewares::{auth::from_token, permission::PermissionLayer},
     AppState,
 };
-use handlers::{install, locale, permission, role, user};
+use handlers::{install, locale, permission, role, template, user};
+use serde::Deserialize;
 use shared::permission::Permission;
 
 mod handlers;
 mod requests;
 mod responses;
+
+pub(crate) struct SafePath<const DEPTH: usize>(pub PathBuf);
+
+impl<const DEPTH: usize> FromStr for SafePath<DEPTH> {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let path = PathBuf::from(s);
+
+        if path.components().count() > DEPTH {
+            return Err("too_deep_path");
+        }
+
+        if path.components().any(|c| {
+            if let Component::Normal(_) = c {
+                false
+            } else {
+                true
+            }
+        }) {
+            return Err("invalid_path");
+        }
+
+        Ok(SafePath(path))
+    }
+}
+
+impl<'de, const DEPTH: usize> Deserialize<'de> for SafePath<DEPTH> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+
+        let path = PathBuf::from(string);
+
+        if path.components().count() > DEPTH {
+            return Err(serde::de::Error::custom("too_deep_path"));
+        }
+
+        if path.components().any(|c| {
+            if let Component::Normal(_) = c {
+                false
+            } else {
+                true
+            }
+        }) {
+            return Err(serde::de::Error::custom("invalid_path"));
+        }
+
+        Ok(SafePath(path))
+    }
+}
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
@@ -43,6 +102,8 @@ pub fn router(state: AppState) -> Router<AppState> {
             delete(locale::delete_locale_resource),
         )
         .route("/locale/{locale_key}", delete(locale::delete_locale))
+        .route("/template", put(template::update_template))
+        .route("/template", delete(template::delete_template))
         .route("/install/theme", post(install::install_theme))
         .layer(PermissionLayer {
             pool: state.pool.clone(),

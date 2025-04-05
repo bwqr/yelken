@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 use axum::{
     extract::{Multipart, State},
@@ -81,7 +84,11 @@ pub async fn install_theme(
                     continue;
                 }
 
-                if !(outpath.starts_with("templates/")
+                if !((outpath.starts_with("templates/")
+                    && outpath
+                        .extension()
+                        .map(|e| e == AsRef::<OsStr>::as_ref("html"))
+                        .unwrap_or(false))
                     || outpath
                         .parent()
                         .map(|p| p == AsRef::<Path>::as_ref("locales"))
