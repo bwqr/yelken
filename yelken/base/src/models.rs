@@ -66,3 +66,35 @@ pub struct Locale {
     pub name: String,
     pub disabled: bool,
 }
+
+#[derive(Queryable)]
+pub struct Model {
+    pub id: i32,
+    pub namespace: Option<String>,
+    pub name: String,
+}
+
+#[derive(Queryable)]
+pub struct Field {
+    pub id: i32,
+    pub name: String,
+    pub kind: String,
+}
+
+#[derive(Queryable)]
+pub struct ModelField {
+    pub id: i32,
+    pub field_id: i32,
+    pub model_id: i32,
+    pub localized: bool,
+    pub multiple: bool,
+    pub name: String,
+}
+
+#[derive(Queryable)]
+pub struct Content {
+    pub id: i32,
+    pub model_id: i32,
+    pub name: String,
+    pub created_at: NaiveDateTime,
+}

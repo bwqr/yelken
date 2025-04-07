@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     path::{Path, PathBuf},
 };
@@ -7,20 +8,56 @@ use axum::{
     extract::{Multipart, State},
     http::StatusCode,
 };
-use base::{responses::HttpError, schema::themes, AppState};
+use base::{
+    models::Field,
+    responses::HttpError,
+    schema::{content_values, contents, fields, model_fields, models, themes},
+    types::Connection,
+    AppState,
+};
 use bytes::Buf;
 use diesel::{
     prelude::*,
     result::{DatabaseErrorKind, Error},
 };
-use diesel_async::RunQueryDsl;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use serde::Deserialize;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Debug, Deserialize)]
+struct ContentValue {
+    field: String,
+    value: String,
+    locale: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Content {
+    name: String,
+    model: String,
+    values: Vec<ContentValue>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ModelField {
+    name: String,
+    field: String,
+    localized: Option<bool>,
+    multiple: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Model {
+    name: String,
+    fields: Vec<ModelField>,
+}
+
+#[derive(Debug, Deserialize)]
 struct ThemeConfig {
     id: String,
     version: String,
     name: String,
+    models: Vec<Model>,
+    contents: Vec<Content>,
 }
 
 fn bad_request(error: &'static str) -> HttpError {
@@ -128,8 +165,10 @@ pub async fn install_theme(
                         .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
                     theme_config =
-                        Some(serde_json::from_reader(&dest_file).map_err(|_| {
-                            HttpError::unprocessable_entity("invalid_manifest_file")
+                        Some(serde_json::from_reader(&dest_file).map_err(|e| HttpError {
+                            code: StatusCode::UNPROCESSABLE_ENTITY,
+                            error: "invalid_manifest_file",
+                            context: Some(format!("{e:?}")),
                         })?)
                 }
             }
@@ -139,31 +178,18 @@ pub async fn install_theme(
 
             log::info!("ThemeConfig {theme_config:?}");
 
+            let theme_id = theme_config.id.clone();
             let pool = state.pool.clone();
-            let config = theme_config.clone();
             tokio::runtime::Handle::current().block_on(async move {
-                diesel::insert_into(themes::table)
-                    .values((
-                        themes::id.eq(config.id),
-                        themes::name.eq(config.name),
-                        themes::version.eq(config.version),
-                    ))
-                    .execute(&mut pool.get().await?)
+                pool.get()
+                    .await?
+                    .transaction(|conn| create_theme(conn, theme_config).scope_boxed())
                     .await
-                    .map_err(|e| {
-                        if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) = &e {
-                            return HttpError::conflict("theme_already_exists");
-                        }
-
-                        e.into()
-                    })?;
-
-                Result::<(), HttpError>::Ok(())
             })?;
 
             std::fs::rename(
                 tmp_theme_dir,
-                [&state.config.storage_dir, "themes", &theme_config.id]
+                [&state.config.storage_dir, "themes", &theme_id]
                     .iter()
                     .collect::<PathBuf>(),
             )
@@ -174,6 +200,152 @@ pub async fn install_theme(
         })
         .await
         .map_err(|_| HttpError::internal_server_error("blocking_error"))??;
+
+    Ok(())
+}
+
+async fn create_theme<'a>(
+    conn: &mut Connection<'a>,
+    theme_config: ThemeConfig,
+) -> Result<(), HttpError> {
+    diesel::insert_into(themes::table)
+        .values((
+            themes::id.eq(&theme_config.id),
+            themes::name.eq(&theme_config.name),
+            themes::version.eq(&theme_config.version),
+        ))
+        .execute(conn)
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) = &e {
+                return HttpError::conflict("theme_already_exists");
+            }
+
+            e.into()
+        })?;
+
+    let models = HashMap::<String, base::models::Model>::from_iter(
+        diesel::insert_into(models::table)
+            .values(
+                theme_config
+                    .models
+                    .iter()
+                    .map(|model| {
+                        (
+                            models::namespace.eq(&theme_config.id),
+                            models::name.eq(&model.name),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .get_results::<base::models::Model>(conn)
+            .await?
+            .into_iter()
+            .map(|model| (model.name.clone(), model)),
+    );
+
+    let fields = HashMap::<String, Field>::from_iter(
+        fields::table
+            .load::<Field>(conn)
+            .await?
+            .into_iter()
+            .map(|field| (field.name.clone(), field)),
+    );
+
+    for model in theme_config.models {
+        let model_id = models
+            .get(&model.name)
+            .ok_or(HttpError::internal_server_error("unreachable"))?
+            .id;
+
+        let model_fields = model
+            .fields
+            .iter()
+            .map(|model_field| {
+                fields
+                    .get(&model_field.field)
+                    .map(|f| (f.id, model_field))
+                    .ok_or_else(|| HttpError {
+                        code: StatusCode::UNPROCESSABLE_ENTITY,
+                        error: "unknown_field",
+                        context: Some(format!("Field {} is not known", model_field.field)),
+                    })
+            })
+            .collect::<Result<Vec<(i32, &ModelField)>, HttpError>>()?;
+
+        let model_fields = HashMap::<String, base::models::ModelField>::from_iter(
+            diesel::insert_into(model_fields::table)
+                .values(
+                    model_fields
+                        .iter()
+                        .map(|model_field| {
+                            (
+                                model_fields::model_id.eq(model_id),
+                                model_fields::field_id.eq(model_field.0),
+                                model_fields::localized
+                                    .eq(model_field.1.localized.unwrap_or(false)),
+                                model_fields::multiple.eq(model_field.1.multiple.unwrap_or(false)),
+                                model_fields::name.eq(&model_field.1.name),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .get_results::<base::models::ModelField>(conn)
+                .await?
+                .into_iter()
+                .map(|mf| (mf.name.clone(), mf)),
+        );
+
+        for content in theme_config
+            .contents
+            .iter()
+            .filter(|c| c.model == model.name)
+        {
+            let values = content
+                .values
+                .iter()
+                .map(|v| {
+                    model_fields
+                        .get(&v.field)
+                        .map(|mf| (mf.id, v))
+                        .ok_or_else(|| HttpError {
+                            code: StatusCode::UNPROCESSABLE_ENTITY,
+                            error: "unknown_field",
+                            context: Some(format!(
+                                "Field in content value {} is not known",
+                                v.field
+                            )),
+                        })
+                })
+                .collect::<Result<Vec<(i32, &ContentValue)>, HttpError>>()?;
+
+            let content_id = diesel::insert_into(contents::table)
+                .values((
+                    contents::model_id.eq(model_id),
+                    contents::name.eq(&content.name),
+                ))
+                .get_result::<base::models::Content>(conn)
+                .await?
+                .id;
+
+            diesel::insert_into(content_values::table)
+                .values(
+                    values
+                        .into_iter()
+                        .map(|v| {
+                            (
+                                content_values::content_id.eq(content_id),
+                                content_values::model_field_id.eq(v.0),
+                                content_values::value.eq(&v.1.value),
+                                content_values::locale.eq(&v.1.locale),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .execute(conn)
+                .await?;
+        }
+    }
 
     Ok(())
 }
