@@ -11,7 +11,7 @@ use axum::{
 use base::{
     models::Field,
     responses::HttpError,
-    schema::{content_values, contents, fields, model_fields, models, themes},
+    schema::{content_values, contents, fields, model_fields, models, pages, themes},
     types::Connection,
     AppState,
 };
@@ -52,12 +52,21 @@ struct Model {
 }
 
 #[derive(Debug, Deserialize)]
-struct ThemeConfig {
+struct Page {
+    name: String,
+    path: String,
+    template: String,
+    locale: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ThemeManifest {
     id: String,
     version: String,
     name: String,
     models: Vec<Model>,
     contents: Vec<Content>,
+    pages: Vec<Page>,
 }
 
 fn bad_request(error: &'static str) -> HttpError {
@@ -108,7 +117,7 @@ pub async fn install_theme(
 
             let _guard = Guard(tmp_theme_dir.clone());
 
-            let mut theme_config: Option<ThemeConfig> = None;
+            let mut theme_manifest: Option<ThemeManifest> = None;
 
             while let Some(mut file) = zip::read::read_zipfile_from_stream(&mut reader)
                 .map_err(|_| HttpError::internal_server_error("failed_reading_zip"))?
@@ -164,7 +173,7 @@ pub async fn install_theme(
                         .inspect_err(|e| log::warn!("Failed to read Yelken.json, {e:?}"))
                         .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
-                    theme_config =
+                    theme_manifest =
                         Some(serde_json::from_reader(&dest_file).map_err(|e| HttpError {
                             code: StatusCode::UNPROCESSABLE_ENTITY,
                             error: "invalid_manifest_file",
@@ -173,17 +182,17 @@ pub async fn install_theme(
                 }
             }
 
-            let theme_config =
-                theme_config.ok_or(HttpError::unprocessable_entity("no_manifest_file"))?;
+            let theme_manifest =
+                theme_manifest.ok_or(HttpError::unprocessable_entity("no_manifest_file"))?;
 
-            log::info!("ThemeConfig {theme_config:?}");
+            log::info!("ThemeManifest {theme_manifest:?}");
 
-            let theme_id = theme_config.id.clone();
+            let theme_id = theme_manifest.id.clone();
             let pool = state.pool.clone();
             tokio::runtime::Handle::current().block_on(async move {
                 pool.get()
                     .await?
-                    .transaction(|conn| create_theme(conn, theme_config).scope_boxed())
+                    .transaction(|conn| create_theme(conn, theme_manifest).scope_boxed())
                     .await
             })?;
 
@@ -206,13 +215,13 @@ pub async fn install_theme(
 
 async fn create_theme<'a>(
     conn: &mut Connection<'a>,
-    theme_config: ThemeConfig,
+    manifest: ThemeManifest,
 ) -> Result<(), HttpError> {
     diesel::insert_into(themes::table)
         .values((
-            themes::id.eq(&theme_config.id),
-            themes::name.eq(&theme_config.name),
-            themes::version.eq(&theme_config.version),
+            themes::id.eq(&manifest.id),
+            themes::name.eq(&manifest.name),
+            themes::version.eq(&manifest.version),
         ))
         .execute(conn)
         .await
@@ -224,15 +233,34 @@ async fn create_theme<'a>(
             e.into()
         })?;
 
+    diesel::insert_into(pages::table)
+        .values(
+            manifest
+                .pages
+                .into_iter()
+                .map(|page| {
+                    (
+                        pages::namespace.eq(&manifest.id),
+                        pages::name.eq(page.name),
+                        pages::path.eq(page.path),
+                        pages::template.eq(page.template),
+                        pages::locale.eq(page.locale),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+        .execute(conn)
+        .await?;
+
     let models = HashMap::<String, base::models::Model>::from_iter(
         diesel::insert_into(models::table)
             .values(
-                theme_config
+                manifest
                     .models
                     .iter()
                     .map(|model| {
                         (
-                            models::namespace.eq(&theme_config.id),
+                            models::namespace.eq(&manifest.id),
                             models::name.eq(&model.name),
                         )
                     })
@@ -252,7 +280,7 @@ async fn create_theme<'a>(
             .map(|field| (field.name.clone(), field)),
     );
 
-    for model in theme_config.models {
+    for model in manifest.models {
         let model_id = models
             .get(&model.name)
             .ok_or(HttpError::internal_server_error("unreachable"))?
@@ -296,7 +324,7 @@ async fn create_theme<'a>(
                 .map(|mf| (mf.name.clone(), mf)),
         );
 
-        for content in theme_config
+        for content in manifest
             .contents
             .iter()
             .filter(|c| c.model == model.name)
