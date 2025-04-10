@@ -87,7 +87,7 @@ pub async fn update_locale_resource(
     Json(req): Json<UpdateLocaleResource>,
 ) -> Result<(), HttpError> {
     if let Err(e) = FluentResource::try_new(req.resource.clone()) {
-        log::warn!("Failed to parse fluent resource successfully, {e:?}");
+        log::debug!("Failed to parse fluent resource successfully, {e:?}");
 
         return Err(HttpError::unprocessable_entity("invalid_fluent_resource"));
     }
@@ -102,22 +102,23 @@ pub async fn update_locale_resource(
     };
 
     let path = if req.theme_scoped {
-        format!(
-            "{}/locales/themes/{}/{}.ftl",
-            state.config.storage_dir, state.config.theme, locale.key
-        )
+        [
+            "locales",
+            "themes",
+            &state.config.theme,
+            &format!("{}.ftl", locale.key),
+        ]
+        .join("/")
     } else {
-        format!(
-            "{}/locales/global/{}.ftl",
-            state.config.storage_dir, locale.key
-        )
+        ["locales", "global", &format!("{}.ftl", locale.key)].join("/")
     };
 
-    if let Err(e) = tokio::fs::write(&path, req.resource).await {
-        log::error!("Failed to write resource at path {path}, {e:?}");
-
-        return Err(HttpError::internal_server_error("failed_writing_resource"));
-    }
+    state
+        .storage
+        .write(&path, req.resource)
+        .await
+        .inspect_err(|e| log::error!("Failed to write resource at path {path}, {e:?}"))
+        .map_err(|_| HttpError::internal_server_error("failed_writing_resource"))?;
 
     Ok(())
 }
@@ -137,22 +138,23 @@ pub async fn delete_locale_resource(
     };
 
     let path = if req.theme_scoped {
-        format!(
-            "{}/locales/themes/{}/{}.ftl",
-            state.config.storage_dir, state.config.theme, locale.key
-        )
+        [
+            "locales",
+            "themes",
+            &state.config.theme,
+            &format!("{}.ftl", locale.key),
+        ]
+        .join("/")
     } else {
-        format!(
-            "{}/locales/global/{}.ftl",
-            state.config.storage_dir, locale.key
-        )
+        ["locales", "global", &format!("{}.ftl", locale.key)].join("/")
     };
 
-    if let Err(e) = tokio::fs::remove_file(&path).await {
-        log::error!("Failed to remove locale resource at path {path}, {e:?}");
-
-        return Err(HttpError::internal_server_error("failed_deleting_resource"));
-    }
+    state
+        .storage
+        .delete(&path)
+        .await
+        .inspect_err(|e| log::error!("Failed to remove locale resource at path {path}, {e:?}"))
+        .map_err(|_| HttpError::internal_server_error("failed_deleting_resource"))?;
 
     Ok(())
 }

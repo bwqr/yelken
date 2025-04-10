@@ -1,6 +1,8 @@
 use std::{ops::Deref, sync::Arc};
 
 use config::Config;
+use opendal::Operator;
+use types::Pool;
 
 pub mod config;
 pub mod crypto;
@@ -23,12 +25,17 @@ impl Deref for AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config, pool: types::Pool) -> Self {
-        Self(Arc::new(Inner { config, pool }))
+    pub fn new(config: Config, pool: Pool, storage: Operator) -> Self {
+        Self(Arc::new(Inner {
+            config,
+            pool,
+            storage,
+        }))
     }
 }
 
 pub struct Inner {
     pub config: Config,
-    pub pool: types::Pool,
+    pub pool: Pool,
+    pub storage: Operator,
 }

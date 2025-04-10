@@ -6,6 +6,7 @@ pub struct ServerConfig {
     pub address: SocketAddrV4,
     pub database_url: String,
     pub app_assets_dir: String,
+    pub storage_dir: String,
 }
 
 impl ServerConfig {
@@ -23,10 +24,14 @@ impl ServerConfig {
         let app_assets_dir = std::env::var("YELKEN_APP_ASSETS_DIR")
             .context("YELKEN_APP_ASSETS_DIR is not defined")?;
 
+        let storage_dir = std::env::var("YELKEN_STORAGE_DIR")
+            .context("YELKEN_STORAGE_DIR is not defined")?;
+
         Ok(Self {
             address,
             database_url,
             app_assets_dir,
+            storage_dir,
         })
     }
 }

@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -21,6 +22,8 @@ use diesel::{
     result::{DatabaseErrorKind, Error},
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
+use opendal::Operator;
+use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -81,10 +84,6 @@ pub async fn install_theme(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> Result<(), HttpError> {
-    let tmp_theme_dir: PathBuf = [&state.config.storage_dir, "tmp", "some-random-chars"]
-        .iter()
-        .collect();
-
     let field = multipart
         .next_field()
         .await
@@ -99,118 +98,160 @@ pub async fn install_theme(
         return Err(bad_request("missing_field_in_multipart"));
     }
 
-    let mut reader = field
+    let reader = field
         .bytes()
         .await
         .map_err(|_| bad_request("invalid_multipart"))?
         .reader();
 
-    tokio::runtime::Handle::current()
-        .spawn_blocking(move || {
-            struct Guard(PathBuf);
+    let tmp_theme_dir: PathBuf = {
+        let random: String = (0..32)
+            .map(|_| rng().sample(Alphanumeric) as char)
+            .collect();
 
-            impl Drop for Guard {
-                fn drop(&mut self) {
-                    let _ = std::fs::remove_dir_all(&self.0);
-                }
-            }
+        [&state.config.tmp_dir, &random].iter().collect()
+    };
 
-            let _guard = Guard(tmp_theme_dir.clone());
+    let result = install(
+        state.storage.clone(),
+        &mut state.pool.get().await?,
+        reader,
+        tmp_theme_dir.clone(),
+    )
+    .await;
 
-            let mut theme_manifest: Option<ThemeManifest> = None;
+    if let Err(e) = tokio::fs::remove_dir_all(&tmp_theme_dir).await {
+        log::warn!(
+            "Failed to remove tmp theme dir during installation cleanup, {tmp_theme_dir:?}, {e:?}"
+        );
+    }
 
-            while let Some(mut file) = zip::read::read_zipfile_from_stream(&mut reader)
-                .map_err(|_| HttpError::internal_server_error("failed_reading_zip"))?
-            {
-                let Some(outpath) = file.enclosed_name() else {
-                    return Err(HttpError::unprocessable_entity("invalid_zip_archive"));
-                };
+    result
+}
 
-                if !file.is_file() {
-                    continue;
-                }
-
-                if !((outpath.starts_with("templates/")
-                    && outpath
-                        .extension()
-                        .map(|e| e == AsRef::<OsStr>::as_ref("html"))
-                        .unwrap_or(false))
-                    || outpath
-                        .parent()
-                        .map(|p| p == AsRef::<Path>::as_ref("locales"))
-                        .unwrap_or(false)
-                    || outpath == AsRef::<Path>::as_ref("Yelken.json"))
-                {
-                    log::warn!("Unexpected file found in archive, {outpath:?}");
-
-                    continue;
-                }
-
-                if let Some(parent) = outpath.parent() {
-                    let mut dir = tmp_theme_dir.clone();
-                    dir.push(parent);
-
-                    std::fs::create_dir_all(dir)
-                        .inspect_err(|e| log::warn!("Failed to create dirs {e:?}"))
-                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
-                }
-
-                let mut dest_file_path = tmp_theme_dir.clone();
-                dest_file_path.push(&outpath);
-
-                {
-                    let mut dest_file = std::fs::File::create(&dest_file_path)
-                        .inspect_err(|e| log::warn!("Failed to create file {e:?}"))
-                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
-
-                    std::io::copy(&mut file, &mut dest_file)
-                        .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
-                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
-                }
-
-                if outpath == AsRef::<Path>::as_ref("Yelken.json") {
-                    let dest_file = std::fs::File::open(&dest_file_path)
-                        .inspect_err(|e| log::warn!("Failed to read Yelken.json, {e:?}"))
-                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
-
-                    theme_manifest =
-                        Some(serde_json::from_reader(&dest_file).map_err(|e| HttpError {
-                            code: StatusCode::UNPROCESSABLE_ENTITY,
-                            error: "invalid_manifest_file",
-                            context: Some(format!("{e:?}")),
-                        })?)
-                }
-            }
-
-            let theme_manifest =
-                theme_manifest.ok_or(HttpError::unprocessable_entity("no_manifest_file"))?;
-
-            log::info!("ThemeManifest {theme_manifest:?}");
-
-            let theme_id = theme_manifest.id.clone();
-            let pool = state.pool.clone();
-            tokio::runtime::Handle::current().block_on(async move {
-                pool.get()
-                    .await?
-                    .transaction(|conn| create_theme(conn, theme_manifest).scope_boxed())
-                    .await
-            })?;
-
-            std::fs::rename(
-                tmp_theme_dir,
-                [&state.config.storage_dir, "themes", &theme_id]
-                    .iter()
-                    .collect::<PathBuf>(),
-            )
-            .inspect_err(|e| log::warn!("Failed to rename folder, {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
-
-            Ok(())
-        })
+async fn install<'a>(
+    storage: Operator,
+    conn: &mut Connection<'a>,
+    reader: impl Read + Send + 'static,
+    dir: PathBuf,
+) -> Result<(), HttpError> {
+    let extract_dir = dir.clone();
+    let (manifest, files) = tokio::runtime::Handle::current()
+        .spawn_blocking(move || extract_archive(reader, extract_dir))
         .await
         .map_err(|_| HttpError::internal_server_error("blocking_error"))??;
 
+    let theme_id = manifest.id.clone();
+
+    conn.transaction(|conn| async move { create_theme(conn, manifest).await }.scope_boxed())
+        .await?;
+
+    for file in files {
+        let mut src_path = dir.clone();
+        src_path.push(&file);
+
+        let dest_path = ["themes", &theme_id, &file].join("/");
+
+        log::debug!("Paths are {src_path:?} and {dest_path}");
+
+        let file = tokio::fs::read(&src_path)
+            .await
+            .inspect_err(|e| {
+                log::warn!("Failed to read file to copy to persistent storage, {src_path:?}, {e:?}")
+            })
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+
+        storage
+            .write(&dest_path, file)
+            .await
+            .inspect_err(|e| {
+                log::warn!("Failed to write file to persistent storage, {dest_path}, {e:?}")
+            })
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+    }
+
     Ok(())
+}
+
+fn extract_archive(
+    mut reader: impl Read,
+    dir: PathBuf,
+) -> Result<(ThemeManifest, Vec<String>), HttpError> {
+    let mut theme_manifest: Option<ThemeManifest> = None;
+    let mut files = Vec::new();
+
+    while let Some(mut file) = zip::read::read_zipfile_from_stream(&mut reader)
+        .map_err(|_| HttpError::internal_server_error("failed_reading_zip"))?
+    {
+        if !file.is_file() {
+            continue;
+        }
+
+        let outpath = file
+            .enclosed_name()
+            .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
+
+        if !((outpath.starts_with("templates/")
+            && outpath
+                .extension()
+                .map(|e| e == AsRef::<OsStr>::as_ref("html"))
+                .unwrap_or(false))
+            || outpath
+                .parent()
+                .map(|p| p == AsRef::<Path>::as_ref("locales"))
+                .unwrap_or(false)
+            || outpath == AsRef::<Path>::as_ref("Yelken.json"))
+        {
+            log::warn!("Unexpected file found in archive, {outpath:?}");
+
+            continue;
+        }
+
+        if let Some(parent) = outpath.parent() {
+            let mut dir = dir.clone();
+            dir.push(parent);
+
+            std::fs::create_dir_all(dir)
+                .inspect_err(|e| log::warn!("Failed to create dirs {e:?}"))
+                .map_err(|_| HttpError::internal_server_error("io_error"))?;
+        }
+
+        let outpath = outpath
+            .to_str()
+            .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
+
+        let mut dest_file_path = dir.clone();
+        dest_file_path.push(outpath);
+
+        {
+            let mut dest_file = std::fs::File::create(&dest_file_path)
+                .inspect_err(|e| log::warn!("Failed to create file {e:?}"))
+                .map_err(|_| HttpError::internal_server_error("io_error"))?;
+
+            std::io::copy(&mut file, &mut dest_file)
+                .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
+                .map_err(|_| HttpError::internal_server_error("io_error"))?;
+        }
+
+        if outpath == "Yelken.json" {
+            let dest_file = std::fs::File::open(&dest_file_path)
+                .inspect_err(|e| log::warn!("Failed to read Yelken.json, {e:?}"))
+                .map_err(|_| HttpError::internal_server_error("io_error"))?;
+
+            theme_manifest = Some(serde_json::from_reader(dest_file).map_err(|e| HttpError {
+                code: StatusCode::UNPROCESSABLE_ENTITY,
+                error: "invalid_manifest_file",
+                context: Some(format!("{e:?}")),
+            })?)
+        }
+
+        files.push(outpath.to_string());
+    }
+
+    let theme_manifest =
+        theme_manifest.ok_or(HttpError::unprocessable_entity("no_manifest_file"))?;
+
+    Ok((theme_manifest, files))
 }
 
 async fn create_theme<'a>(
@@ -324,11 +365,7 @@ async fn create_theme<'a>(
                 .map(|mf| (mf.name.clone(), mf)),
         );
 
-        for content in manifest
-            .contents
-            .iter()
-            .filter(|c| c.model == model.name)
-        {
+        for content in manifest.contents.iter().filter(|c| c.model == model.name) {
             let values = content
                 .values
                 .iter()

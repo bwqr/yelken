@@ -33,6 +33,7 @@ leptos_router = "0.7.5"
 log = "0.4.25"
 rand = "0.9.0"
 reqwest = { version = "0.12.12", features = ["json"] }
+opendal = "0.53.0"
 serde = { version = "1.0.217", features = ["rc", "serde_derive"] }
 tokio = { version = "1.43.0", features = ["full"] }
 tower = "0.5.2"
@@ -63,6 +64,8 @@ tokio.workspace = true
 tower.workspace = true
 tower-http = { version = "0.6.2", features = ["cors", "fs"] }
 unic-langid.workspace = true
+
+opendal = { workspace = true, features = ["services-fs"] }
 
 [profile.dev]
 debug = false

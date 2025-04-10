@@ -12,6 +12,7 @@ chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
+opendal.workspace = true
 serde.workspace = true
 tower.workspace = true
 

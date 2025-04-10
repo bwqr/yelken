@@ -13,6 +13,7 @@ use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
     AsyncPgConnection,
 };
+use opendal::{services, Operator};
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
@@ -42,9 +43,13 @@ async fn main() {
     env_logger::init();
 
     let config = Config::from_env().unwrap();
-    let storage_dir = config.storage_dir.clone();
-
     let server_config = ServerConfig::from_env().unwrap();
+
+    let storage = {
+        let builder = services::Fs::default().root(&server_config.storage_dir);
+
+        Operator::new(builder).unwrap().finish()
+    };
 
     let db_config =
         AsyncDieselConnectionManager::<AsyncPgConnection>::new(&server_config.database_url);
@@ -66,18 +71,18 @@ async fn main() {
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
         .allow_origin(config.web_origin.parse::<HeaderValue>().unwrap());
 
-    let state = AppState::new(config, pool);
+    let state = AppState::new(config, pool, storage.clone());
 
     let layers = ServiceBuilder::new().layer(cors).layer(Extension(crypto));
 
     let app = Router::new()
         .nest_service(
             "/assets/static",
-            ServeDir::new(format!("{}/assets", storage_dir)),
+            ServeDir::new(format!("{}/assets", server_config.storage_dir)),
         )
         .nest_service(
             "/assets/content",
-            ServeDir::new(format!("{}/content", storage_dir)),
+            ServeDir::new(format!("{}/content", server_config.storage_dir)),
         );
 
     #[cfg(feature = "admin")]
@@ -106,7 +111,7 @@ async fn main() {
     #[cfg(feature = "plugin")]
     let (app, layers, plugin_host) = {
         let plugin_host = plugin::PluginHost::new(
-            &format!("{storage_dir}/plugins"),
+            &format!("{}/plugins", server_config.storage_dir),
             state.pool.get().await.unwrap(),
         )
         .await
@@ -147,21 +152,16 @@ async fn main() {
         });
 
         let l10n = ui::build_l10n(
+            storage.clone(),
             locales,
             default_locale,
             &[
                 // Theme provided localizations
-                format!(
-                    "{}/themes/{}/locales",
-                    state.config.storage_dir, state.config.theme
-                ),
+                format!("themes/{}/locales", state.config.theme),
                 // Global scoped, user provided localizations
-                format!("{}/locales/global", state.config.storage_dir),
+                "locales/global".to_string(),
                 // Theme scoped, user provided localizations
-                format!(
-                    "{}/locales/themes/{}",
-                    state.config.storage_dir, state.config.theme
-                ),
+                format!("locales/themes/{}", state.config.theme),
             ],
         )
         .await;
@@ -172,22 +172,18 @@ async fn main() {
         let resources = (l10n.clone(), state.pool.clone());
 
         let render = ui::build_render(
+            storage.clone(),
             &[
                 // Theme provided templates
-                format!(
-                    "{}/themes/{}/templates",
-                    state.config.storage_dir, state.config.theme
-                ),
+                format!("themes/{}/templates/", state.config.theme),
                 // Global scoped, user provided templates
-                format!("{}/templates/global", state.config.storage_dir),
+                "templates/global/".to_string(),
                 // Theme scoped, user provided templates
-                format!(
-                    "{}/templates/themes/{}",
-                    state.config.storage_dir, state.config.theme
-                ),
+                format!("templates/themes/{}/", state.config.theme),
             ],
             resources,
-        );
+        )
+        .await;
 
         (
             app.nest("/api/ui", ui::router(state.clone()))

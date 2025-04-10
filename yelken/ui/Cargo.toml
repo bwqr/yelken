@@ -12,6 +12,7 @@ axum.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
+opendal.workspace = true
 tokio.workspace = true
 
 arc-swap = "1.7.1"

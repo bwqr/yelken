@@ -8,7 +8,7 @@ base.path = "../base"
 shared = { path = "../shared", features = ["permission"] }
 
 anyhow.workspace = true
-axum = { workspace = true, features = ["multipart"] }
+axum = { workspace = true, features = ["multipart", "macros"] }
 bytes = "1.10.1"
 chrono.workspace = true
 diesel.workspace = true
@@ -16,6 +16,7 @@ diesel-async.workspace = true
 fluent.workspace = true
 log.workspace = true
 rand.workspace = true
+opendal.workspace = true
 serde.workspace = true
 tokio.workspace = true
 unic-langid.workspace = true
