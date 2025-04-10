@@ -1,8 +1,8 @@
 use axum::{
     extract::{Path, Query, State},
-    Json,
+    Extension, Json,
 };
-use base::{models::Locale, responses::HttpError, schema::locales, AppState};
+use base::{config::Options, models::Locale, responses::HttpError, schema::locales, AppState};
 use diesel::{
     prelude::*,
     result::{DatabaseErrorKind, Error},
@@ -83,6 +83,7 @@ pub async fn delete_locale(
 
 pub async fn update_locale_resource(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     Path(locale_key): Path<String>,
     Json(req): Json<UpdateLocaleResource>,
 ) -> Result<(), HttpError> {
@@ -105,7 +106,7 @@ pub async fn update_locale_resource(
         [
             "locales",
             "themes",
-            &state.config.theme,
+            &options.theme(),
             &format!("{}.ftl", locale.key),
         ]
         .join("/")
@@ -125,6 +126,7 @@ pub async fn update_locale_resource(
 
 pub async fn delete_locale_resource(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     Path(locale_key): Path<String>,
     Query(req): Query<DeleteLocaleResource>,
 ) -> Result<(), HttpError> {
@@ -141,7 +143,7 @@ pub async fn delete_locale_resource(
         [
             "locales",
             "themes",
-            &state.config.theme,
+            &options.theme(),
             &format!("{}.ftl", locale.key),
         ]
         .join("/")

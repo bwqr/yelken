@@ -49,7 +49,7 @@ impl Render {
     }
 }
 
-pub struct Inner {
+struct Inner {
     tera: Tera,
 }
 

@@ -1,17 +1,18 @@
 use axum::{
     extract::{Query, State},
-    Json,
+    Extension, Json,
 };
-use base::{responses::HttpError, AppState};
+use base::{config::Options, responses::HttpError, AppState};
 
 use crate::requests::{DeleteTemplate, UpdateTemplate};
 
 pub async fn update_template(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     Json(req): Json<UpdateTemplate>,
 ) -> Result<(), HttpError> {
     let mut path = if req.theme_scoped {
-        ["templates", "themes", &state.config.theme].join("/")
+        ["templates", "themes", &options.theme()].join("/")
     } else {
         ["templates", "global"].join("/")
     };
@@ -31,10 +32,11 @@ pub async fn update_template(
 
 pub async fn delete_template(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     Query(req): Query<DeleteTemplate>,
 ) -> Result<(), HttpError> {
     let mut path = if req.theme_scoped {
-        ["templates", "themes", &state.config.theme].join("/")
+        ["templates", "themes", &options.theme()].join("/")
     } else {
         ["templates", "global"].join("/")
     };

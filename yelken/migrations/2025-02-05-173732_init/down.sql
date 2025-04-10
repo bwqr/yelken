@@ -16,12 +16,16 @@ drop table fields;
 
 drop table locales;
 
-drop table plugins;
-
 drop table permissions;
 
 drop table users;
 
 drop table roles;
+
+drop table plugins;
+
+drop table themes;
+
+drop table options;
 
 drop function update_timestamp;

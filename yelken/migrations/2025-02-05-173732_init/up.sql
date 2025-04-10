@@ -5,19 +5,26 @@ begin
 end;
 $$ language plpgsql;
 
+create table options(
+    id        serial primary key not null,
+    namespace varchar(128) default null,
+    name      varchar(128) not null,
+    value     varchar(128) not null
+);
+
 create table plugins(
-    id         varchar(255) primary key not null,
+    id         varchar(128) primary key not null,
     version    varchar(32)  not null,
     enabled    boolean      not null default true,
-    name       varchar(255) not null,
+    name       varchar(128) not null,
     "desc"     text         not null,
     created_at timestamp    not null default current_timestamp
 );
 
 create table themes(
-    id      varchar(255) primary key not null,
+    id      varchar(128) primary key not null,
     version varchar(32)  not null,
-    name    varchar(255) not null,
+    name    varchar(128) not null,
     created_at timestamp    not null default current_timestamp
 );
 
@@ -30,7 +37,7 @@ create table roles(
 create table users(
     id         serial  primary key not null,
     role_id    int             default null,
-    username   varchar(255)    not null unique,
+    username   varchar(128)    not null unique,
     name       varchar(255)    not null,
     email      varchar(255)    not null unique,
     password   varchar(88)     not null,
@@ -65,13 +72,13 @@ create table fields(
 create table enum_options(
     id       serial primary key not null,
     field_id int          not null,
-    value    varchar(255) not null,
+    value    varchar(128) not null,
     constraint fk_enum_options_field_id foreign key (field_id) references fields (id) on delete no action on update no action
 );
 
 create table models(
     id        serial primary key  not null,
-    namespace varchar(32)  default null,
+    namespace varchar(128)  default null,
     name      varchar(128) not null
 );
 
@@ -81,7 +88,7 @@ create table model_fields(
     model_id  int not null,
     localized bool not null default false,
     multiple  bool not null default false,
-    name      varchar(255) not null,
+    name      varchar(128) not null,
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );
@@ -107,10 +114,10 @@ create table content_values(
 
 create table pages(
     id         serial primary key not null,
-    namespace  varchar(32)  default null,
-    name       varchar(255) not null,
+    namespace  varchar(128)  default null,
+    name       varchar(128) not null,
     path       varchar(255) not null,
-    template   varchar(255) not null,
+    template   varchar(128) not null,
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
     constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
@@ -118,7 +125,7 @@ create table pages(
 
 create table form_submissions(
     id         serial primary key not null,
-    name       varchar(255) not null,
+    name       varchar(128) not null,
     values     text         not null,
     created_at timestamp    not null default current_timestamp
 );

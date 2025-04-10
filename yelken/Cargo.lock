@@ -404,6 +404,7 @@ name = "base"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arc-swap",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -416,6 +417,7 @@ dependencies = [
  "serde",
  "shared",
  "tower",
+ "unic-langid",
 ]
 
 [[package]]

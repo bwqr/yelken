@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
+use arc_swap::ArcSwap;
+use unic_langid::LanguageIdentifier;
 
 #[derive(Default)]
 pub struct Config {
@@ -6,7 +10,6 @@ pub struct Config {
     pub tmp_dir: String,
     pub api_origin: String,
     pub web_origin: String,
-    pub theme: String,
 }
 
 impl Config {
@@ -21,14 +24,36 @@ impl Config {
         let web_origin =
             std::env::var("YELKEN_WEB_ORIGIN").context("YELKEN_WEB_ORIGIN is not defined")?;
 
-        let theme = std::env::var("YELKEN_THEME").context("YELKEN_THEME is not defined")?;
-
         Ok(Self {
             env,
             tmp_dir,
             api_origin,
             web_origin,
-            theme,
         })
     }
+}
+
+#[derive(Clone)]
+pub struct Options(Arc<ArcSwap<Inner>>);
+
+impl Options {
+    pub fn new(theme: Arc<str>, default_locale: LanguageIdentifier) -> Self {
+        Self(Arc::new(ArcSwap::new(Arc::new(Inner {
+            theme,
+            default_locale,
+        }))))
+    }
+
+    pub fn theme(&self) -> Arc<str> {
+        self.0.load().theme.clone()
+    }
+
+    pub fn default_locale(&self) -> LanguageIdentifier {
+        self.0.load().default_locale.clone()
+    }
+}
+
+struct Inner {
+    theme: Arc<str>,
+    default_locale: LanguageIdentifier,
 }

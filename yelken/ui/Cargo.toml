@@ -8,18 +8,18 @@ base.path = "../base"
 plugin = { path = "../plugin", optional = true }
 
 anyhow.workspace = true
+arc-swap.workspace=true
 axum.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
+fluent.workspace = true
 log.workspace = true
 opendal.workspace = true
 tokio.workspace = true
+unic-langid.workspace = true
 
-arc-swap = "1.7.1"
-fluent.workspace = true
 matchit = "0.8.4"
 tera = { version = "1.20.0", default-features = false }
-unic-langid.workspace = true
 
 [features]
 plugin = ["dep:plugin"]

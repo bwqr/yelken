@@ -24,7 +24,7 @@ diesel::table! {
     enum_options (id) {
         id -> Int4,
         field_id -> Int4,
-        #[max_length = 255]
+        #[max_length = 128]
         value -> Varchar,
     }
 }
@@ -42,7 +42,7 @@ diesel::table! {
 diesel::table! {
     form_submissions (id) {
         id -> Int4,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
         values -> Text,
         created_at -> Timestamp,
@@ -66,7 +66,7 @@ diesel::table! {
         model_id -> Int4,
         localized -> Bool,
         multiple -> Bool,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
     }
 }
@@ -74,7 +74,7 @@ diesel::table! {
 diesel::table! {
     models (id) {
         id -> Int4,
-        #[max_length = 32]
+        #[max_length = 128]
         namespace -> Nullable<Varchar>,
         #[max_length = 128]
         name -> Varchar,
@@ -82,15 +82,27 @@ diesel::table! {
 }
 
 diesel::table! {
+    options (id) {
+        id -> Int4,
+        #[max_length = 128]
+        namespace -> Nullable<Varchar>,
+        #[max_length = 128]
+        name -> Varchar,
+        #[max_length = 128]
+        value -> Varchar,
+    }
+}
+
+diesel::table! {
     pages (id) {
         id -> Int4,
-        #[max_length = 32]
+        #[max_length = 128]
         namespace -> Nullable<Varchar>,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
         #[max_length = 255]
         path -> Varchar,
-        #[max_length = 255]
+        #[max_length = 128]
         template -> Varchar,
         #[max_length = 8]
         locale -> Nullable<Varchar>,
@@ -111,12 +123,12 @@ diesel::table! {
 
 diesel::table! {
     plugins (id) {
-        #[max_length = 255]
+        #[max_length = 128]
         id -> Varchar,
         #[max_length = 32]
         version -> Varchar,
         enabled -> Bool,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
         desc -> Text,
         created_at -> Timestamp,
@@ -134,11 +146,11 @@ diesel::table! {
 
 diesel::table! {
     themes (id) {
-        #[max_length = 255]
+        #[max_length = 128]
         id -> Varchar,
         #[max_length = 32]
         version -> Varchar,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
         created_at -> Timestamp,
     }
@@ -148,7 +160,7 @@ diesel::table! {
     users (id) {
         id -> Int4,
         role_id -> Nullable<Int4>,
-        #[max_length = 255]
+        #[max_length = 128]
         username -> Varchar,
         #[max_length = 255]
         name -> Varchar,
@@ -185,6 +197,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     locales,
     model_fields,
     models,
+    options,
     pages,
     permissions,
     plugins,

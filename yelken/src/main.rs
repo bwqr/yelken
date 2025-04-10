@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use axum::{
     extract::Request,
@@ -7,11 +7,18 @@ use axum::{
     response::Response,
     Extension, Router,
 };
-use base::{config::Config, crypto::Crypto, schema::locales, types::Pool, AppState};
+use base::{
+    config::{Config, Options},
+    crypto::Crypto,
+    schema::{locales, options},
+    types::{Connection, Pool},
+    AppState,
+};
 use config::ServerConfig;
+use diesel::prelude::*;
 use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
-    AsyncPgConnection,
+    AsyncPgConnection, RunQueryDsl,
 };
 use opendal::{services, Operator};
 use tower::ServiceBuilder;
@@ -34,6 +41,40 @@ async fn logger(req: Request, next: Next) -> Response {
     );
 
     res
+}
+
+async fn load_options<'a>(mut conn: Connection<'a>) -> Options {
+    let option_values = options::table
+        .filter(options::namespace.is_null())
+        .filter(options::name.eq_any(&["theme", "default_locale"]))
+        .select((options::name, options::value))
+        .load::<(String, String)>(&mut conn)
+        .await
+        .unwrap();
+
+    let theme: Arc<str> = match option_values.iter().find(|opt| opt.0 == "theme") {
+        Some((_, theme)) => Into::<Arc<str>>::into(theme.as_str()),
+        None => {
+            log::warn!("No value found for \"theme\" option, using default \"yelken.default\"");
+
+            "yelken.default".into()
+        }
+    };
+
+    let default_locale = match option_values
+        .iter()
+        .find(|opt| opt.0 == "default_locale")
+        .and_then(|opt| opt.1.parse().ok())
+    {
+        Some(default_locale) => default_locale,
+        None => {
+            log::warn!("No value or an invalid one found for \"default_locale\" option, using default \"en\"");
+
+            "en".parse().unwrap()
+        }
+    };
+
+    Options::new(theme, default_locale)
 }
 
 #[tokio::main]
@@ -61,6 +102,8 @@ async fn main() {
             .as_str(),
     );
 
+    let options = load_options(pool.get().await.unwrap()).await;
+
     let cors = CorsLayer::new()
         .allow_methods([
             http::Method::GET,
@@ -73,7 +116,10 @@ async fn main() {
 
     let state = AppState::new(config, pool, storage.clone());
 
-    let layers = ServiceBuilder::new().layer(cors).layer(Extension(crypto));
+    let layers = ServiceBuilder::new()
+        .layer(cors)
+        .layer(Extension(crypto))
+        .layer(Extension(options.clone()));
 
     let app = Router::new()
         .nest_service(
@@ -145,23 +191,17 @@ async fn main() {
             })
             .collect::<Arc<[LanguageIdentifier]>>();
 
-        let default_locale = locales.get(0).cloned().unwrap_or_else(|| {
-            log::error!("Either there is no locale in database or an invalid one exists, using default locale \"en\"");
-
-            "en".parse().unwrap()
-        });
-
         let l10n = ui::build_l10n(
             storage.clone(),
             locales,
-            default_locale,
+            options.default_locale(),
             &[
                 // Theme provided localizations
-                format!("themes/{}/locales", state.config.theme),
+                format!("themes/{}/locales", options.theme()),
                 // Global scoped, user provided localizations
                 "locales/global".to_string(),
                 // Theme scoped, user provided localizations
-                format!("locales/themes/{}", state.config.theme),
+                format!("locales/themes/{}", options.theme()),
             ],
         )
         .await;
@@ -175,11 +215,11 @@ async fn main() {
             storage.clone(),
             &[
                 // Theme provided templates
-                format!("themes/{}/templates/", state.config.theme),
+                format!("themes/{}/templates/", options.theme()),
                 // Global scoped, user provided templates
                 "templates/global/".to_string(),
                 // Theme scoped, user provided templates
-                format!("templates/themes/{}/", state.config.theme),
+                format!("templates/themes/{}/", options.theme()),
             ],
             resources,
         )

@@ -2,7 +2,7 @@ insert into plugins (id, version, enabled, name, "desc") values ('yelken.editor'
 
 insert into locales (key, name) values ('en', 'English'), ('tr', 'Türkçe');
 
-insert into fields (name, kind) values ('text', 'string'), ('multiline text', 'string'), ('date', 'date');
+insert into fields (name, kind) values ('text', 'string'), ('multiline text', 'string'), ('date', 'date'), ('integer', 'int');
 
 insert into models (name) values ('article');
 

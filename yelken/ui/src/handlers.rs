@@ -7,7 +7,7 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Extension,
 };
-use base::{responses::HttpError, schema::pages, AppState};
+use base::{config::Options, responses::HttpError, schema::pages, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
@@ -81,6 +81,7 @@ fn resolve_locale<'a>(
 
 pub async fn serve_page(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Extension(renderer): Extension<Render>,
     req: Request,
@@ -88,6 +89,11 @@ pub async fn serve_page(
     let mut router = Router::new();
 
     let pages = pages::table
+        .filter(
+            pages::namespace
+                .is_null()
+                .or(pages::namespace.eq(&*options.theme())),
+        )
         .select((pages::name, pages::path, pages::template, pages::locale))
         .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
         .await?;
