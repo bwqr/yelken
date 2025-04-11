@@ -105,8 +105,12 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
         .route("/install/theme", post(install::install_theme))
+        .route("/uninstall/theme/{theme}", delete(install::uninstall_theme))
         .route("/options/theme", post(options::update_theme))
-        .route("/options/default-locale", post(options::update_default_locale))
+        .route(
+            "/options/default-locale",
+            post(options::update_default_locale),
+        )
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Admin,

@@ -25,7 +25,7 @@ create table themes(
     id      varchar(128) primary key not null,
     version varchar(32)  not null,
     name    varchar(128) not null,
-    created_at timestamp    not null default current_timestamp
+    created_at timestamp not null default current_timestamp
 );
 
 create table roles(

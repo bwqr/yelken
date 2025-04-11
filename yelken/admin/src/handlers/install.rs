@@ -1,15 +1,12 @@
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, ffi::OsStr, io::Read, path::PathBuf};
 
 use axum::{
-    extract::{Multipart, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
+    Extension,
 };
 use base::{
+    config::Options,
     models::Field,
     responses::HttpError,
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
@@ -22,7 +19,7 @@ use diesel::{
     result::{DatabaseErrorKind, Error},
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use opendal::Operator;
+use opendal::{Entry, EntryMode, Operator};
 use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
 
@@ -78,6 +75,52 @@ fn bad_request(error: &'static str) -> HttpError {
         error,
         context: None,
     }
+}
+
+pub async fn uninstall_theme(
+    State(state): State<AppState>,
+    Extension(options): Extension<Options>,
+    Path(theme): Path<String>,
+) -> Result<(), HttpError> {
+    if theme == &*options.theme() {
+        return Err(HttpError::conflict("cannot_delete_active_theme"));
+    }
+
+    let theme = themes::table
+        .filter(themes::id.eq(theme))
+        .select(themes::id)
+        .first::<String>(&mut state.pool.get().await?)
+        .await?;
+
+    let locations = [
+        format!("themes/{theme}/"),
+        format!("locales/themes/{theme}/"),
+        format!("templates/themes/{theme}/"),
+    ];
+
+    for location in locations {
+        let entries = state
+            .storage
+            .list_with(&location)
+            .recursive(true)
+            .await
+            .inspect_err(|e| log::warn!("Failed to list theme files for path {location}, {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+
+        state
+            .storage
+            .delete_iter(entries)
+            .await
+            .inspect_err(|e| log::warn!("Failed to delete theme files for path {location}, {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+    }
+
+    diesel::delete(themes::table)
+        .filter(themes::id.eq(theme))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    Ok(())
 }
 
 pub async fn install_theme(
@@ -191,16 +234,17 @@ fn extract_archive(
             .enclosed_name()
             .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
 
-        if !((outpath.starts_with("templates/")
-            && outpath
-                .extension()
-                .map(|e| e == AsRef::<OsStr>::as_ref("html"))
-                .unwrap_or(false))
+        if !(outpath.starts_with("assets/")
+            || (outpath.starts_with("templates/")
+                && outpath
+                    .extension()
+                    .map(|e| e == AsRef::<OsStr>::as_ref("html"))
+                    .unwrap_or(false))
             || outpath
                 .parent()
-                .map(|p| p == AsRef::<Path>::as_ref("locales"))
+                .map(|p| p == AsRef::<std::path::Path>::as_ref("locales"))
                 .unwrap_or(false)
-            || outpath == AsRef::<Path>::as_ref("Yelken.json"))
+            || outpath == AsRef::<std::path::Path>::as_ref("Yelken.json"))
         {
             log::warn!("Unexpected file found in archive, {outpath:?}");
 
