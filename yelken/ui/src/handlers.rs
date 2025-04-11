@@ -14,7 +14,7 @@ use matchit::{Match, Router};
 use tera::Context;
 use unic_langid::LanguageIdentifier;
 
-use crate::{l10n::L10n, render::Render};
+use crate::render::Render;
 
 fn resolve_locale<'a>(
     req: &'a Request,
@@ -118,8 +118,9 @@ pub async fn serve_page(
         })
         .collect();
 
-    let default_locale = l10n.default_locale();
-    let supported_locales = l10n.supported_locales();
+    let supported_locales = options.locales();
+    let default_locale = options.default_locale();
+
     let current_locale = resolve_locale(&req, &supported_locales, &default_locale);
 
     pages
@@ -172,7 +173,7 @@ pub async fn serve_page(
             }
         }
 
-        return match renderer.render("__404__.html", &Context::new()) {
+        return match render.render("__404__.html", &Context::new()) {
             Ok(html) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
             Err(e) => Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -240,7 +241,7 @@ pub async fn serve_page(
 
     let template = template.clone();
     let res = tokio::runtime::Handle::current()
-        .spawn_blocking(move || renderer.render(&template, &context))
+        .spawn_blocking(move || render.render(&template, &context))
         .await
         .unwrap();
 
@@ -252,29 +253,6 @@ pub async fn serve_page(
         )
             .into_response()),
     }
-}
-
-pub async fn refresh_templates(
-    State(state): State<AppState>,
-    Extension(l10n): Extension<L10n>,
-    Extension(renderer): Extension<Render>,
-    #[cfg(feature = "plugin")] Extension(plugin_host): Extension<plugin::PluginHost>,
-) -> Result<(), HttpError> {
-    #[cfg(feature = "plugin")]
-    let resources = (l10n, state.pool.clone(), plugin_host);
-    #[cfg(not(feature = "plugin"))]
-    let resources = (l10n, state.pool.clone());
-
-    renderer
-        .refresh(
-            &format!(
-                "{}/themes/{}/templates",
-                state.config.storage_dir, state.config.theme
-            ),
-            Some(resources),
-        )
-        .inspect_err(|e| log::warn!("Failed to refresh templates, {e:?}"))
-        .map_err(|_| HttpError::internal_server_error("failed_refreshing_templates"))
 }
 
 #[cfg(test)]

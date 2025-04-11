@@ -1,13 +1,11 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
-use arc_swap::{access::Access, ArcSwap};
+use arc_swap::ArcSwap;
 use base::responses::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use base::types::Pool;
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-// use plugin::PluginHost;
+use opendal::{EntryMode, Operator};
 use tera::{from_value, to_value, Context, Error, Tera, Value};
 use unic_langid::{LanguageIdentifier, LanguageIdentifierError};
 
@@ -18,26 +16,76 @@ pub type FnResources = (L10n, Pool, plugin::PluginHost);
 #[cfg(not(feature = "plugin"))]
 pub type FnResources = (L10n, Pool);
 
+async fn load_templates(storage: &Operator, locations: &[String]) -> Vec<(String, String)> {
+    let mut templates = HashMap::<String, String>::new();
+
+    // It is expected that the template that exists in later `location` should override
+    // previously loaded ones. So, iteration is reversed.
+    for location in locations.into_iter().rev() {
+        let Ok(entries) = storage
+            .list_with(location)
+            .recursive(true)
+            .await
+            .inspect_err(|e| log::debug!("Failed to read directory {location:?} {e:?}"))
+        else {
+            continue;
+        };
+
+        for entry in entries {
+            if entry.metadata().mode() != EntryMode::FILE || !entry.path().ends_with(".html") {
+                continue;
+            }
+
+            let key = entry.path().strip_prefix(location).unwrap();
+
+            if !templates.contains_key(key) {
+                log::debug!("loading template file {}", entry.path());
+
+                let Ok(bytes) = storage
+                    .read(entry.path())
+                    .await
+                    .inspect_err(|e| log::warn!("Failed to read template {e}"))
+                    .map(|b| b.to_bytes())
+                else {
+                    continue;
+                };
+
+                let Ok(template) = std::str::from_utf8(&*bytes)
+                    .inspect_err(|e| log::warn!("Failed to read template as string {e:?}"))
+                else {
+                    continue;
+                };
+
+                templates.insert(key.to_string(), template.to_string());
+            } else {
+                log::debug!("skipping template file {}", entry.path());
+            }
+        }
+    }
+
+    templates.into_iter().collect()
+}
+
 #[derive(Clone)]
 pub struct Render(Arc<ArcSwap<Inner>>);
 
 impl Render {
-    pub fn new(templates: Vec<(String, String)>, resources: Option<FnResources>) -> Result<Self, Error> {
-        let mut inner = Inner::new(templates)?;
+    pub async fn new(
+        storage: &Operator,
+        locations: &[String],
+        resources: Option<FnResources>,
+    ) -> Result<Self, Error> {
+        let templates = load_templates(storage, locations).await;
 
-        if let Some(resources) = resources {
-            register_functions(&mut inner.tera, resources);
-        }
+        let inner = Inner::new(templates, resources)?;
 
         Ok(Render(Arc::new(ArcSwap::new(Arc::new(inner)))))
     }
 
-    pub fn refresh(&self, templates: Vec<(String, String)>, resources: Option<FnResources>) -> Result<(), Error> {
-        let mut inner = Inner::new(templates)?;
+    pub async fn reload(&self, storage: &Operator, locations: &[String]) -> Result<(), Error> {
+        let templates = load_templates(storage, locations).await;
 
-        if let Some(resources) = resources {
-            register_functions(&mut inner.tera, resources);
-        }
+        let inner = Inner::new(templates, (*self.0).load().resources.clone())?;
 
         self.0.store(Arc::new(inner));
 
@@ -45,21 +93,29 @@ impl Render {
     }
 
     pub fn render(&self, template: &str, ctx: &Context) -> Result<String, Error> {
-        Access::<Inner>::load(&*self.0).tera.render(template, ctx)
+        (*self.0).load().tera.render(template, ctx)
     }
 }
 
 struct Inner {
     tera: Tera,
+    resources: Option<FnResources>,
 }
 
 impl Inner {
-    fn new(templates: Vec<(String, String)>) -> Result<Self, Error> {
+    fn new(
+        templates: Vec<(String, String)>,
+        resources: Option<FnResources>,
+    ) -> Result<Self, Error> {
         let mut tera = Tera::default();
 
         tera.add_raw_templates(templates)?;
 
-        Ok(Inner { tera })
+        if let Some(resources) = &resources {
+            register_functions(&mut tera, resources.clone());
+        }
+
+        Ok(Inner { tera, resources })
     }
 }
 
@@ -72,6 +128,9 @@ fn invalid_locale(_: LanguageIdentifierError) -> tera::Error {
 }
 
 pub fn register_functions(tera: &mut Tera, resources: FnResources) {
+    use diesel::prelude::*;
+    use diesel_async::RunQueryDsl;
+
     #[cfg(feature = "plugin")]
     let (l10n, pool, plugin_host) = resources;
     #[cfg(not(feature = "plugin"))]

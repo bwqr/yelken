@@ -48,3 +48,13 @@ pub struct DeleteTemplate {
     pub theme_scoped: bool,
     pub path: SafePath<3>,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateTheme {
+    pub theme: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateDefaultLocale {
+    pub locale: String,
+}

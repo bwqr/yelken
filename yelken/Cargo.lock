@@ -36,6 +36,7 @@ dependencies = [
  "serde_json",
  "shared",
  "tokio",
+ "ui",
  "unic-langid",
  "zip",
 ]

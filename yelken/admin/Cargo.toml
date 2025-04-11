@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 base.path = "../base"
 shared = { path = "../shared", features = ["permission"] }
+ui.path = "../ui"
 
 anyhow.workspace = true
 axum = { workspace = true, features = ["multipart", "macros"] }

@@ -10,7 +10,7 @@ use axum::{
 use base::{
     config::{Config, Options},
     crypto::Crypto,
-    schema::{locales, options},
+    schema::options,
     types::{Connection, Pool},
     AppState,
 };
@@ -74,7 +74,9 @@ async fn load_options<'a>(mut conn: Connection<'a>) -> Options {
         }
     };
 
-    Options::new(theme, default_locale)
+    let locales = Options::load_locales(&mut conn).await.unwrap();
+
+    Options::new(theme, locales, default_locale)
 }
 
 #[tokio::main]
@@ -172,37 +174,11 @@ async fn main() {
 
     #[cfg(feature = "ui")]
     let (app, layers) = {
-        use diesel::prelude::*;
-        use diesel_async::RunQueryDsl;
-        use std::sync::Arc;
-        use unic_langid::LanguageIdentifier;
-
-        let locales = locales::table
-            .select(locales::key)
-            .filter(locales::disabled.eq(false))
-            .load::<String>(&mut state.pool.get().await.unwrap())
-            .await
-            .unwrap()
-            .into_iter()
-            .flat_map(|key| {
-                key.parse()
-                    .inspect_err(|e| log::warn!("Failed to parse locale {key} due to {e:?}"))
-                    .ok()
-            })
-            .collect::<Arc<[LanguageIdentifier]>>();
-
-        let l10n = ui::build_l10n(
-            storage.clone(),
-            locales,
+        let l10n = ui::L10n::new(
+            &storage,
+            &options.locale_locations(),
+            &options.locales(),
             options.default_locale(),
-            &[
-                // Theme provided localizations
-                format!("themes/{}/locales", options.theme()),
-                // Global scoped, user provided localizations
-                "locales/global".to_string(),
-                // Theme scoped, user provided localizations
-                format!("locales/themes/{}", options.theme()),
-            ],
         )
         .await;
 
@@ -211,19 +187,9 @@ async fn main() {
         #[cfg(not(feature = "plugin"))]
         let resources = (l10n.clone(), state.pool.clone());
 
-        let render = ui::build_render(
-            storage.clone(),
-            &[
-                // Theme provided templates
-                format!("themes/{}/templates/", options.theme()),
-                // Global scoped, user provided templates
-                "templates/global/".to_string(),
-                // Theme scoped, user provided templates
-                format!("templates/themes/{}/", options.theme()),
-            ],
-            resources,
-        )
-        .await;
+        let render = ui::Render::new(&storage, &options.template_locations(), Some(resources))
+            .await
+            .unwrap();
 
         (
             app.nest("/api/ui", ui::router(state.clone()))

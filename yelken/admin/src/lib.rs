@@ -12,7 +12,7 @@ use base::{
     middlewares::{auth::from_token, permission::PermissionLayer},
     AppState,
 };
-use handlers::{install, locale, permission, role, template, user};
+use handlers::{install, locale, options, permission, role, template, user};
 use serde::Deserialize;
 use shared::permission::Permission;
 
@@ -105,6 +105,8 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
         .route("/install/theme", post(install::install_theme))
+        .route("/options/theme", post(options::update_theme))
+        .route("/options/default-locale", post(options::update_default_locale))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Admin,
