@@ -70,6 +70,12 @@ async fn load_templates(storage: &Operator, locations: &[String]) -> Vec<(String
 pub struct Render(Arc<ArcSwap<Inner>>);
 
 impl Render {
+    pub fn empty(resources: Option<FnResources>) -> Self {
+        let inner = Inner::empty(resources);
+
+        Render(Arc::new(ArcSwap::new(Arc::new(inner))))
+    }
+
     pub async fn new(
         storage: &Operator,
         locations: &[String],
@@ -103,6 +109,16 @@ struct Inner {
 }
 
 impl Inner {
+    fn empty(resources: Option<FnResources>) -> Self {
+        let mut tera = Tera::default();
+
+        if let Some(resources) = &resources {
+            register_functions(&mut tera, resources.clone());
+        }
+
+        Inner { tera, resources }
+    }
+
     fn new(
         templates: Vec<(String, String)>,
         resources: Option<FnResources>,

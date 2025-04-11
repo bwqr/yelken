@@ -187,9 +187,14 @@ async fn main() {
         #[cfg(not(feature = "plugin"))]
         let resources = (l10n.clone(), state.pool.clone());
 
-        let render = ui::Render::new(&storage, &options.template_locations(), Some(resources))
-            .await
-            .unwrap();
+        let render = ui::Render::new(
+            &storage,
+            &options.template_locations(),
+            Some(resources.clone()),
+        )
+        .await
+        .inspect_err(|e| log::error!("Failed to initialize Render, using an empty instance, {e:?}"))
+        .unwrap_or_else(|_| ui::Render::empty(Some(resources)));
 
         (
             app.nest("/api/ui", ui::router(state.clone()))

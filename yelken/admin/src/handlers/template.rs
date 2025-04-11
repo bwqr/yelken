@@ -29,6 +29,7 @@ pub async fn update_template(
         .inspect_err(|e| log::error!("Failed to write template at path {path:?}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_writing_template"))?;
 
+    // TODO handle invalid template case before writing the received template
     render
         .reload(&state.storage, &options.template_locations())
         .await

@@ -19,7 +19,7 @@ use diesel::{
     result::{DatabaseErrorKind, Error},
 };
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use opendal::{Entry, EntryMode, Operator};
+use opendal::Operator;
 use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
 
