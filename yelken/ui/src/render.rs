@@ -42,7 +42,11 @@ pub mod context {
     impl Object for LocaleContext {
         fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
             match key.as_str()? {
-                "all" => Some(Value::from_iter(self.all.iter().map(|l| vec![format!("{l}"), format!("{l}")]))),
+                "all" => Some(Value::from_iter(
+                    self.all
+                        .iter()
+                        .map(|l| vec![format!("{l}"), format!("{l}")]),
+                )),
                 "current" => Some(Value::from(format!("{}", self.current))),
                 "default" => Some(Value::from(format!("{}", self.default))),
                 _ => None,
@@ -55,6 +59,7 @@ pub mod context {
         locale: Arc<LocaleContext>,
         pages: Arc<PageContext>,
         params: Arc<BTreeMap<String, String>>,
+        namespace: String,
     }
 
     impl RenderContext {
@@ -62,11 +67,13 @@ pub mod context {
             locale: Arc<LocaleContext>,
             pages: Arc<PageContext>,
             params: Arc<BTreeMap<String, String>>,
+            namespace: String,
         ) -> Self {
             Self {
                 locale,
                 pages,
                 params,
+                namespace,
             }
         }
     }
@@ -77,6 +84,7 @@ pub mod context {
                 "locale" => Some(Value::from_dyn_object(self.locale.clone())),
                 "pages" => Some(Value::from_dyn_object(Arc::clone(&self.pages))),
                 "params" => Some(Value::from_dyn_object(Arc::clone(&self.params))),
+                "namespace" => Some(Value::from(self.namespace.clone())),
                 _ => None,
             }
         }
@@ -321,6 +329,14 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     .downcast_object()
                     .expect("locale variable does not have expected type");
 
+                let namespace = state
+                    .lookup("namespace")
+                    .expect("could not find namespace in render context");
+
+                let namespace = namespace
+                    .as_str()
+                    .expect("namespace variable does not have expected type");
+
                 let pool = pool.clone();
 
                 let content: Result<BTreeMap<String, Value>, HttpError> =
@@ -328,7 +344,13 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         let mut conn = pool.get().await?;
 
                         let model_id = models::table
-                            .filter(models::name.eq(model))
+                            .filter(
+                                models::name.eq(model).and(
+                                    models::namespace
+                                        .is_null()
+                                        .or(models::namespace.eq(&namespace)),
+                                ),
+                            )
                             .select(models::id)
                             .first::<i32>(&mut conn)
                             .await?;
@@ -441,6 +463,14 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     ));
                 }
 
+                let namespace = state
+                    .lookup("namespace")
+                    .expect("could not find namespace in render context");
+
+                let namespace = namespace
+                    .as_str()
+                    .expect("namespace variable does not have expected type");
+
                 let pool = pool.clone();
 
                 let values: Result<Vec<Value>, HttpError> = tokio::runtime::Handle::current()
@@ -448,7 +478,13 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         let mut conn = pool.get().await?;
 
                         let model_id = models::table
-                            .filter(models::name.eq(model))
+                            .filter(
+                                models::name.eq(model).and(
+                                    models::namespace
+                                        .is_null()
+                                        .or(models::namespace.eq(&namespace)),
+                                ),
+                            )
                             .select(models::id)
                             .first::<i32>(&mut conn)
                             .await?;

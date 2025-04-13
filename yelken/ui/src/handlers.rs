@@ -181,6 +181,7 @@ pub async fn serve_page(
                     pages: template_pages,
                 }),
                 Arc::new(BTreeMap::new()),
+                options.theme().to_string(),
             )),
         ) {
             Ok(html) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
@@ -228,6 +229,7 @@ pub async fn serve_page(
         Arc::new(BTreeMap::from_iter(
             params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
         )),
+        options.theme().to_string(),
     );
 
     let res = tokio::runtime::Handle::current()
