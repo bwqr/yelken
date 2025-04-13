@@ -106,7 +106,7 @@ create table content_values(
     content_id     int not null,
     model_field_id int not null,
     locale         varchar(8) default null,
-    value          text default null,
+    value          text not null,
     constraint fk_content_values_content_id foreign key (content_id) references contents (id) on delete no action on update no action,
     constraint fk_content_values_model_field_id foreign key (model_field_id) references model_fields (id) on delete no action on update no action,
     constraint fk_content_values_locale foreign key (locale) references locales (key) on delete no action on update no action

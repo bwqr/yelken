@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use axum::{
     body::Body,
@@ -11,10 +11,13 @@ use base::{config::Options, responses::HttpError, schema::pages, AppState};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
-use tera::Context;
+use minijinja::Value;
 use unic_langid::LanguageIdentifier;
 
-use crate::render::Render;
+use crate::render::{
+    context::{LocaleContext, Page, PageContext, RenderContext},
+    Render,
+};
 
 fn resolve_locale<'a>(
     req: &'a Request,
@@ -98,30 +101,23 @@ pub async fn serve_page(
         .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
         .await?;
 
-    let template_pages: Vec<HashMap<&'static str, String>> = pages
-        .iter()
-        .map(|page| {
-            HashMap::<&'static str, String>::from_iter(
-                [
-                    ("name", page.0.clone()),
-                    ("path", page.1.clone()),
-                    (
-                        "locale",
-                        page.3
-                            .as_ref()
-                            .map(|l| l.to_string())
-                            .unwrap_or("".to_string()),
-                    ),
-                ]
-                .into_iter(),
-            )
-        })
-        .collect();
-
     let supported_locales = options.locales();
     let default_locale = options.default_locale();
 
     let current_locale = resolve_locale(&req, &supported_locales, &default_locale);
+
+    let template_pages: Arc<[Page]> = pages
+        .iter()
+        .map(|page| Page {
+            name: page.0.clone(),
+            path: page.1.clone(),
+            locale: page
+                .3
+                .as_ref()
+                .map(|l| l.parse().unwrap_or(current_locale.clone()))
+                .unwrap_or(current_locale.clone()),
+        })
+        .collect();
 
     pages
         .into_iter()
@@ -146,7 +142,7 @@ pub async fn serve_page(
 
             if let Err(e) = router.insert(
                 localized_path,
-                (name.clone(), path.clone(), template, locale),
+                (name.clone(), template, locale),
             ) {
                 log::warn!("Failed to add path {path} of page {name} due to {e:?}");
             }
@@ -154,7 +150,7 @@ pub async fn serve_page(
 
     let Ok(Match {
         params,
-        value: (name, path, template, page_locale),
+        value: (name, template, page_locale),
     }) = router.at(req.uri().path())
     else {
         if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
@@ -173,7 +169,20 @@ pub async fn serve_page(
             }
         }
 
-        return match render.render("__404__.html", &Context::new()) {
+        return match render.render(
+            "__404__.html",
+            Value::from_object(RenderContext::new(
+                Arc::new(LocaleContext {
+                    all: supported_locales.clone(),
+                    current: current_locale.clone(),
+                    default: default_locale.clone(),
+                }),
+                Arc::new(PageContext {
+                    pages: template_pages,
+                }),
+                Arc::new(BTreeMap::new()),
+            )),
+        ) {
             Ok(html) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
             Err(e) => Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -206,52 +215,47 @@ pub async fn serve_page(
         }
     }
 
-    let mut context = Context::new();
-    context.insert("default_locale", &format!("{default_locale}"));
-    context.insert("locale", &format!("{current_locale}"));
-    context.insert(
-        "locales",
-        &HashMap::<String, String>::from_iter(
-            supported_locales
-                .iter()
-                .map(|l| (format!("{l}"), format!("{l}"))),
-        ),
-    );
-    context.insert(
-        "params",
-        &HashMap::<String, String>::from_iter(
+    let template = template.clone();
+    let ctx = RenderContext::new(
+        Arc::new(LocaleContext {
+            all: supported_locales.clone(),
+            current: current_locale.clone(),
+            default: default_locale.clone(),
+        }),
+        Arc::new(PageContext {
+            pages: template_pages,
+        }),
+        Arc::new(BTreeMap::from_iter(
             params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
-        ),
-    );
-    context.insert("pages", &template_pages);
-    context.insert(
-        "page",
-        &HashMap::<&'static str, String>::from_iter([
-            ("name", name.clone()),
-            ("path", path.clone()),
-            (
-                "locale",
-                page_locale
-                    .as_ref()
-                    .map(|l| l.to_string())
-                    .unwrap_or("".to_string()),
-            ),
-        ]),
+        )),
     );
 
-    let template = template.clone();
     let res = tokio::runtime::Handle::current()
-        .spawn_blocking(move || render.render(&template, &context))
+        .spawn_blocking(move || {
+            let ctx = Value::from_object(ctx);
+
+            render.render(&template, ctx)
+        })
         .await
         .unwrap();
 
     match res {
         Ok(html) => Ok(Html(html).into_response()),
-        Err(e) => Ok((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Html(format!("Failed to render page, {e:?}")),
-        )
-            .into_response()),
+        Err(e) => {
+            log::info!("Could not render template: {:#}", e);
+
+            let mut e = &e as &dyn std::error::Error;
+            while let Some(next_err) = e.source() {
+                log::info!("caused by: {:#}", next_err);
+                e = next_err;
+            }
+
+            Ok((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Html(format!("Failed to render page,\n{e}")),
+            )
+                .into_response())
+        }
     }
 }
 
@@ -285,9 +289,12 @@ mod tests {
         locales: &[&str],
         templates: Vec<(String, String)>,
     ) -> (AppState, L10n, Render) {
+        let service = opendal::services::Memory::default();
+        let storage = opendal::Operator::new(service).unwrap().finish();
+
         let config = Config::default();
         let pool = create_pool(DB_CONFIG).await;
-        let state = AppState::new(config, pool);
+        let state = AppState::new(config, pool, storage);
 
         diesel::insert_into(locales::table)
             .values(

@@ -15,11 +15,12 @@ diesel-async.workspace = true
 fluent.workspace = true
 log.workspace = true
 opendal.workspace = true
+serde.workspace = true
 tokio.workspace = true
 unic-langid.workspace = true
 
 matchit = "0.8.4"
-tera = { version = "1.20.0", default-features = false }
+minijinja = { version = "2.9.0", default-features = false, features = ["builtins", "debug", "loader", "loop_controls", "macros", "multi_template", "serde"] }
 
 [features]
 plugin = ["dep:plugin"]

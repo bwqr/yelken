@@ -7,7 +7,7 @@ diesel::table! {
         model_field_id -> Int4,
         #[max_length = 8]
         locale -> Nullable<Varchar>,
-        value -> Nullable<Text>,
+        value -> Text,
     }
 }
 

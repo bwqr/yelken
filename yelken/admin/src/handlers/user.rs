@@ -172,7 +172,10 @@ mod tests {
             name: auth_user.name,
         };
 
-        (AppState::new(config, pool), auth_user)
+        let service = opendal::services::Memory::default();
+        let storage = opendal::Operator::new(service).unwrap().finish();
+
+        (AppState::new(config, pool, storage), auth_user)
     }
 
     #[tokio::test]
