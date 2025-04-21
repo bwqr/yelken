@@ -1,12 +1,9 @@
 use axum::{
-    extract::{Json as ExtJson, State},
-    http::StatusCode,
-    response::Json as RespJson,
-    Extension,
+    extract::State, http::StatusCode, Extension, Json
 };
 use base::{
     crypto::Crypto,
-    models::{User, UserState},
+    models::{LoginKind, User, UserState},
     responses::HttpError,
     schema::users,
     AppState,
@@ -17,29 +14,48 @@ use rand::{distr::Alphanumeric, rng, Rng};
 
 use shared::auth::{Login, Token};
 
+use super::generate_username;
+
+const SALT_LENGTH: usize = 32;
+
 pub async fn login(
     State(state): State<AppState>,
     crypto: Extension<Crypto>,
-    ExtJson(request): ExtJson<Login>,
-) -> Result<RespJson<Token>, HttpError> {
+    Json(request): Json<Login>,
+) -> Result<Json<Token>, HttpError> {
     const INVALID_CREDENTIALS: HttpError = HttpError {
         code: StatusCode::UNAUTHORIZED,
         error: "invalid_credentials",
         context: None,
     };
 
-    let Some((user_id, password, salt, user_state)) = users::table
+    let Some((user_id, login_kind, password, user_state)) = users::table
         .filter(users::email.eq(&request.email))
-        .select((users::id, users::password, users::salt, users::state))
-        .first::<(i32, String, String, UserState)>(&mut state.pool.get().await?)
+        .select((users::id, users::login_kind, users::password, users::state))
+        .first::<(i32, LoginKind, Option<String>, UserState)>(&mut state.pool.get().await?)
         .await
         .optional()?
     else {
         return Err(INVALID_CREDENTIALS);
     };
 
+    match login_kind {
+        LoginKind::Email => {}
+        _ => return Err(HttpError::conflict("user_not_created_with_email")),
+    }
+
+    let Some(password) = password else {
+        return Err(HttpError::internal_server_error(
+            "email_login_kind_has_null_password",
+        ));
+    };
+
+    let Some((salt, password)) = password.split_at_checked(SALT_LENGTH) else {
+        return Err(HttpError::internal_server_error("invalid_password_and_salt"));
+    };
+
     // TODO use verify
-    if crypto.sign512((request.password + salt.as_str()).as_bytes()) != password {
+    if crypto.sign512((request.password + salt).as_bytes()) != password {
         return Err(INVALID_CREDENTIALS);
     }
 
@@ -51,7 +67,7 @@ pub async fn login(
         });
     }
 
-    Ok(RespJson(Token {
+    Ok(Json(Token {
         token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,
     }))
 }
@@ -66,9 +82,9 @@ pub struct SignUp {
 pub async fn sign_up(
     State(state): State<AppState>,
     crypto: Extension<Crypto>,
-    ExtJson(request): ExtJson<SignUp>,
-) -> Result<RespJson<Token>, HttpError> {
-    let salt: String = (0..32)
+    Json(request): Json<SignUp>,
+) -> Result<Json<Token>, HttpError> {
+    let salt: String = (0..SALT_LENGTH)
         .map(|_| rng().sample(Alphanumeric) as char)
         .collect();
     let password = crypto.sign512((request.password + salt.as_str()).as_bytes());
@@ -80,8 +96,7 @@ pub async fn sign_up(
             users::username.eq(generate_username(&request.name)),
             users::name.eq(&request.name),
             users::email.eq(&request.email),
-            users::password.eq(password),
-            users::salt.eq(salt),
+            users::password.eq(salt + password.as_str()),
         ))
         .get_result::<User>(&mut conn)
         .await
@@ -104,18 +119,7 @@ pub async fn sign_up(
         })?
         .id;
 
-    Ok(RespJson(Token {
+    Ok(Json(Token {
         token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,
     }))
-}
-
-fn generate_username(name: &str) -> String {
-    name.chars()
-        .filter(|ch| ch.is_ascii_alphanumeric())
-        .collect::<String>()
-        + "_"
-        + (0..12)
-            .map(|_| rng().sample(Alphanumeric) as char)
-            .collect::<String>()
-            .as_str()
 }

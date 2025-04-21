@@ -44,9 +44,22 @@ fn BackgroundServices(children: ChildrenFn) -> impl IntoView {
     view! {
         <Suspense fallback=move || view! { <p>"Loading"</p> }>
             {move || Suspend::new(async move {
-                let (user, fields) = match (user.await, fields.await) {
-                    (Ok(user), Ok(fields)) => (user, fields),
-                    _ => return view! { <p>"Failed to load user "</p> }.into_any()
+                let user = match user.await {
+                    Ok(user) => user,
+                    Err(e) => {
+                        log::warn!("{e:?}");
+
+                        return view! { <p>"Failed to load user "</p> }.into_any();
+                    },
+                };
+
+                let fields = match fields.await {
+                    Ok(fields) => fields,
+                    Err(e) => {
+                        log::warn!("{e:?}");
+
+                        return view! { <p>"Failed to load fields "</p> }.into_any();
+                    },
                 };
 
                 provide_context(ContentStore::new(fields));

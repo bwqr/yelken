@@ -114,7 +114,7 @@ async fn main() {
             http::Method::DELETE,
         ])
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
-        .allow_origin(config.web_origin.parse::<HeaderValue>().unwrap());
+        .allow_origin(config.frontend_origin.parse::<HeaderValue>().unwrap());
 
     let state = AppState::new(config, pool, storage.clone());
 

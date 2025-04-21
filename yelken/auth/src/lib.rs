@@ -1,11 +1,30 @@
 use axum::{routing::post, Router};
 use base::AppState;
+use handlers::email;
 
 mod handlers;
 mod requests;
 
 pub fn router() -> Router<AppState> {
-    Router::new()
-        .route("/login", post(handlers::login))
-        .route("/sign-up", post(handlers::sign_up))
+    let router = Router::new();
+
+    #[cfg(feature = "email")]
+    let router = router
+        .route("/login", post(email::login))
+        .route("/sign-up", post(email::sign_up));
+
+    #[cfg(feature = "oauth")]
+    let router = {
+        use axum::{routing::get, Extension};
+        use handlers::oauth;
+
+        let auth_config = oauth::AuthConfig::from_env().unwrap();
+
+        router
+            .route("/oauth/redirect", get(oauth::redirect_oauth_provider))
+            .route("/oauth/saas", get(oauth::saas_oauth))
+            .layer(Extension(auth_config))
+    };
+
+    router
 }

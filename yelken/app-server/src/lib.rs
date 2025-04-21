@@ -5,7 +5,7 @@ use axum::{
     extract::{Request, State},
     http::{header, Method},
     middleware,
-    response::{Html, IntoResponse, Redirect, Response},
+    response::{IntoResponse, Redirect, Response},
     Extension, Router,
 };
 use futures::StreamExt;
@@ -62,19 +62,42 @@ async fn handle_auth_req(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let config = Config::new(APP_ROOT.to_string(), state.config.api_origin.clone());
+    let config = Config::new(APP_ROOT.to_string(), state.config.backend_origin.clone());
 
-    let body = Owner::new_root(None).with(move || {
+    let shared_context = Arc::new(SsrSharedContext::new());
+
+    let mut body = Owner::new_root(Some(
+        Arc::clone(&shared_context) as Arc<dyn SharedContext + Send + Sync>
+    ))
+    .with(move || {
         provide_context(RequestUrl::new(&format!("{}/auth{}", APP_ROOT, url)));
 
-        app::Auth(app::AuthProps { config }).to_html()
+        app::Auth(app::AuthProps { config }).to_html_stream_in_order()
     });
 
-    Html(format!(
-        "{}{}{}{}",
-        index_html.head, index_html.body, body, index_html.tail
-    ))
-    .into_response()
+    body.push_sync(&index_html.head);
+    body.push_sync(&index_html.body);
+
+    let mut resp = Body::from_stream(
+        body.chain(
+            shared_context
+                .pending_data()
+                .unwrap()
+                .map(|chunk| format!("<script>{chunk}</script>")),
+        )
+        .chain(futures::stream::once(
+            async move { index_html.tail.clone() },
+        ))
+        .map(|body| -> Result<String, &str> { Ok(body) }),
+    )
+    .into_response();
+
+    resp.headers_mut().insert(
+        header::CONTENT_TYPE,
+        "text/html; charset=utf-8".parse().unwrap(),
+    );
+
+    resp
 }
 
 async fn handle_req(
@@ -98,7 +121,7 @@ async fn handle_req(
         .map(|pq| pq.as_str())
         .unwrap_or("/");
 
-    let config = Config::new(APP_ROOT.to_string(), state.config.api_origin.clone());
+    let config = Config::new(APP_ROOT.to_string(), state.config.backend_origin.clone());
 
     let shared_context = Arc::new(SsrSharedContext::new());
 

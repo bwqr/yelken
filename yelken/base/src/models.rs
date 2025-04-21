@@ -40,6 +40,34 @@ impl FromSql<Text, Pg> for UserState {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
+pub enum LoginKind {
+    Email,
+    Saas,
+}
+
+impl ToSql<Text, Pg> for LoginKind {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
+        match *self {
+            LoginKind::Email => out.write_all(b"email")?,
+            LoginKind::Saas => out.write_all(b"saas")?,
+        }
+
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<Text, Pg> for LoginKind {
+    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"email" => Ok(LoginKind::Email),
+            b"saas" => Ok(LoginKind::Saas),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
 #[derive(Queryable)]
 pub struct User {
     pub id: i32,
@@ -47,9 +75,10 @@ pub struct User {
     pub username: String,
     pub name: String,
     pub email: String,
-    pub password: String,
-    pub salt: String,
+    pub password: Option<String>,
+    pub login_kind: LoginKind,
     pub state: UserState,
+    pub openid: Option<String>,
     pub created_at: NaiveDateTime,
 }
 

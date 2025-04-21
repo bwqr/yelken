@@ -12,11 +12,14 @@ leptos_router.workspace = true
 log.workspace = true
 reqwest = { workspace = true, optional = true }
 serde.workspace = true
+serde_json.workspace = true
 wasm-bindgen = { workspace = true, optional = true }
-web-sys = { workspace = true, features = ["Document", "HtmlDocument", "Storage", "Window"], optional = true }
+web-sys = { workspace = true, features = ["Crypto", "Document", "HtmlDocument", "Storage", "Window"], optional = true }
+
+js-sys = { version = "0.3.77", optional = true }
 
 [features]
-web = ["dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]
+web = ["dep:js-sys", "dep:reqwest", "dep:wasm-bindgen", "dep:web-sys"]
 
 [package.metadata.leptos-i18n]
 default = "en"

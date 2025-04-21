@@ -161,12 +161,14 @@ checksum = "6b964d184e89d9b6b67dd2715bc8e74cf3107fb2b529990c90cf517326150bf4"
 name = "app"
 version = "0.1.0"
 dependencies = [
+ "js-sys",
  "leptos",
  "leptos_i18n",
  "leptos_router",
  "log",
  "reqwest",
  "serde",
+ "serde_json",
  "shared",
  "wasm-bindgen",
  "web-sys",
@@ -297,8 +299,10 @@ dependencies = [
  "diesel-async",
  "log",
  "rand 0.9.0",
+ "reqwest",
  "serde",
  "shared",
+ "url",
 ]
 
 [[package]]

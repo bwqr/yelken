@@ -38,11 +38,12 @@ create table users(
     id         serial  primary key not null,
     role_id    int             default null,
     username   varchar(128)    not null unique,
-    name       varchar(255)    not null,
-    email      varchar(255)    not null unique,
-    password   varchar(88)     not null,
-    salt       varchar(32)     not null,
+    name       varchar(128)    not null,
+    email      varchar(128)    not null unique,
+    password   varchar(128)    default null,
+    login_kind varchar(16)     not null default 'email',
     state      varchar(8)      not null default 'enabled' check (state in ('enabled', 'disabled')),
+    openid     varchar(32)     default null,
     created_at timestamp       not null default current_timestamp,
     constraint fk_users_role_id foreign key (role_id) references roles (id) on delete no action on update no action
 );

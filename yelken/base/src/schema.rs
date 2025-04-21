@@ -162,16 +162,18 @@ diesel::table! {
         role_id -> Nullable<Int4>,
         #[max_length = 128]
         username -> Varchar,
-        #[max_length = 255]
+        #[max_length = 128]
         name -> Varchar,
-        #[max_length = 255]
+        #[max_length = 128]
         email -> Varchar,
-        #[max_length = 88]
-        password -> Varchar,
-        #[max_length = 32]
-        salt -> Varchar,
+        #[max_length = 128]
+        password -> Nullable<Varchar>,
+        #[max_length = 16]
+        login_kind -> Varchar,
         #[max_length = 8]
         state -> Varchar,
+        #[max_length = 32]
+        openid -> Nullable<Varchar>,
         created_at -> Timestamp,
     }
 }

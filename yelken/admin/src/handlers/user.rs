@@ -48,8 +48,7 @@ pub async fn create_user(
             users::username.eq(generate_username(&req.name)),
             users::name.eq(&req.name),
             users::email.eq(&req.email),
-            users::password.eq(password),
-            users::salt.eq(salt),
+            users::password.eq(salt + password.as_str()),
         ))
         .get_result::<User>(&mut conn)
         .await

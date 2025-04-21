@@ -14,4 +14,12 @@ diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true
 rand.workspace = true
+reqwest = { workspace = true, optional = true }
 serde.workspace = true
+
+url = { version = "2.5.4", optional = true }
+
+[features]
+default = []
+email = []
+oauth = ["dep:reqwest", "dep:url"]

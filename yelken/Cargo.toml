@@ -36,6 +36,7 @@ rand = "0.9.0"
 reqwest = { version = "0.12.12", features = ["json"] }
 opendal = "0.53.0"
 serde = { version = "1.0.217", features = ["rc", "serde_derive"] }
+serde_json = "1.0.140"
 tokio = { version = "1.43.0", features = ["full"] }
 tower = "0.5.2"
 unic-langid = "0.9.5"
@@ -81,10 +82,10 @@ inherits = "dev"
 lto = true
 
 [features]
-default = ["admin", "app", "auth", "content", "form", "ui", "user"]
+default = ["admin", "app", "auth", "content", "ui", "user"]
 admin = ["dep:admin"]
 app = ["dep:app_server"]
-auth = ["dep:auth"]
+auth = ["dep:auth", "auth?/email", "auth?/oauth"]
 content = ["dep:content"]
 form = ["dep:form"]
 plugin = ["dep:plugin", "ui?/plugin", "app_server?/plugin"]

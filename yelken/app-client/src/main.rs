@@ -18,7 +18,7 @@ fn main() {
 
     console_error_panic_hook::set_once();
 
-    let base = if cfg!(feature = "csr") { "" } else { "/yk-app" };
+    let base = if cfg!(feature = "csr") { "" } else { "/yk/app" };
 
     #[cfg(not(feature = "csr"))]
     let mount = leptos::mount::hydrate_body;
