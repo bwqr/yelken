@@ -30,7 +30,7 @@ The main goals of Yelken can be described as
 
 ## Documentation
 
-Right now, [Yelken's Wiki](https://github.com/bwqr/yelken/wiki) is the correct place to look for documentation.
+Right now, [Yelken Book](https://bwqr.github.io/yelken-book/) is the correct place to look for documentation.
 
 ## Getting Started
 
@@ -50,8 +50,8 @@ As a first step, Yelken targets reaching `0.1.0` version that should provide a g
 
 ## Community
 
-There is no official channel for Yelken yet. However, you can express your ideas and questions in Issues or Discussions.
-Having a community group, such as Discord server, may happen in the future.
+You can express your ideas and questions in Issues or Discussions.
+You can also join our [Discord](https://discord.gg/D4bfHr8neh) server to chat about Yelken
 
 ## Contributing
 
