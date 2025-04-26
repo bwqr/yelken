@@ -12,6 +12,7 @@ pub struct Config {
     pub tmp_dir: String,
     pub backend_origin: String,
     pub frontend_origin: String,
+    pub reload_templates: bool,
 }
 
 impl Config {
@@ -26,11 +27,16 @@ impl Config {
         let frontend_origin = std::env::var("YELKEN_FRONTEND_ORIGIN")
             .context("YELKEN_FRONTEND_ORIGIN is not defined")?;
 
+        let reload_templates = std::env::var("YELKEN_RELOAD_TEMPLATES")
+            .map(|var| var.as_str() == "on" || var.as_str() == "true" || var.as_str() == "yes")
+            .unwrap_or(false);
+
         Ok(Self {
             env,
             tmp_dir,
             backend_origin,
             frontend_origin,
+            reload_templates,
         })
     }
 }

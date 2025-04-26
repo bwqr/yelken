@@ -85,10 +85,26 @@ fn resolve_locale<'a>(
 pub async fn serve_page(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
-    Extension(l10n): Extension<L10n>,
-    Extension(renderer): Extension<Render>,
+    Extension(render): Extension<Render>,
+    Extension(l10n): Extension<crate::L10n>,
     req: Request,
 ) -> Result<Response, HttpError> {
+    if state.config.reload_templates {
+        l10n.reload(
+            &state.storage,
+            &options.locale_locations(),
+            &options.locales(),
+            options.default_locale(),
+        )
+        .await;
+
+        render
+            .reload(&state.storage, &options.template_locations())
+            .await
+            .inspect_err(|e| log::warn!("Failed to refresh render {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("reload_templates_failed"))?;
+    }
+
     let mut router = Router::new();
 
     let pages = pages::table

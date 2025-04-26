@@ -5,18 +5,14 @@ use shared::content::{Field, Model};
 
 #[derive(Clone, Copy)]
 pub struct ContentStore {
-    fields: RwSignal<Arc<[Field]>>,
+    // fields: RwSignal<Arc<[Field]>>,
 }
 
 impl ContentStore {
-    pub fn new(fields: Arc<[Field]>) -> Self {
+    pub fn new(_: Arc<[Field]>) -> Self {
         Self {
-            fields: RwSignal::new(fields),
+            // fields: RwSignal::new(fields),
         }
-    }
-
-    pub fn fields(&self) -> ReadSignal<Arc<[Field]>> {
-        self.fields.read_only()
     }
 }
 
