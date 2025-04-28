@@ -1,3 +1,4 @@
 target
 .env
 app-client/dist
+app-client/node_modules
