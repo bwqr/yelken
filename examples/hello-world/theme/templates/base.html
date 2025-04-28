@@ -1,19 +1,29 @@
-{%- block init %}{% endblock init -%}
 <!DOCTYPE html>
 <html>
   <head>
-    <title>{% block title %}{{ localize(key="site-title", locale=locale) }}{% endblock title%}</title>
+      <title>{% block title %}{{ localize("site-title") }}{% endblock title%}</title>
+      <link href="{{ asset_url('theme/main.css') }}" rel="stylesheet">
   </head>
   <body>
-    <div>
-      <p style="display: inline">{{ localize(key="locales", locale=locale) }}</p>
-      <ul style="display: inline">
-        {% for key, name in locales %}
-          <li style="display: inline"><a href="{{ "/" ~ key }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a></li>
-        {% endfor %}
-      </ul>
+    <div class="container">
+        <header>
+            <h1 class="site-header">
+                <a href="{{ localize_url(page='home') }}">{{ localize("site-title") }}</a>
+            </h1>
+            <nav>
+                {% for key, name in locale.all %}
+                    <a href="{{ "/" ~ key }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a>
+                {% endfor %}
+            </nav>
+        </header>
+        <main id="main" tabindex="-1">
+            {%- block body %}{% endblock body -%}
+        </main>
+        <footer>
+            <p>
+                {{ localize('powered-by', name='<a target="_blank" href="https://github.com/bwqr/yelken">Yelken</a>') | safe }}, {{ localize('theme') }} <a target="_blank" href="https://github.com/zbrox/anpu-zola-theme">Anpu</a>.
+            </p>
+        </footer>
     </div>
-
-    {%- block body %}{% endblock body -%}
   </body>
 </html>

@@ -1,3 +1,4 @@
 site-title = Yelken
-locales = Diller
 articles = Makaleler
+powered-by = {$name} ile oluşturuldu
+theme = Tema

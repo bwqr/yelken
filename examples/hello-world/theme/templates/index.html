@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 
 {% block body %}
-  <p>{{ localize(key="articles", locale=locale) }}</p>
-  <ul>
-  {% for article in get_contents(model="article", fields=["title", "slug"], locale=locale) %}
-    <li><a href="{{ localize_url(page="article", pages=pages, locale=locale, default_locale=default_locale, params=[article.slug]) }}">{{ article.title }}</a></li>
-  {% endfor %}
-  <ul>
+    <p>{{ localize("articles") }}</p>
+
+    {% for article in get_contents("article", ["title", "slug"]) %}
+        <article class="post-list">
+            <header>
+                <h1>
+                    <a href="{{ localize_url(page="article", params=[article.slug]) }}">{{ article.title }}</a>
+                </h1>
+            </header>
+        </article>
+    {% endfor %}
 {% endblock body %}
