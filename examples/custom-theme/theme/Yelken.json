@@ -1,0 +1,42 @@
+{
+  "id": "my.theme",
+  "version": "0.1.0",
+  "name": "My Custom Theme",
+  "models": [
+    {
+      "name": "menu",
+      "fields": [
+        { "name": "name", "field": "text", "localized": true, "multiple": false },
+        { "name": "path", "field": "text", "localized": true, "multiple": false }
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "name": "Home",
+      "model": "menu",
+      "values": [
+        { "field": "name", "value": "Home", "locale": "en"},
+        { "field": "name", "value": "Ana Sayfa", "locale": "tr"},
+        { "field": "path", "value": "/", "locale": "en"},
+        { "field": "path", "value": "/", "locale": "tr"}
+      ]
+    },
+    {
+      "name": "About Me",
+      "model": "menu",
+      "values": [
+        { "field": "name", "value": "About Me", "locale": "en"},
+        { "field": "name", "value": "Hakkımda", "locale": "tr"},
+        { "field": "path", "value": "/about-me", "locale": "en"},
+        { "field": "path", "value": "/hakkimda", "locale": "tr"}
+      ]
+    }
+  ],
+  "pages": [
+    { "name": "home", "path": "/", "template": "home.html", "locale": "en" },
+    { "name": "home", "path": "/", "template": "home.html", "locale": "tr" },
+    { "name": "about-me", "path": "/about-me", "template": "about-me.html", "locale": "en" },
+    { "name": "about-me", "path": "/hakkimda", "template": "about-me.html", "locale": "tr" }
+  ]
+}
