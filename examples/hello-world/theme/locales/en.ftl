@@ -1,3 +1,4 @@
 site-title = Sail
-locales = Locales
 articles = Articles
+powered-by = Powered by {$name}
+theme = Theme

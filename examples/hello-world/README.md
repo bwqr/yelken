@@ -3,7 +3,7 @@ This example shows how Yelken works internally.
 Easiest way to experiment with Yelken is running this example.
 Before running it, please ensure that you have `docker-compose` installed and ready to be used on your machine.
 
-To run the example, just execute the following command inside this directory and open http://127.0.0.1:8080 url in your browser.
+To run the example, just execute the following command inside this directory and open [http://127.0.0.1:8080](http://127.0.0.1:8080) url in your browser.
 ```sh
   docker-compose up
 ```
@@ -21,7 +21,7 @@ Then there are two contents, named **Hello World** and **Nice Day** that are cre
 Followed by that, there are values of each content for each field of `article` model.
 Up to this point, only the data is defined but how it should be displayed is not yet.
 
-Next step is looking at [templates](theme/templates) located under theme folder.
+Next step will be looking at [templates](theme/templates) located under theme folder.
 Inside this folder, there are 3 different html files which are actually Jinja2 templates.
 There is `index.html` that displays links for all articles and `article.html` that displays details of an article.
 There is also `base.html` which sets a base for other templates and is extended by aforementioned two templates.
@@ -35,4 +35,4 @@ Each page can also have a locale that decides the exact url of the page and also
 
 It is time to play with this example by changing templates and inserting new data.
 Please make sure that you run `docker-compose down` after changing the **init.sql** since this script is only run when database starts up for the first time.
-To make changes in templates take effect, you need to stop and run `docker-compose up` again.
+Changes in templates are automatically refreshed when you reload the page.
