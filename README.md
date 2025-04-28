@@ -13,6 +13,7 @@ The main goals of Yelken can be described as
 * Have an extendable architecture with plugins and themes
 * Keep deployment to anywhere very easy
 
+Yelken also received its first alpha release. You can read more about this release from [announcement](https://bwqr.github.io/yelken-blog/first-announcement/), if you have not read it yet.
 
 ## Features
 
@@ -34,7 +35,7 @@ Right now, [Yelken Book](https://bwqr.github.io/yelken-book/) is the correct pla
 
 ## Getting Started
 
-Best way to get started with Yelken is checking out *Hello World* example located under [examples](examples/hello-world) directory
+Yelken Book has a chapter about [Getting Started](https://bwqr.github.io/yelken-book/getting-started.html) which describes how to run Yelken.
 
 ## Roadmap
 
@@ -51,7 +52,7 @@ As a first step, Yelken targets reaching `0.1.0` version that should provide a g
 ## Community
 
 You can express your ideas and questions in Issues or Discussions.
-You can also join our [Discord](https://discord.gg/D4bfHr8neh) server to chat about Yelken
+You can also join our [Discord](https://discord.gg/D4bfHr8neh) server to chat about Yelken.
 
 ## Contributing
 
