@@ -117,6 +117,7 @@ pub struct ModelField {
     pub model_id: i32,
     pub localized: bool,
     pub multiple: bool,
+    pub required: bool,
     pub name: String,
 }
 

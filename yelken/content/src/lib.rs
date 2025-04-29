@@ -1,4 +1,4 @@
-use axum::{middleware, routing::get, Router};
+use axum::{middleware, routing::{get, post}, Router};
 use base::{middlewares::permission::PermissionLayer, AppState};
 
 mod handlers;
@@ -15,10 +15,13 @@ pub fn router(state: AppState) -> Router<AppState> {
             perm: Permission::Content(Mode::Read),
         });
 
-    let content_write = Router::new().layer(PermissionLayer {
-        pool: state.pool.clone(),
-        perm: Permission::Content(Mode::Write),
-    });
+    let content_write = Router::new()
+        .route("/model", post(handlers::create_model))
+        .route("/content", post(handlers::create_content))
+        .layer(PermissionLayer {
+            pool: state.pool.clone(),
+            perm: Permission::Content(Mode::Write),
+        });
 
     Router::new()
         .merge(content_read)
