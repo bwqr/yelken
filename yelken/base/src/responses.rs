@@ -32,6 +32,14 @@ impl HttpError {
         }
     }
 
+    pub const fn bad_request(error: &'static str) -> Self {
+        HttpError {
+            code: StatusCode::BAD_REQUEST,
+            error,
+            context: None,
+        }
+    }
+
     pub const fn not_found(error: &'static str) -> Self {
         HttpError {
             code: StatusCode::NOT_FOUND,

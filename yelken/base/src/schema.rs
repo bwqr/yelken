@@ -66,6 +66,7 @@ diesel::table! {
         model_id -> Int4,
         localized -> Bool,
         multiple -> Bool,
+        required -> Bool,
         #[max_length = 128]
         name -> Varchar,
     }
