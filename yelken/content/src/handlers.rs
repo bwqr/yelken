@@ -159,6 +159,7 @@ pub async fn create_content(
             return Some("missing_required_field");
         }
 
+        // TODO check multiple values for each locale separately if mf is localized
         if !mf.0.multiple && values.clone().nth(1).is_some() {
             return Some("multiple_value_for_field");
         }
