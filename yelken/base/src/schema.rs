@@ -64,11 +64,11 @@ diesel::table! {
         id -> Int4,
         field_id -> Int4,
         model_id -> Int4,
+        #[max_length = 128]
+        name -> Varchar,
         localized -> Bool,
         multiple -> Bool,
         required -> Bool,
-        #[max_length = 128]
-        name -> Varchar,
     }
 }
 

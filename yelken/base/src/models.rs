@@ -115,10 +115,10 @@ pub struct ModelField {
     pub id: i32,
     pub field_id: i32,
     pub model_id: i32,
+    pub name: String,
     pub localized: bool,
     pub multiple: bool,
     pub required: bool,
-    pub name: String,
 }
 
 #[derive(Queryable)]

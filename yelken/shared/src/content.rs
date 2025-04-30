@@ -43,3 +43,8 @@ pub struct CreateContent {
     pub name: String,
     pub values: Vec<ContentValue>,
 }
+
+#[derive(Deserialize, Serialize)]
+pub struct UpdateContentValue {
+    pub value: String,
+}
