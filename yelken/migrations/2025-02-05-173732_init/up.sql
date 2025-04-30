@@ -87,10 +87,11 @@ create table model_fields(
     id        serial primary key not null,
     field_id  int not null,
     model_id  int not null,
+    name      varchar(128) not null,
     localized bool not null default false,
     multiple  bool not null default false,
     required  bool not null default false,
-    name      varchar(128) not null,
+    unique (field_id, model_id, name),
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );

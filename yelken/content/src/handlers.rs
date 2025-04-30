@@ -1,4 +1,7 @@
-use axum::{extract::State, Extension, Json};
+use axum::{
+    extract::{Path, State},
+    Extension, Json,
+};
 use base::{
     config::Options,
     responses::HttpError,
@@ -7,7 +10,7 @@ use base::{
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use shared::content::{CreateContent, CreateModel, Field, Model};
+use shared::content::{ContentValue, CreateContent, CreateModel, Field, Model, UpdateContentValue};
 
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table
@@ -139,12 +142,12 @@ pub async fn create_content(
         .await
         .optional()?
     else {
-        return Err(HttpError::not_found("unknown_model"));
+        return Err(HttpError::not_found("model_not_found"));
     };
 
     let model_fields = fields::table
-        .inner_join(model_fields::table.inner_join(models::table))
-        .filter(models::id.eq(model.id))
+        .inner_join(model_fields::table)
+        .filter(model_fields::model_id.eq(model.id))
         .select((model_fields::all_columns, fields::all_columns))
         .load::<(base::models::ModelField, base::models::Field)>(&mut conn)
         .await?;
@@ -181,7 +184,7 @@ pub async fn create_content(
             .find(|mf| mf.0.id == v.model_field_id)
             .is_none()
     }) {
-        return Err(HttpError::not_found("unknown_model_field"));
+        return Err(HttpError::not_found("model_field_not_found"));
     }
 
     conn.transaction(|conn| {
@@ -216,6 +219,117 @@ pub async fn create_content(
         .scope_boxed()
     })
     .await?;
+
+    Ok(())
+}
+
+pub async fn create_content_value(
+    State(state): State<AppState>,
+    Extension(options): Extension<Options>,
+    Path(content_id): Path<i32>,
+    Json(req): Json<ContentValue>,
+) -> Result<(), HttpError> {
+    let mut conn = state.pool.get().await?;
+
+    let Some(model_id) = models::table
+        .inner_join(contents::table)
+        .filter(contents::id.eq(content_id))
+        .select(models::id)
+        .first::<i32>(&mut conn)
+        .await
+        .optional()?
+    else {
+        return Err(HttpError::not_found("content_not_found"));
+    };
+
+    let Some(model_field) = fields::table
+        .inner_join(model_fields::table)
+        .filter(
+            model_fields::id
+                .eq(req.model_field_id)
+                .and(model_fields::model_id.eq(model_id)),
+        )
+        .select((model_fields::all_columns, fields::all_columns))
+        .first::<(base::models::ModelField, base::models::Field)>(&mut conn)
+        .await
+        .optional()?
+    else {
+        return Err(HttpError::not_found("model_field_not_found"));
+    };
+
+    if (model_field.0.localized && req.locale.is_none())
+        || (!model_field.0.localized && req.locale.is_some())
+    {
+        return Err(HttpError::bad_request("invalid_locale_for_field"));
+    }
+
+    if let Some(locale) = req.locale.as_ref() {
+        if options
+            .locales()
+            .iter()
+            .find(|l| format!("{l}") == *locale)
+            .is_none()
+        {
+            return Err(HttpError::bad_request("invalid_locale_for_field"));
+        }
+    }
+
+    if !model_field.0.multiple {
+        let query = if let Some(locale) = req.locale.as_ref() {
+            content_values::table
+                .filter(
+                    content_values::model_field_id
+                        .eq(model_field.0.id)
+                        .and(content_values::locale.eq(locale))
+                        .and(content_values::content_id.eq(content_id)),
+                )
+                .into_boxed()
+        } else {
+            content_values::table
+                .filter(
+                    content_values::model_field_id
+                        .eq(model_field.0.id)
+                        .and(content_values::locale.is_null())
+                        .and(content_values::content_id.eq(content_id)),
+                )
+                .into_boxed()
+        };
+
+        if diesel::dsl::select(diesel::dsl::exists(query))
+            .get_result::<bool>(&mut conn)
+            .await?
+        {
+            return Err(HttpError::conflict("content_value_already_exists"));
+        }
+    }
+
+    diesel::insert_into(content_values::table)
+        .values((
+            content_values::content_id.eq(content_id),
+            content_values::model_field_id.eq(model_field.0.id),
+            content_values::locale.eq(req.locale),
+            content_values::value.eq(req.value),
+        ))
+        .execute(&mut conn)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn update_content_value(
+    State(state): State<AppState>,
+    Path(value_id): Path<i32>,
+    Json(req): Json<UpdateContentValue>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(content_values::table)
+        .filter(content_values::id.eq(value_id))
+        .set(content_values::value.eq(req.value))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("content_value_not_found"));
+    }
 
     Ok(())
 }
