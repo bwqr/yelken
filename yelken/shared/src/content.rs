@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -7,11 +9,23 @@ pub struct Field {
     pub kind: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
+pub struct ModelField {
+    pub id: i32,
+    pub field_id: i32,
+    pub model_id: i32,
+    pub name: String,
+    pub localized: bool,
+    pub multiple: bool,
+    pub required: bool,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Model {
     pub id: i32,
     pub namespace: Option<String>,
     pub name: String,
+    pub fields: Arc<[ModelField]>,
 }
 
 #[derive(Deserialize, Serialize)]

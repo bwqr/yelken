@@ -185,6 +185,7 @@ dependencies = [
  "log",
  "reqwest",
  "send_wrapper",
+ "serde",
  "shared",
  "wasm-bindgen",
  "web-sys",

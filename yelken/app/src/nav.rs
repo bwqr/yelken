@@ -83,7 +83,8 @@ pub fn SideNav() -> impl IntoView {
     let links = move || {
         vec![
             ("", t_string!(i18n, sidenav.dashboard)),
-            ("models", t_string!(i18n, sidenav.models)),
+            ("content/models", t_string!(i18n, sidenav.models)),
+            ("content/contents", t_string!(i18n, sidenav.contents)),
             ("plugin-manager", t_string!(i18n, sidenav.plugin_manager)),
             ("settings", t_string!(i18n, sidenav.settings)),
         ]

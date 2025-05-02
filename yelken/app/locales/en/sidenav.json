@@ -2,6 +2,7 @@
   "apps": "Apps",
   "plugins": "Plugins",
   "dashboard": "Dashboard",
+  "contents": "Contents",
   "models": "Models",
   "plugin_manager": "Plugin Manager",
   "settings": "Settings",

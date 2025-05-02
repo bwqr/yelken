@@ -10,7 +10,9 @@ use base::{
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use shared::content::{ContentValue, CreateContent, CreateModel, Field, Model, UpdateContentValue};
+use shared::content::{
+    ContentValue, CreateContent, CreateModel, Field, Model, ModelField, UpdateContentValue,
+};
 
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table
@@ -32,21 +34,38 @@ pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Fiel
 }
 
 pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Model>>, HttpError> {
-    models::table
-        .load::<base::models::Model>(&mut state.pool.get().await?)
-        .await
-        .map(|ms| {
-            Json(
-                ms.into_iter()
-                    .map(|m| Model {
-                        id: m.id,
-                        namespace: m.namespace,
-                        name: m.name,
+    let mut conn = state.pool.get().await?;
+
+    let models = models::table.load::<base::models::Model>(&mut conn).await?;
+
+    let model_fields = model_fields::table
+        .load::<base::models::ModelField>(&mut conn)
+        .await?;
+
+    Ok(Json(
+        models
+            .into_iter()
+            .map(|m| Model {
+                id: m.id,
+                namespace: m.namespace,
+                name: m.name,
+                fields: model_fields
+                    .iter()
+                    .filter_map(|mf| {
+                        (mf.model_id == m.id).then(|| ModelField {
+                            id: mf.id,
+                            field_id: mf.field_id,
+                            model_id: mf.model_id,
+                            name: mf.name.clone(),
+                            localized: mf.localized,
+                            multiple: mf.multiple,
+                            required: mf.required,
+                        })
                     })
                     .collect(),
-            )
-        })
-        .map_err(Into::into)
+            })
+            .collect(),
+    ))
 }
 
 pub async fn create_model(
@@ -80,7 +99,7 @@ pub async fn create_model(
         return Err(HttpError::conflict("model_already_exists"));
     }
 
-    let model = conn
+    let (model, model_fields) = conn
         .transaction(|conn| {
             async move {
                 let model = diesel::insert_into(models::table)
@@ -91,7 +110,7 @@ pub async fn create_model(
                     .get_result::<base::models::Model>(conn)
                     .await?;
 
-                diesel::insert_into(model_fields::table)
+                let model_fields = diesel::insert_into(model_fields::table)
                     .values(
                         req.model_fields
                             .into_iter()
@@ -107,10 +126,13 @@ pub async fn create_model(
                             })
                             .collect::<Vec<_>>(),
                     )
-                    .execute(conn)
+                    .get_results::<base::models::ModelField>(conn)
                     .await?;
 
-                Result::<base::models::Model, HttpError>::Ok(model)
+                Result::<(base::models::Model, Vec<base::models::ModelField>), HttpError>::Ok((
+                    model,
+                    model_fields,
+                ))
             }
             .scope_boxed()
         })
@@ -120,6 +142,18 @@ pub async fn create_model(
         id: model.id,
         namespace: model.namespace,
         name: model.name,
+        fields: model_fields
+            .into_iter()
+            .map(|mf| ModelField {
+                id: mf.id,
+                field_id: mf.field_id,
+                model_id: mf.model_id,
+                name: mf.name.clone(),
+                localized: mf.localized,
+                multiple: mf.multiple,
+                required: mf.required,
+            })
+            .collect(),
     }))
 }
 

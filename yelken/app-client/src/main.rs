@@ -1,6 +1,6 @@
+use app::{App, AppProps, Auth, AuthProps, BaseResource, Config};
 use leptos::prelude::IntoAny;
 use resources::{ContentResources, PluginResources, UserResources};
-use app::{App, AppProps, Auth, AuthProps, Config};
 
 mod log;
 mod resources;
@@ -48,14 +48,17 @@ fn main() {
 
     mount(move || match root {
         Root::App => {
-            let user_resource = UserResources::new(config.clone());
+            let base_resource = BaseResource::new(config.clone());
 
-            let plugin_resource = PluginResources::new(config.clone());
+            let user_resource = UserResources::new(base_resource.clone());
 
-            let content_resource = ContentResources::new(config.clone());
+            let plugin_resource = PluginResources::new(base_resource.clone());
+
+            let content_resource = ContentResources::new(base_resource.clone());
 
             App(AppProps {
                 config,
+                base_resource,
                 user_resource,
                 plugin_resource,
                 content_resource,

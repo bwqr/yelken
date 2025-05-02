@@ -13,6 +13,7 @@ leptos.workspace = true
 log.workspace = true
 reqwest.workspace = true
 send_wrapper = "0.6.0"
+serde.workspace = true
 wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["Location", "Storage", "Window"] }
 
