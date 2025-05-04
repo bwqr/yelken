@@ -1,8 +1,7 @@
-use std::sync::Arc;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Field {
     pub id: i32,
     pub name: String,
@@ -10,6 +9,7 @@ pub struct Field {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelField {
     pub id: i32,
     pub field_id: i32,
@@ -21,14 +21,16 @@ pub struct ModelField {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: i32,
     pub namespace: Option<String>,
     pub name: String,
-    pub fields: Arc<[ModelField]>,
+    pub fields: Vec<ModelField>,
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateModelField {
     pub field_id: i32,
     pub name: String,
@@ -38,6 +40,7 @@ pub struct CreateModelField {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateModel {
     pub name: String,
     pub model_fields: Vec<CreateModelField>,

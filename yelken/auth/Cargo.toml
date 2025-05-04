@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 base.path = "../base"
-shared = { path = "../shared", features = ["auth"] }
 
 anyhow.workspace = true
 axum.workspace = true

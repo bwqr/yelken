@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared", features = ["permission"] }
-
 anyhow.workspace = true
 arc-swap.workspace = true
 axum.workspace = true

@@ -6,7 +6,6 @@ use base::types::Connection;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use log::{info, warn};
-use shared::plugin::Menu;
 use wasmtime::component::{Component, ComponentNamedList, Lift, Linker, Lower, ResourceTable};
 use wasmtime::{Config, Engine, Store};
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder, WasiView};
@@ -15,6 +14,12 @@ use base::schema::plugins;
 
 use crate::bindings::plugin::init::HostInfo;
 use crate::bindings::{handler::init::Reg, plugin::init::PluginInfo};
+
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Menu {
+    pub path: String,
+    pub name: String,
+}
 
 trait Plugin
 where
@@ -206,7 +211,7 @@ impl Plugin for ManagementPlugin {
             plugin,
             menus: menus
                 .into_iter()
-                .map(|m| shared::plugin::Menu {
+                .map(|m| Menu {
                     path: m.path,
                     name: m.name,
                 })

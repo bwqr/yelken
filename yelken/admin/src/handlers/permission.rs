@@ -6,13 +6,13 @@ use axum::{
 };
 use base::{
     middlewares::auth::AuthUser,
+    middlewares::permission::Permission,
     responses::HttpError,
     schema::{permissions, roles, users},
     AppState,
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use shared::permission::Permission;
 
 pub async fn update_role_permissions(
     State(state): State<AppState>,

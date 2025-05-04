@@ -3,12 +3,15 @@ use axum::{
     routing::{get, post, put},
     Router,
 };
-use base::{middlewares::permission::PermissionLayer, AppState};
+use base::{
+    middlewares::permission::{Mode, Permission, PermissionLayer},
+    AppState,
+};
 
 mod handlers;
+mod requests;
 
 pub use handlers::{fetch_fields, fetch_models};
-use shared::permission::{Mode, Permission};
 
 pub fn router(state: AppState) -> Router<AppState> {
     let content_read = Router::new()

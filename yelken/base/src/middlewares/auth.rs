@@ -148,7 +148,7 @@ async fn fetch_user(
 
     if UserState::Enabled != user.2 {
         return Err(HttpError {
-            code: StatusCode::UNAUTHORIZED,
+            code: StatusCode::FORBIDDEN,
             error: "failed_authorization",
             context: Some("User is not enabled".to_string()),
         });

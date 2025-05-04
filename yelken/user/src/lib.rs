@@ -1,8 +1,11 @@
 use axum::{middleware, routing::get, Router};
-use base::{middlewares::permission::PermissionLayer, AppState};
-use shared::permission::{Mode, Permission};
+use base::{
+    middlewares::permission::{Mode, Permission, PermissionLayer},
+    AppState,
+};
 
 mod handlers;
+mod responses;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()

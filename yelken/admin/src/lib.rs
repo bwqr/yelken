@@ -9,12 +9,14 @@ use axum::{
     Router,
 };
 use base::{
-    middlewares::{auth::from_token, permission::PermissionLayer},
+    middlewares::{
+        auth::from_token,
+        permission::{Permission, PermissionLayer},
+    },
     AppState,
 };
 use handlers::{install, locale, options, permission, role, template, user};
 use serde::Deserialize;
-use shared::permission::Permission;
 
 mod handlers;
 mod requests;
