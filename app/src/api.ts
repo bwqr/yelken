@@ -1,4 +1,4 @@
-export const API_URL = 'http://127.0.0.1:3000/api';
+import * as config from "./config";
 
 export class HttpError extends Error {
     constructor(public code: number, public error: string, public context: string | undefined) {
@@ -26,7 +26,7 @@ export class Api {
             headers['Content-Type'] = 'application/json';
         }
 
-        const resp = await fetch(`${API_URL}${path}`, {
+        const resp = await fetch(config.resolveURL(config.API_URL, path), {
             body: body ? JSON.stringify(body) : null,
             headers,
             method,
@@ -34,7 +34,7 @@ export class Api {
 
         if (!resp.ok) {
             if (resp.status === 401) {
-                window.location.assign('/auth/login');
+                window.location.assign(config.resolveURL(config.BASE_URL, '/auth/login'));
             }
 
             const text = await resp.text();

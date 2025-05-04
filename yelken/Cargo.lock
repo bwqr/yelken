@@ -145,6 +145,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b964d184e89d9b6b67dd2715bc8e74cf3107fb2b529990c90cf517326150bf4"
 
 [[package]]
+name = "app"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base",
+ "log",
+ "serde",
+ "serde_json",
+ "tower-http",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3900,6 +3912,7 @@ version = "0.1.0"
 dependencies = [
  "admin",
  "anyhow",
+ "app",
  "auth",
  "axum",
  "base",

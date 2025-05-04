@@ -7,6 +7,7 @@ import Dashboard from './dashboard';
 import { Contents } from './content/content';
 import EmailLogin from './auth/login/email';
 import { OauthLogin, OauthRedirect } from './auth/login/oauth';
+import * as config from './config';
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
     const [contentContext, ContentProvider] = ContentContext.create();
@@ -37,8 +38,16 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
 };
 
 const App: Component = () => {
+    let baseUrl = config.BASE_URL;
+
+    // When base is not equal to '/' and it ends with '/', href value for A component turns into `/base//link`.
+    // To avoid that, strip '/' from the end. We may need a better solution in the future though.
+    if (baseUrl !== '/' && baseUrl.endsWith('/')) {
+        baseUrl = baseUrl.slice(0, baseUrl.length - 1);
+    }
+
     return (
-        <Router root={props => (<>{props.children}</>)}>
+        <Router base={baseUrl} root={props => (<>{props.children}</>)}>
             <Route path="/auth" component={props => (<>{props.children}</>)}>
                 <Route path="/login" component={EmailLogin} />
                 <Route path="/oauth/saas" component={OauthRedirect} />

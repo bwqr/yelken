@@ -138,13 +138,20 @@ async fn main() {
 
     #[cfg(feature = "app")]
     let app = app.nest(
-        "/yk/app",
-        app_server::router(state.clone(), &server_config.app_assets_dir),
+        "/yk/app/",
+        app::router(&state.config.backend_origin, &server_config.app_assets_dir),
     );
+
     #[cfg(feature = "app")]
-    let app = app.nest_service(
-        "/assets/yelken",
-        ServeDir::new(server_config.app_assets_dir),
+    let app = app.route(
+        "/yk/app",
+        axum::routing::get((
+            axum::http::StatusCode::PERMANENT_REDIRECT,
+            [(
+                axum::http::header::LOCATION,
+                axum::http::HeaderValue::from_static("/yk/app/"),
+            )],
+        )),
     );
 
     #[cfg(feature = "auth")]

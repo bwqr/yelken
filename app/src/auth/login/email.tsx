@@ -1,5 +1,6 @@
 import { createSignal, Show } from "solid-js";
 import { Api, HttpError } from "../../api";
+import * as config from "../../config";
 
 export default function() {
     enum ValidationError {
@@ -48,7 +49,7 @@ export default function() {
             .then(token => {
                 localStorage.setItem('token', token.token);
 
-                window.location.assign('/');
+                window.location.assign(config.BASE_URL);
             })
             .catch(e => {
                 if (e instanceof HttpError) {

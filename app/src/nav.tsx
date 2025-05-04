@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { createSignal, For, JSX, Show } from "solid-js";
 import { UserContext } from "./context";
+import * as config from './config';
 
 export function TopBar(): JSX.Element {
     const userCtx = UserContext.ctx();
@@ -32,7 +33,7 @@ export function TopBar(): JSX.Element {
                         <li>
                             <a
                                 class="dropdown-item"
-                                href="/auth/login"
+                                href={config.resolveURL(config.BASE_URL, '/auth/login')}
                                 on:click={_ => localStorage.removeItem('token')}
                                 rel="external"
                             >Logout</a>
