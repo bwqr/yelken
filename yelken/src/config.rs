@@ -24,8 +24,8 @@ impl ServerConfig {
         let app_assets_dir = std::env::var("YELKEN_APP_ASSETS_DIR")
             .context("YELKEN_APP_ASSETS_DIR is not defined")?;
 
-        let storage_dir = std::env::var("YELKEN_STORAGE_DIR")
-            .context("YELKEN_STORAGE_DIR is not defined")?;
+        let storage_dir =
+            std::env::var("YELKEN_STORAGE_DIR").context("YELKEN_STORAGE_DIR is not defined")?;
 
         Ok(Self {
             address,
