@@ -1,6 +1,6 @@
 {
   "name": "vite-template-solid",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha2",
   "description": "",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "vite build",
     "serve": "vite preview"
   },
-  "license": "MIT",
+  "license": "BSL 1.1",
   "devDependencies": {
     "bootstrap": "^5.3.5",
     "sass-embedded": "^1.87.0",
