@@ -56,10 +56,10 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                             <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Add Field</h1>
                         </div>
                         <div class="modal-body">
-                            <form onSubmit={(e) => { e.preventDefault(); createField(); }}>
+                            <form onSubmit={ev => { ev.preventDefault(); createField(); }}>
                                 <div class="mb-3">
                                     <label for="modelFieldName" class="form-label">Name</label>
-                                    <input value={name()} onInput={(e) => setName(e.target.value)} type="text" class="form-control" id="modelFieldName" />
+                                    <input value={name()} onInput={ev => setName(ev.target.value)} type="text" class="form-control" id="modelFieldName" />
                                     <Show when={validationErrors().has(ValidationError.Name)}>
                                         <small class="text-danger">Please enter name</small>
                                     </Show>
@@ -70,7 +70,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         id="modelFieldId"
                                         class="form-select"
                                         value={fieldId()}
-                                        onChange={(e) => setFieldId(parseInt(e.target.value))}
+                                        onChange={ev => setFieldId(parseInt(ev.target.value))}
                                     >
                                         <option disabled selected>Select a field</option>
                                         <For each={contentCtx.fields()}>
@@ -84,19 +84,19 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                     </Show>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" checked={localized()} onChange={(e) => setLocalized(e.target.checked)} id="modelFieldLocalized" />
+                                    <input class="form-check-input" type="checkbox" checked={localized()} onChange={ev => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
                                     <label class="form-check-label" for="modelFieldLocalized">
                                         Localized
                                     </label>
                                 </div>
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" checked={multiple()} onChange={(e) => setMultiple(e.target.checked)} id="modelFieldMultiple" />
+                                    <input class="form-check-input" type="checkbox" checked={multiple()} onChange={ev => setMultiple(ev.target.checked)} id="modelFieldMultiple" />
                                     <label class="form-check-label" for="modelFieldMultiple">
                                         Multiple
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" checked={required()} onChange={(e) => setRequired(e.target.checked)} id="modelFieldRequired" />
+                                    <input class="form-check-input" type="checkbox" checked={required()} onChange={ev => setRequired(ev.target.checked)} id="modelFieldRequired" />
                                     <label class="form-check-label" for="modelFieldRequired">
                                         Required
                                     </label>
