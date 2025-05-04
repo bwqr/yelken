@@ -1,15 +1,11 @@
 [workspace]
 members = [
   "admin",
-  "app",
-  "app-client",
-  "app-server",
   "auth",
   "base",
   "content",
   "form",
   "plugin",
-  "shared",
   "ui",
   "user",
 ]
@@ -45,7 +41,6 @@ web-sys = "0.3.77"
 
 [dependencies]
 admin = { path = "./admin", optional = true }
-app_server = { path = "./app-server", optional = true }
 auth = { path = "./auth", optional = true }
 base.path = "./base"
 content = { path = "./content", optional = true }
@@ -82,12 +77,11 @@ inherits = "dev"
 lto = true
 
 [features]
-default = ["admin", "app", "auth", "content", "ui", "user"]
+default = ["admin", "auth", "content", "ui", "user"]
 admin = ["dep:admin"]
-app = ["dep:app_server"]
 auth = ["dep:auth", "auth?/email"]
 content = ["dep:content"]
 form = ["dep:form"]
-plugin = ["dep:plugin", "ui?/plugin", "app_server?/plugin"]
+plugin = ["dep:plugin", "ui?/plugin"]
 ui = ["dep:ui"]
 user = ["dep:user"]

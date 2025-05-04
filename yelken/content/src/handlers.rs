@@ -10,7 +10,7 @@ use base::{
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use shared::content::{
+use crate::requests::{
     ContentValue, CreateContent, CreateModel, Field, Model, ModelField, UpdateContentValue,
 };
 

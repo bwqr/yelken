@@ -12,11 +12,22 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
-use shared::auth::{Login, Token};
+use serde::{Deserialize, Serialize};
 
 use super::generate_username;
 
 const SALT_LENGTH: usize = 32;
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct Token {
+    pub token: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct Login {
+    pub email: String,
+    pub password: String,
+}
 
 pub async fn login(
     State(state): State<AppState>,
@@ -24,7 +35,7 @@ pub async fn login(
     Json(request): Json<Login>,
 ) -> Result<Json<Token>, HttpError> {
     const INVALID_CREDENTIALS: HttpError = HttpError {
-        code: StatusCode::UNAUTHORIZED,
+        code: StatusCode::FORBIDDEN,
         error: "invalid_credentials",
         context: None,
     };
@@ -61,7 +72,7 @@ pub async fn login(
 
     if UserState::Enabled != user_state {
         return Err(HttpError {
-            code: StatusCode::UNAUTHORIZED,
+            code: StatusCode::FORBIDDEN,
             error: "user_not_enabled",
             context: None,
         });
