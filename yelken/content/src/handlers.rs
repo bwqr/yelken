@@ -1,3 +1,6 @@
+use crate::requests::{
+    ContentValue, CreateContent, CreateModel, Field, Model, ModelField, UpdateContentValue,
+};
 use axum::{
     extract::{Path, State},
     Extension, Json,
@@ -10,9 +13,6 @@ use base::{
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
-use crate::requests::{
-    ContentValue, CreateContent, CreateModel, Field, Model, ModelField, UpdateContentValue,
-};
 
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table

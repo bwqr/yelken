@@ -1,6 +1,4 @@
-use axum::{
-    extract::State, http::StatusCode, Extension, Json
-};
+use axum::{extract::State, http::StatusCode, Extension, Json};
 use base::{
     crypto::Crypto,
     models::{LoginKind, User, UserState},
@@ -62,7 +60,9 @@ pub async fn login(
     };
 
     let Some((salt, password)) = password.split_at_checked(SALT_LENGTH) else {
-        return Err(HttpError::internal_server_error("invalid_password_and_salt"));
+        return Err(HttpError::internal_server_error(
+            "invalid_password_and_salt",
+        ));
     };
 
     // TODO use verify

@@ -156,10 +156,7 @@ pub async fn serve_page(
                 _ => path.to_string(),
             };
 
-            if let Err(e) = router.insert(
-                localized_path,
-                (name.clone(), template, locale),
-            ) {
+            if let Err(e) = router.insert(localized_path, (name.clone(), template, locale)) {
                 log::warn!("Failed to add path {path} of page {name} due to {e:?}");
             }
         });
