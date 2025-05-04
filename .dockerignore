@@ -1,0 +1,8 @@
+*
+!yelken
+!app
+yelken/.env
+yelken/target
+app/.env.local
+app/dist
+app/node_modules
