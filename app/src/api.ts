@@ -52,7 +52,6 @@ export class Api {
                 typeof json.error === 'string' &&
                 !('context' in json && typeof json.context !== 'string')
             ) {
-
                 throw new HttpError(json.code, json.error, json.context);
             }
 

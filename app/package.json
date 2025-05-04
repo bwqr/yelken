@@ -4,8 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "start": "vite --port 8080",
-    "dev": "vite --port 8080",
+    "start": "vite",
+    "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
