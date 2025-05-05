@@ -12,7 +12,8 @@ export default defineConfig({
     css: {
         preprocessorOptions: {
             scss: {
-                silenceDeprecations: ['mixed-decls', 'color-functions', 'global-builtin', 'import']
+                // https://github.com/twbs/bootstrap/issues/40962#issuecomment-2448291496
+                silenceDeprecations: ['color-functions', 'global-builtin', 'import']
             },
         }
     },

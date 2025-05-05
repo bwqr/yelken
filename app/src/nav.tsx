@@ -8,35 +8,55 @@ export function TopBar(): JSX.Element {
 
     const [dropdown, setDropdown] = createSignal(false);
 
-    const onSwitch = () => { console.log('switched') };
-
     window.document.addEventListener('click', () => setDropdown(false));
 
     return (
-        <nav class="navbar px-4 py-3 mb-4">
+        <nav class="navbar px-4 py-2" style="border-bottom: 1px solid #d8d8d8;">
             <div class="flex-grow-1">
-                <button class="btn btn-secondary" onClick={onSwitch}>Change Language</button>
             </div>
 
             <div class="dropdown">
                 <button
-                    class="btn border border-2 border-primary-subtle"
+                    class="btn icon-link fs-4"
                     type="button"
                     aria-expanded={dropdown()}
                     on:click={ev => { ev.stopPropagation(); setDropdown(!dropdown()) }}
                 >
-                    {userCtx.user().name}
+                    <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                        <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#person-circle" />
+                    </svg>
                 </button>
 
                 <Show when={dropdown()}>
-                    <ul class="dropdown-menu mt-1 show" style="right: 0;" on:click={ev => ev.stopPropagation()}>
+                    <ul class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 250px;">
+                        <li>
+                            <a class="dropdown-item disabled icon-link py-2" aria-disabled="true">
+                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true"></svg>
+                                {userCtx.user().name}
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <A class="dropdown-item icon-link py-2" href="/profile">
+                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                    <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#person" />
+                                </svg>
+                                Profile
+                            </A>
+                        </li>
                         <li>
                             <a
-                                class="dropdown-item"
+                                class="dropdown-item icon-link py-2"
                                 href={config.resolveURL(config.BASE_URL, '/auth/login')}
                                 on:click={_ => localStorage.removeItem('token')}
                                 rel="external"
-                            >Logout</a>
+                            >
+                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                    <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#box-arrow-right" />
+                                </svg>
+
+                                Logout
+                            </a>
                         </li>
                     </ul>
                 </Show>
@@ -55,9 +75,10 @@ export function SideNav(): JSX.Element {
     ];
 
     return (
-        <nav id="sidenav" class="vh-100 text-secondary" style="background-color: #ffdabd;">
+        <nav id="sidenav" class="vh-100 text-secondary" style="border-right: 1px solid #d8d8d8">
             <div class="px-4 py-4 mb-2">
                 <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
+            <hr/>
             </div>
 
             <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Apps</b></p>

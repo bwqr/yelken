@@ -57,22 +57,32 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                         </div>
                         <div class="modal-body">
                             <form onSubmit={ev => { ev.preventDefault(); createField(); }}>
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label for="modelFieldName" class="form-label">Name</label>
-                                    <input value={name()} onInput={ev => setName(ev.target.value)} type="text" class="form-control" id="modelFieldName" />
+                                    <input
+                                        type="text"
+                                        id="modelFieldName"
+                                        class="form-control"
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        name="name"
+                                        value={name()}
+                                        onInput={ev => setName(ev.target.value)}
+                                    />
                                     <Show when={validationErrors().has(ValidationError.Name)}>
-                                        <small class="text-danger">Please enter name</small>
+                                        <small class="invalid-feedback">Please enter name.</small>
                                     </Show>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-4">
                                     <label for="modelFieldId" class="form-label">Field</label>
                                     <select
                                         id="modelFieldId"
                                         class="form-select"
-                                        value={fieldId()}
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        name="fieldId"
+                                        value={fieldId() || ''}
                                         onChange={ev => setFieldId(parseInt(ev.target.value))}
                                     >
-                                        <option disabled selected>Select a field</option>
+                                        <option value="" disabled selected>Select a field</option>
                                         <For each={contentCtx.fields()}>
                                             {(field) => (
                                                 <option value={field.id}> {field.name}</option>
@@ -80,16 +90,16 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         </For>
                                     </select>
                                     <Show when={validationErrors().has(ValidationError.Field)}>
-                                        <small class="text-danger">Please select a field</small>
+                                        <small class="invalid-feedback">Please select a field.</small>
                                     </Show>
                                 </div>
-                                <div class="form-check mb-2">
+                                <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" checked={localized()} onChange={ev => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
-                                    <label class="form-check-label" for="modelFieldLocalized">
+                                    <label class="form-check-label icon-link" for="modelFieldLocalized">
                                         Localized
                                     </label>
                                 </div>
-                                <div class="form-check mb-2">
+                                <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" checked={multiple()} onChange={ev => setMultiple(ev.target.checked)} id="modelFieldMultiple" />
                                     <label class="form-check-label" for="modelFieldMultiple">
                                         Multiple
@@ -104,12 +114,12 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                             </form>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" onClick={props.close}>Close</button>
-                            <button type="button" class="btn btn-primary" onClick={createField}>Save changes</button>
-                        </div >
-                    </div >
-                </div >
-            </div >
+                            <button type="button" class="btn btn-outline-danger" onClick={props.close}>Discard</button>
+                            <button type="button" class="btn btn-primary" onClick={createField}>Add Field</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="modal-backdrop fade show"></div>
         </>
@@ -122,10 +132,16 @@ export const CreateModel = () => {
         Field,
     }
 
+    enum ModelScope {
+        Global,
+        Theme,
+    }
+
     const contentCtx = ContentContext.ctx();
     const navigate = useNavigate();
 
     const [name, setName] = createSignal('');
+    const [scope, setScope] = createSignal(ModelScope.Global);
     const [fields, setFields] = createStore([] as CreateModelField[]);
     const [showModal, setShowModal] = createSignal(false);
 
@@ -161,7 +177,11 @@ export const CreateModel = () => {
 
         setInProgress(true);
 
-        contentCtx.createModel({ name: name(), modelFields: unwrap(fields), themeScoped: false })
+        contentCtx.createModel({
+            name: name(),
+            modelFields: unwrap(fields),
+            themeScoped: scope() === ModelScope.Theme
+        })
             .then(() => navigate('/content/models'))
             .catch(e => {
                 if (e instanceof HttpError) {
@@ -171,46 +191,117 @@ export const CreateModel = () => {
                 }
             })
             .finally(() => setInProgress(false));
-
-        ;
     };
 
     return (
-        <div class="container">
-            <h3>Create Model</h3>
-            <form class="d-block m-auto" style="max-width: 400px;" onSubmit={onSubmit}>
-                <div class="mb-3">
-                    <label for="modelName" class="form-label">Model Name</label>
-                    <input type="text" class="form-control" id="modelName" name="name" value={name()} onInput={ev => setName(ev.target.value)} />
-                    <Show when={validationErrors().has(ValidationError.Name)}>
-                        <small class="text-danger">Please enter a name</small>
-                    </Show>
-                </div>
+        <div class="container mt-4">
+            <h2 class="mb-4">Create Model</h2>
 
-                <For each={fields}>
-                    {(field) => (
-                        <div class="border rounded p-2 border-2 border-black mb-3" style="border-style: dashed !important;">
-                            <p>{field.name} <button type="button" onClick={() => setFields(fields.filter(f => f !== field))}>x</button></p>
+            <div class="row">
+                <form class="col-md-4" onSubmit={onSubmit}>
+                    <div class="mb-4">
+                        <label for="modelName" class="form-label">Model Name</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                            id="modelName"
+                            name="name"
+                            value={name()}
+                            onInput={ev => setName(ev.target.value)}
+                        />
+                        <Show when={validationErrors().has(ValidationError.Name)}>
+                            <small class="invalid-feedback">Please enter a name.</small>
+                        </Show>
+                    </div>
+
+                    <div class="mb-4" role="group">
+                        <label class="form-label">Scope</label>
+                        <div class="btn-group w-100">
+                            <input
+                                type="radio"
+                                class="btn-check"
+                                name="modelScope"
+                                id="modelScopeGlobal"
+                                autocomplete="off"
+                                checked={scope() === ModelScope.Global}
+                                onChange={() => setScope(ModelScope.Global)}
+                            />
+                            <label class="btn btn-outline-secondary" for="modelScopeGlobal">Global</label>
+
+                            <input
+                                type="radio"
+                                class="btn-check"
+                                name="modelScope"
+                                id="modelScopeTheme"
+                                autocomplete="off"
+                                checked={scope() === ModelScope.Theme}
+                                onChange={() => setScope(ModelScope.Theme)}
+                            />
+                            <label class="btn btn-outline-secondary" for="modelScopeTheme">Theme</label>
                         </div>
-                    )}
-                </For>
+                    </div>
 
-                <Show when={validationErrors().has(ValidationError.Field)}>
-                    <small class="text-danger">Please add at least one field</small>
-                </Show>
+                    <label class="form-label">Fields</label>
 
-                <div class="mb-3">
-                    <button type="button" class="btn btn-secondary" onClick={() => setShowModal(true)}>Add field</button>
-                </div>
+                    <For each={fields}>
+                        {(mf) => {
+                            const field = contentCtx.fields().find(f => f.id === mf.fieldId);
 
-                <div class="mb-3">
-                    <button type="submit" class="btn btn-primary" disabled={inProgress()}>Create</button>
-                </div>
+                            return (
+                                <div class="d-flex border rounded p-2 border-1 border-black mb-3" style="border-style: dashed !important;">
+                                    <div class="flex-grow-1">
+                                        <p class="m-0">{mf.name}</p>
+                                        <small>Field: {field?.name}{mf.localized ? ', Localized' : ''}{mf.multiple ? ', Multiple' : ''}{mf.required ? ', Required' : ''}</small>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-outline-danger icon-link p-1" onClick={() => setFields(fields.filter(f => f !== mf))}>
+                                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#x-lg" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        }}
+                    </For>
 
-                <Show when={serverError()}>
-                    <small class="text-danger">{serverError()}</small>
-                </Show>
-            </form>
+                    <div class="mb-4 py-1">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary icon-link justify-content-center w-100"
+                            classList={{ 'btn-outline-danger': validationErrors().has(ValidationError.Field) }}
+                            onClick={() => setShowModal(true)}
+                        >
+                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-square-dotted" />
+                            </svg>
+                            Add field
+                        </button>
+                        <Show when={validationErrors().has(ValidationError.Field)}>
+                            <small class="text-danger">Please add at least one field.</small>
+                        </Show>
+                    </div>
+
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary icon-link justify-content-center w-100" disabled={inProgress()}>
+                            <Show when={inProgress()}>
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </Show>
+                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
+                            </svg>
+                            Create
+                        </button>
+                        <Show when={serverError()}>
+                            <small class="text-danger">{serverError()}</small>
+                        </Show>
+                    </div>
+
+                </form>
+            </div>
 
             <Show when={showModal()}>
                 <CreateModelFieldModal
@@ -226,26 +317,35 @@ export const Models = () => {
     const contentCtx = ContentContext.ctx();
 
     return (
-        <div class="container">
-            <div class="d-flex mb-4">
+        <div class="container mt-4">
+            <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
-                    <h3>Models</h3>
+                    <h1>Models</h1>
                 </div>
-                <A href="/content/create-model" class="btn btn-primary">Create new model</A>
+                <A class="btn btn-outline-primary icon-link" href="/content/create-model">
+                    <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                        <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
+                    </svg>
+                    Create model
+                </A>
             </div>
 
-            <div class="d-block m-auto p-3" style="max-width: 400px;">
-                <table class="table align-middle fs-6">
+            <div class="border border-1 border-secondary-subtle rounded p-2 shadow-sm">
+                <table class="table table-hover m-0">
                     <thead>
-                        <tr class="text-start text-gray-500 fs-7 text-uppercase" role="row">
-                            <th><span class="">Name</span></th>
-                            <th><span class=""># Fields</span></th>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Namespace</th>
+                            <th scope="col">Name</th>
+                            <th scope="col"># Fields</th>
                         </tr>
                     </thead>
-                    <tbody class="fw-bold text-gray-600">
+                    <tbody class="table-group-divider">
                         <For each={contentCtx.models()}>
                             {model => (
                                 <tr>
+                                    <td scope="row">{model.id}</td>
+                                    <td>{model.namespace ? model.namespace : '-'}</td>
                                     <td>
                                         <A href={model.namespace ? `/content/model/${model.namespace}/${model.name}` : `/content/model/${model.name}`}>
                                             {model.name}
@@ -258,7 +358,7 @@ export const Models = () => {
                     </tbody>
                 </table>
             </div>
-        </div >
+        </div>
     );
 };
 
@@ -276,25 +376,55 @@ export const Model = () => {
     return (
         <Show when={model()}>
             {m => (
-                <div class="container">
-                    <div class="d-block m-auto" style="max-width: 400px;">
-                        <h4>{m().name}</h4>
+                <div class="container mt-4">
+                    <div>
+                        <h2 class="m-0">{m().name}</h2>
+                        <small>Model</small>
+                    </div>
 
-                        <For each={m().fields}>
-                            {mf => {
-                                const field = contentCtx.fields().find(f => f.id === mf.fieldId);
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <label class="form-label">Scope</label>
+                            <div class="btn-group w-100 mb-4">
+                                <input
+                                    type="radio"
+                                    class="btn-check"
+                                    name="modelScope"
+                                    id="modelScopeGlobal"
+                                    autocomplete="off"
+                                    checked={m().namespace === null}
+                                    disabled
+                                />
+                                <label class="btn btn-outline-secondary" for="modelScopeGlobal">Global</label>
 
-                                if (field === undefined) {
-                                    return <></>;
-                                }
+                                <input
+                                    type="radio"
+                                    class="btn-check"
+                                    name="modelScope"
+                                    id="modelScopeTheme"
+                                    autocomplete="off"
+                                    checked={m().namespace !== null}
+                                    disabled
+                                />
+                                <label class="btn btn-outline-secondary" for="modelScopeTheme">Theme{m().namespace !== null ? ` (${m().namespace})` : ''}</label>
+                            </div>
 
-                                return (
-                                    <div class="border rounded p-2 border-2 border-black mb-3" style="border-style: dashed !important;">
-                                        <p>{mf.name} <br /> <span>{field.name}</span></p>
-                                    </div>
-                                );
-                            }}
-                        </For>
+                            <label class="form-label">Fields</label>
+                            <For each={m().fields}>
+                                {mf => {
+                                    const field = contentCtx.fields().find(f => f.id === mf.fieldId);
+
+                                    return (
+                                        <div class="d-flex border rounded p-2 border-1 border-black mb-3">
+                                            <div class="flex-grow-1">
+                                                <p class="m-0">{mf.name}</p>
+                                                <small>Field: {field?.name}{mf.localized ? ', Localized' : ''}{mf.multiple ? ', Multiple' : ''}{mf.required ? ', Required' : ''}</small>
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            </For>
+                        </div>
                     </div>
                 </div>
             )}

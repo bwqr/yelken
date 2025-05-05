@@ -68,6 +68,7 @@ const App: Component = () => {
                 </div>
             )}>
                 <Route path="/" component={Dashboard} />
+                <Route path="/profile" component={props => <p>Profile</p>} />
 
                 <Route path="/content" component={props => (<>{props.children}</>)}>
                     <Route path="/contents" component={Contents} />

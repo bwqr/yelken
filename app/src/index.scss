@@ -3,6 +3,10 @@
 
 // 2. Include any default variable overrides here
 /* $font-size-base: .85rem; */
+$btn-border-radius: 0.5rem;
+$spinner-width: 1.5rem;
+$spinner-height: 1.5rem;
+$spinner-border-width: 0.15em;
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
 @import "bootstrap/scss/variables";
@@ -21,6 +25,7 @@
 @import "bootstrap/scss/reboot";
 @import "bootstrap/scss/forms";
 @import "bootstrap/scss/buttons";
+@import "bootstrap/scss/button-group";
 @import "bootstrap/scss/dropdown";
 @import "bootstrap/scss/card";
 @import "bootstrap/scss/containers";
@@ -28,6 +33,8 @@
 @import "bootstrap/scss/modal";
 @import "bootstrap/scss/navbar";
 @import "bootstrap/scss/nav";
+@import "bootstrap/scss/spinners";
+@import "bootstrap/scss/tables";
 @import "bootstrap/scss/helpers";
 
 // 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss`
@@ -40,6 +47,14 @@
 
   .navbar-nav a[aria-current="page"] {
     background: rgba(0, 62, 129, 0.24);
+    border-left: 3px solid rgb(60, 60, 180);
+  }
+}
+
+.dropdown-menu {
+  a.dropdown-item:active, a[aria-current="page"] {
+    background: none;
+    color: var(--bs-dropdown-link-color);
     border-left: 3px solid rgb(60, 60, 180);
   }
 }

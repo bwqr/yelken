@@ -5,7 +5,7 @@ export default function Dashboard(): JSX.Element {
     const userCtx = UserContext.ctx();
 
     return (
-        <div class="p-2">
+        <div class="container mt-4">
             <div class="row">
                 <div class="col-6">
                     <div class="rounded bg-primary-subtle p-3">
