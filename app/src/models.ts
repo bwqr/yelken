@@ -3,6 +3,12 @@ export interface User {
     name: string;
 }
 
+export interface Locale {
+    key: string;
+    name: string;
+    disabled: boolean;
+}
+
 export interface ModelField {
     id: number;
     fieldId: number;
@@ -17,7 +23,7 @@ export interface Model {
     id: number;
     namespace: string | null;
     name: string;
-    fields: [ModelField];
+    fields: ModelField[];
 }
 
 export interface Field {
@@ -35,7 +41,26 @@ export interface CreateModelField {
 }
 
 export interface CreateModel {
-  name: string;
-  modelFields: CreateModelField[];
-  themeScoped: boolean;
+    name: string;
+    modelFields: CreateModelField[];
+    themeScoped: boolean;
+}
+
+export interface ContentValue {
+    modelFieldId: number;
+    value: string;
+    locale?: string;
+}
+
+export interface CreateContent {
+    name: string;
+    modelId: number;
+    values: ContentValue[];
+}
+
+export interface Content {
+    id: number,
+    modelId: number,
+    name: string,
+    createdAt: string;
 }

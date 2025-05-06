@@ -1,7 +1,7 @@
 let YELKEN_CONFIG: Record<string, string> = {};
 
 try {
-    YELKEN_CONFIG = JSON.parse((window as any).YELKEN_CONFIG || '{}')
+    YELKEN_CONFIG = JSON.parse((window as any).YELKEN_CONFIG ?? '{}')
 } catch (e) {
     console.debug('Failed to parse YELKEN_CONFIG', e);
 }

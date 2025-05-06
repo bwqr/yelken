@@ -68,17 +68,16 @@ export function TopBar(): JSX.Element {
 export function SideNav(): JSX.Element {
     const links = [
         { title: 'Dashboard', href: '/' },
-        { title: 'Models', href: '/content/models' },
-        { title: 'Contents', href: '/content/contents' },
+        { title: 'Models', href: '/model/models' },
+        { title: 'Contents', href: '/content' },
         { title: 'Plugin Manager', href: '/plugin-manager' },
         { title: 'Settings', href: '/settings' },
     ];
 
     return (
-        <nav id="sidenav" class="vh-100 text-secondary" style="border-right: 1px solid #d8d8d8">
-            <div class="px-4 py-4 mb-2">
+        <nav id="sidenav" class="vh-100 text-secondary" style="width: 200px; border-right: 1px solid #d8d8d8">
+            <div class="px-4 py-2">
                 <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
-            <hr/>
             </div>
 
             <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Apps</b></p>

@@ -4,14 +4,19 @@ import { SideNav, TopBar } from './nav';
 import { ContentContext, UserContext } from './context';
 import { CreateModel, Model, Models } from './content/model';
 import Dashboard from './dashboard';
-import { Contents } from './content/content';
+import { ContentRoot, Contents, CreateContent } from './content/content';
 import EmailLogin from './auth/login/email';
 import { OauthLogin, OauthRedirect } from './auth/login/oauth';
 import * as config from './config';
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
-    const [contentContext, ContentProvider] = ContentContext.create();
-    const [promises] = createResource(() => Promise.all([UserContext.fetchUser(), contentContext.loadModels(), contentContext.loadFields()]));
+    const [contentCtx, ContentProvider] = ContentContext.create();
+    const [promises] = createResource(() => Promise.all([
+        UserContext.fetchUser(),
+        contentCtx.loadFields(),
+        contentCtx.loadLocales(),
+        contentCtx.loadModels()
+    ]));
 
     return (
         <Suspense fallback={<p>Loading...</p>}>
@@ -26,7 +31,7 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                         const [userContext, UserProvider] = UserContext.create(user);
 
                         return (
-                            <ContentProvider value={contentContext}>
+                            <ContentProvider value={contentCtx}>
                                 <UserProvider value={userContext}>{props.children}</UserProvider>
                             </ContentProvider>
                         );
@@ -58,7 +63,7 @@ const App: Component = () => {
                 <div class="d-flex">
                     <SideNav />
 
-                    <main class="flex-grow-1">
+                    <main class="flex-grow-1 d-flex flex-column">
                         <BackgroundServices>
                             <TopBar />
 
@@ -70,12 +75,19 @@ const App: Component = () => {
                 <Route path="/" component={Dashboard} />
                 <Route path="/profile" component={props => <p>Profile</p>} />
 
-                <Route path="/content" component={props => (<>{props.children}</>)}>
-                    <Route path="/contents" component={Contents} />
-                    <Route path="/create-model" component={CreateModel} />
+                <Route path="/model" component={props => (<>{props.children}</>)}>
                     <Route path="/models" component={Models} />
                     <Route path="/model/:namespace/:name" component={Model} />
                     <Route path="/model/:name" component={Model} />
+                    <Route path="/create-model" component={CreateModel} />
+                </Route>
+
+                <Route path="/content" component={ContentRoot}>
+                    <Route path="/" component={() => (<></>)} />
+                    <Route path="/:namespace/:name/create-content" component={CreateContent} />
+                    <Route path="/:name/create-content" component={CreateContent} />
+                    <Route path="/:namespace/:name/contents" component={Contents} />
+                    <Route path="/:name/contents" component={Contents} />
                 </Route>
             </Route>
         </Router>

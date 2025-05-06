@@ -79,7 +79,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         class="form-select"
                                         classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                         name="fieldId"
-                                        value={fieldId() || ''}
+                                        value={fieldId() ?? ''}
                                         onChange={ev => setFieldId(parseInt(ev.target.value))}
                                     >
                                         <option value="" disabled selected>Select a field</option>
@@ -95,7 +95,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" checked={localized()} onChange={ev => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
-                                    <label class="form-check-label icon-link" for="modelFieldLocalized">
+                                    <label class="form-check-label" for="modelFieldLocalized">
                                         Localized
                                     </label>
                                 </div>
@@ -244,6 +244,8 @@ export const CreateModel = () => {
 
                     <label class="form-label">Fields</label>
 
+                    <hr class="mt-0" />
+
                     <For each={fields}>
                         {(mf) => {
                             const field = contentCtx.fields().find(f => f.id === mf.fieldId);
@@ -284,6 +286,9 @@ export const CreateModel = () => {
                     </div>
 
                     <div class="mb-3">
+                        <Show when={serverError()}>
+                            <small class="text-danger">{serverError()}</small>
+                        </Show>
                         <button type="submit" class="btn btn-primary icon-link justify-content-center w-100" disabled={inProgress()}>
                             <Show when={inProgress()}>
                                 <div class="spinner-border" role="status">
@@ -295,11 +300,7 @@ export const CreateModel = () => {
                             </svg>
                             Create
                         </button>
-                        <Show when={serverError()}>
-                            <small class="text-danger">{serverError()}</small>
-                        </Show>
                     </div>
-
                 </form>
             </div>
 
@@ -344,7 +345,7 @@ export const Models = () => {
                         <For each={contentCtx.models()}>
                             {model => (
                                 <tr>
-                                    <td scope="row">{model.id}</td>
+                                    <td>{model.id}</td>
                                     <td>{model.namespace ? model.namespace : '-'}</td>
                                     <td>
                                         <A href={model.namespace ? `/content/model/${model.namespace}/${model.name}` : `/content/model/${model.name}`}>
@@ -410,6 +411,9 @@ export const Model = () => {
                             </div>
 
                             <label class="form-label">Fields</label>
+
+                            <hr class="mt-0" />
+
                             <For each={m().fields}>
                                 {mf => {
                                     const field = contentCtx.fields().find(f => f.id === mf.fieldId);
