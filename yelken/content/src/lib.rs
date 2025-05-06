@@ -15,7 +15,9 @@ pub use handlers::{fetch_fields, fetch_models};
 
 pub fn router(state: AppState) -> Router<AppState> {
     let content_read = Router::new()
+        .route("/contents", get(handlers::fetch_contents))
         .route("/fields", get(handlers::fetch_fields))
+        .route("/locales", get(handlers::fetch_locales))
         .route("/models", get(handlers::fetch_models))
         .layer(PermissionLayer {
             pool: state.pool.clone(),

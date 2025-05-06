@@ -1,35 +1,47 @@
+use std::collections::HashMap;
+
 use crate::requests::{
-    ContentValue, CreateContent, CreateModel, Field, Model, ModelField, UpdateContentValue,
+    ContentValue, CreateContent, CreateModel, FilterByModel, Model, ModelField, UpdateContentValue,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     Extension, Json,
 };
 use base::{
     config::Options,
+    models::{Content, Field, Locale},
     responses::HttpError,
-    schema::{content_values, contents, fields, model_fields, models},
+    schema::{content_values, contents, fields, locales, model_fields, models},
     AppState,
 };
 use diesel::prelude::*;
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 
+pub async fn fetch_contents(
+    State(state): State<AppState>,
+    Query(req): Query<FilterByModel>,
+) -> Result<Json<Vec<Content>>, HttpError> {
+    contents::table
+        .filter(contents::model_id.eq(req.model_id))
+        .load::<Content>(&mut state.pool.get().await?)
+        .await
+        .map(Json)
+        .map_err(Into::into)
+}
+
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table
-        .select((fields::id, fields::name, fields::kind))
-        .load::<(i32, String, String)>(&mut state.pool.get().await?)
+        .load::<Field>(&mut state.pool.get().await?)
         .await
-        .map(|fs| {
-            Json(
-                fs.into_iter()
-                    .map(|f| Field {
-                        id: f.0,
-                        name: f.1,
-                        kind: f.2,
-                    })
-                    .collect(),
-            )
-        })
+        .map(Json)
+        .map_err(Into::into)
+}
+
+pub async fn fetch_locales(State(state): State<AppState>) -> Result<Json<Vec<Locale>>, HttpError> {
+    locales::table
+        .load::<Locale>(&mut state.pool.get().await?)
+        .await
+        .map(Json)
         .map_err(Into::into)
 }
 
@@ -161,7 +173,7 @@ pub async fn create_content(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Json(req): Json<CreateContent>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let locales = options
@@ -186,24 +198,36 @@ pub async fn create_content(
         .load::<(base::models::ModelField, base::models::Field)>(&mut conn)
         .await?;
 
-    if let Some(err) = model_fields.iter().find_map(|mf| {
-        let mut values = req.values.iter().filter(|v| v.model_field_id == mf.0.id);
+    if let Some(err) = model_fields.iter().find_map(|(mf, _)| {
+        let mut values = req.values.iter().filter(|v| v.model_field_id == mf.id);
 
-        if mf.0.required && values.clone().next().is_none() {
+        if mf.required && values.clone().next().is_none() {
             return Some("missing_required_field");
         }
 
-        // TODO check multiple values for each locale separately if mf is localized
-        if !mf.0.multiple && values.clone().nth(1).is_some() {
+        let value_locales = values.clone().filter_map(|v| v.locale.clone()).fold(
+            HashMap::<String, u32>::new(),
+            |mut acc, l| {
+                let count = acc.entry(l).or_insert(0);
+                *count += 1;
+                acc
+            },
+        );
+
+        if mf.required && mf.localized && locales.iter().any(|l| value_locales.get(l).is_none()) {
+            return Some("missing_localization_for_required_field");
+        }
+
+        if !mf.multiple && value_locales.into_iter().any(|(_, count)| count > 1) {
             return Some("multiple_value_for_field");
         }
 
         if !values.all(|v| {
-            (mf.0.localized
+            (mf.localized
                 && v.locale
                     .as_ref()
                     .is_some_and(|vl| locales.iter().any(|l| vl == l)))
-                || (!mf.0.localized && v.locale.is_none())
+                || (!mf.localized && v.locale.is_none())
         }) {
             return Some("invalid_locale_for_field");
         }
@@ -255,7 +279,7 @@ pub async fn create_content(
     })
     .await?;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn create_content_value(
@@ -263,7 +287,7 @@ pub async fn create_content_value(
     Extension(options): Extension<Options>,
     Path(content_id): Path<i32>,
     Json(req): Json<ContentValue>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let Some(model_id) = models::table
@@ -348,14 +372,14 @@ pub async fn create_content_value(
         .execute(&mut conn)
         .await?;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn update_content_value(
     State(state): State<AppState>,
     Path(value_id): Path<i32>,
     Json(req): Json<UpdateContentValue>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let effected_row: usize = diesel::update(content_values::table)
         .filter(content_values::id.eq(value_id))
         .set(content_values::value.eq(req.value))
@@ -366,5 +390,5 @@ pub async fn update_content_value(
         return Err(HttpError::not_found("content_value_not_found"));
     }
 
-    Ok(())
+    Ok(Json(()))
 }

@@ -103,7 +103,7 @@ pub struct Model {
     pub name: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Field {
     pub id: i32,
     pub name: String,
@@ -121,7 +121,8 @@ pub struct ModelField {
     pub required: bool,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Content {
     pub id: i32,
     pub model_id: i32,
