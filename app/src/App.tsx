@@ -10,12 +10,12 @@ import { OauthLogin, OauthRedirect } from './auth/login/oauth';
 import * as config from './config';
 import { createStore, produce, reconcile } from 'solid-js/store';
 
-export enum AlertState {
+enum AlertState {
     Success,
     Failure,
 }
 
-export interface Alert {
+interface Alert {
     title: string;
     state: AlertState;
 }
