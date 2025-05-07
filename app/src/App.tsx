@@ -58,8 +58,6 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
         contentService.loadModels()
     ]));
 
-    const [alerts, setAlerts] = createStore<DisposableAlert[]>([]);
-
     return (
         <Suspense fallback={<p>Loading...</p>}>
             <Switch>
@@ -97,34 +95,24 @@ const App: Component = () => {
     let timeoutId: NodeJS.Timeout | undefined = undefined;
     const timeout = 5 * 1000;
 
-    const alertService: AlertStore = {
-        success(title) {
-            const alert: DisposableAlert = {
-                expire: new Date().getTime() + timeout,
-                title,
-                state: AlertState.Success
-            };
+    const fireAlert = (state: AlertState, title: string) =>{
+        const alert: DisposableAlert = {
+            expire: new Date().getTime() + timeout,
+            title,
+            state,
+        };
 
-            setAlerts(produce(alerts => alerts.push(alert)));
+        setAlerts(produce(alerts => alerts.push(alert)));
 
-            if (timeoutId === undefined) {
-                timeoutId = setTimeout(cleanAlerts, timeout);
-            }
-        },
-        fail(title) {
-            const alert: DisposableAlert = {
-                expire: new Date().getTime() + timeout,
-                title,
-                state: AlertState.Failure
-            };
-
-            setAlerts(produce(alerts => alerts.push(alert)));
-
-            if (timeoutId === undefined) {
-                timeoutId = setTimeout(cleanAlerts, timeout);
-            }
+        if (timeoutId === undefined) {
+            timeoutId = setTimeout(cleanAlerts, timeout);
         }
-    }
+    };
+
+    const alertService: AlertStore = {
+        success: (title) => fireAlert(AlertState.Success, title),
+        fail: (title) => fireAlert(AlertState.Failure, title),
+    };
 
     function removeAlert(alert: DisposableAlert) {
         const index = alerts.findIndex((a) => a === alert);
