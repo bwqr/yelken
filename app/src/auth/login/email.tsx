@@ -79,7 +79,7 @@ export default function() {
                                 id="login-email"
                                 type="email"
                                 class="form-control"
-                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Email) }}
+                                class:is-invalid={validationErrors().has(ValidationError.Email)}
                                 placeholder="Email"
                                 name="email"
                                 value={email()}
@@ -95,7 +95,7 @@ export default function() {
                                 id="login-password"
                                 type="password"
                                 class="form-control"
-                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Password) }}
+                                class:is-invalid={validationErrors().has(ValidationError.Password)}
                                 placeholder="Password"
                                 name="password"
                                 value={password()}

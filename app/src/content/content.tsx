@@ -10,7 +10,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 
     return (
         <div class="d-flex flex-grow-1">
-            <nav id="second-nav" class="h-100 text-secondary" style="width: 230px; border-right: 1px solid #d8d8d8">
+            <nav id="second-nav" class="h-100 text-secondary" style="width: 13rem; border-right: 1px solid #d8d8d8">
                 <p class="text-secondary ps-3 mt-4 mb-2 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Models</b></p>
                 <ul class="navbar-nav mb-4">
                     <For each={models}>
@@ -199,7 +199,7 @@ export const CreateContent = () => {
                                         type="text"
                                         id="contentName"
                                         class="form-control"
-                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        class:is-invalid={validationErrors().has(ValidationError.Name)}
                                         name="contentName"
                                         value={name()}
                                         onInput={ev => setName(ev.target.value)}

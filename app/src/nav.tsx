@@ -28,7 +28,7 @@ export function TopBar(): JSX.Element {
                 </button>
 
                 <Show when={dropdown()}>
-                    <ul class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 250px;">
+                    <ul class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 15rem;">
                         <li>
                             <a class="dropdown-item disabled icon-link py-2" aria-disabled="true">
                                 <svg class="bi" viewBox="0 0 16 16" aria-hidden="true"></svg>
@@ -75,7 +75,7 @@ export function SideNav(): JSX.Element {
     ];
 
     return (
-        <nav id="sidenav" class="vh-100 text-secondary" style="width: 200px; border-right: 1px solid #d8d8d8">
+        <nav id="sidenav" class="vh-100 text-secondary" style="width: 12rem; border-right: 1px solid #d8d8d8">
             <div class="px-4 py-2">
                 <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
             </div>

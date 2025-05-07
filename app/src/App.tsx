@@ -115,17 +115,17 @@ const App: Component = () => {
     };
 
     function removeAlert(alert: DisposableAlert) {
-        const index = alerts.findIndex((a) => a === alert);
+        const index = alerts.findIndex(a => a === alert);
 
         if (index > -1) {
-            setAlerts(produce((alerts) => alerts.splice(index, 1)));
+            setAlerts(produce(alerts => alerts.splice(index, 1)));
         }
     }
 
     function cleanAlerts() {
         const now = new Date().getTime();
 
-        setAlerts(reconcile(alerts.filter((alert) => alert.expire > now)));
+        setAlerts(reconcile(alerts.filter(alert => alert.expire > now)));
         timeoutId = undefined;
 
         const earliestExpire = alerts.reduce<number | undefined>((expire, alert) => {
