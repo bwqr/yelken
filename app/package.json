@@ -1,5 +1,5 @@
 {
-  "name": "vite-template-solid",
+  "name": "yelken-app",
   "version": "0.1.0-alpha2",
   "description": "",
   "type": "module",
@@ -16,6 +16,7 @@
     "sass-embedded": "^1.87.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.0",
+    "vite-plugin-checker": "^0.9.3",
     "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {

@@ -16,6 +16,8 @@ diesel::table! {
         id -> Int4,
         model_id -> Int4,
         name -> Text,
+        #[max_length = 16]
+        stage -> Varchar,
         created_at -> Timestamp,
     }
 }

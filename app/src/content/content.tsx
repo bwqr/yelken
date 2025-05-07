@@ -1,12 +1,12 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { ContentContext } from "../context";
-import { createEffect, createSignal, For, JSX, Show } from "solid-js";
+import { AlertContext, ContentContext } from "../context";
+import { createEffect, createResource, createSignal, For, JSX, Match, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../api";
 import { createStore, unwrap } from "solid-js/store";
-import { Content, ContentValue } from "../models";
+import { Content as ContentModel, ContentStage, CreateContentValue } from "../models";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
-    const models = ContentContext.ctx().models();
+    const models = useContext(ContentContext)!.models();
 
     return (
         <div class="d-flex flex-grow-1">
@@ -35,7 +35,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 }
 
 export const Contents = () => {
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const params = useParams();
 
     const model = () => {
@@ -45,7 +45,7 @@ export const Contents = () => {
         return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
     }
 
-    const [contents, setContents] = createSignal([] as Content[]);
+    const [contents, setContents] = createSignal([] as ContentModel[]);
 
     createEffect(async () => {
         const m = model();
@@ -78,6 +78,7 @@ export const Contents = () => {
                         <tr>
                             <th scope="col">#</th>
                             <th scope="col">Name</th>
+                            <th scope="col">Stage</th>
                             <th scope="col">Created At</th>
                         </tr>
                     </thead>
@@ -86,7 +87,8 @@ export const Contents = () => {
                             {content => (
                                 <tr>
                                     <td>{content.id}</td>
-                                    <td>{content.name}</td>
+                                    <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
+                                    <td>{content.stage}</td>
                                     <td>{content.createdAt}</td>
                                 </tr>
                             )}
@@ -104,7 +106,7 @@ export const CreateContent = () => {
         Field,
     }
 
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
@@ -116,7 +118,7 @@ export const CreateContent = () => {
     };
 
     const [name, setName] = createSignal('');
-    const [values, setValues] = createStore({} as Record<number, ContentValue[]>);
+    const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);
 
     createEffect(() => {
         const m = model();
@@ -129,7 +131,7 @@ export const CreateContent = () => {
             obj[mf.id] = [];
 
             return obj;
-        }, {} as Record<number, ContentValue[]>));
+        }, {} as Record<number, CreateContentValue[]>));
     });
 
     const [inProgress, setInProgress] = createSignal(false);
@@ -319,3 +321,86 @@ export const CreateContent = () => {
         </div >
     );
 }
+
+export const Content = () => {
+    const alertCtx = useContext(AlertContext)!;
+    const contentCtx = useContext(ContentContext)!;
+    const params = useParams();
+
+    const [content, { mutate }] = createResource(() => parseInt(params.id), async (id: number) => contentCtx.fetchContent(id));
+
+    const [inProgress, setInProgress] = createSignal(false);
+
+    const updateContentStage = () => {
+        const c = content();
+        if (inProgress() || c === undefined) {
+            return;
+        }
+
+        setInProgress(true);
+
+        const stage = c.content.stage === ContentStage.Published ? ContentStage.Draft : ContentStage.Published;
+
+        contentCtx.updateContentStage(c.content.id, stage)
+            .then(() => {
+                mutate({ ...c, content: { ...c.content, stage } });
+
+                alertCtx.success(stage === ContentStage.Published ? 'Content is published' : 'Content is marked as draft');
+            })
+            .catch(e => {
+                if (e instanceof HttpError) {
+                    alertCtx.fail(e.error);
+                } else {
+                    alertCtx.fail(`${e}`);
+                }
+            })
+            .finally(() => setInProgress(false));
+    };
+
+    const contentUpdateClass = () => content()?.content.stage === ContentStage.Published ? 'btn-secondary' : 'btn-primary';
+    const contentUpdateIcon = () => content()?.content.stage === ContentStage.Published ? 'bookmark-check' : 'bookmark-check-fill';
+
+    return (
+        <div class="container mt-4">
+            <Switch>
+                <Match when={content.loading}>Loading ...</Match>
+                <Match when={content.error}>Error: {content.error}</Match>
+                <Match when={content()}>{c => (
+                    <>
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="flex-grow-1">
+                                <h2 class="m-0">{c().content.name}</h2>
+                                <small>Content</small>
+                            </div>
+                            <Show when={content()}>
+                                {c => (
+                                    <button class={`btn icon-link ${contentUpdateClass()}`} onClick={updateContentStage} disabled={inProgress()}>
+                                        <Show when={inProgress()}>
+                                            <div class="spinner-border" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </Show>
+                                        <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
+                                            <use href={`/node_modules/bootstrap-icons/bootstrap-icons.svg#${contentUpdateIcon()}`} />
+                                        </svg>
+                                        <Switch>
+                                            <Match when={c().content.stage === ContentStage.Draft}>Publish</Match>
+                                            <Match when={c().content.stage === ContentStage.Published}>Mark as Draft</Match>
+                                        </Switch>
+                                    </button>
+                                )}
+                            </Show>
+                        </div>
+                        <div>
+                            <For each={c().values}>
+                                {v => (
+                                    <p>{v.value}</p>
+                                )}
+                            </For>
+                        </div>
+                    </>
+                )}</Match>
+            </Switch>
+        </div>
+    );
+};

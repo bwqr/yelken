@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite';
+import checker from 'vite-plugin-checker'
 import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
-    plugins: [solidPlugin()],
+    plugins: [solidPlugin(), checker({ typescript: true })],
     server: {
         port: 8080,
     },

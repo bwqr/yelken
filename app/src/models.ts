@@ -46,21 +46,39 @@ export interface CreateModel {
     themeScoped: boolean;
 }
 
-export interface ContentValue {
+export interface CreateContentValue {
     modelFieldId: number;
-    value: string;
     locale?: string;
+    value: string;
 }
 
 export interface CreateContent {
     name: string;
     modelId: number;
-    values: ContentValue[];
+    values: CreateContentValue[];
+}
+
+export enum ContentStage {
+    Published = 'published',
+    Draft = 'draft',
 }
 
 export interface Content {
     id: number,
     modelId: number,
     name: string,
+    stage: ContentStage,
     createdAt: string;
+}
+
+export interface ContentValue {
+    id: number;
+    modelFieldId: number;
+    locale: string | null;
+    value: string;
+}
+
+export interface ContentWithValues {
+    content: Content,
+    values: ContentValue[],
 }

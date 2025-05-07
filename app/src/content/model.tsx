@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, Show, useContext } from "solid-js";
 import { ContentContext } from "../context";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
@@ -11,7 +11,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
         Field
     }
 
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
 
     const [name, setName] = createSignal('');
     const [fieldId, setFieldId] = createSignal(undefined as number | undefined);
@@ -137,7 +137,7 @@ export const CreateModel = () => {
         Theme,
     }
 
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const navigate = useNavigate();
 
     const [name, setName] = createSignal('');
@@ -315,7 +315,7 @@ export const CreateModel = () => {
 };
 
 export const Models = () => {
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
 
     return (
         <div class="container mt-4">
@@ -364,7 +364,7 @@ export const Models = () => {
 };
 
 export const Model = () => {
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const params = useParams();
 
     const model = () => {

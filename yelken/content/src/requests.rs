@@ -1,3 +1,4 @@
+use base::models::ContentStage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -59,6 +60,12 @@ pub struct CreateContent {
     pub model_id: i32,
     pub name: String,
     pub values: Vec<ContentValue>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateContentStage {
+    pub stage: ContentStage,
 }
 
 #[derive(Deserialize)]

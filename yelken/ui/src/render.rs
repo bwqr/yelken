@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use base::models::ContentStage;
 use base::responses::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use base::types::Pool;
@@ -515,6 +516,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                 .filter(mf1.field(model_fields::id).eq_any(
                                     &model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>(),
                                 ))
+                                .filter(c1.field(contents::stage).eq(ContentStage::Published))
                                 .filter(
                                     cv1.field(content_values::locale)
                                         .eq(format!("{}", locale.current))
@@ -524,6 +526,10 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                     c1.field(contents::id).eq_any(
                                         c2.select(c2.field(contents::id))
                                             .inner_join(cv2.inner_join(mf2))
+                                            .filter(
+                                                c2.field(contents::stage)
+                                                    .eq(ContentStage::Published),
+                                            )
                                             .filter(mf2.field(model_fields::name).eq(&filter[0]))
                                             .filter(
                                                 cv2.field(content_values::value).eq(&filter[1]),
@@ -549,6 +555,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                 .filter(model_fields::id.eq_any(
                                     &model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>(),
                                 ))
+                                .filter(contents::stage.eq(ContentStage::Published))
                                 .filter(
                                     content_values::locale
                                         .eq(format!("{}", locale.current))

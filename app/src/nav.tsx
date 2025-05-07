@@ -1,10 +1,10 @@
 import { A } from "@solidjs/router";
-import { createSignal, For, JSX, Show } from "solid-js";
+import { createSignal, For, JSX, Show, useContext } from "solid-js";
 import { UserContext } from "./context";
 import * as config from './config';
 
 export function TopBar(): JSX.Element {
-    const userCtx = UserContext.ctx();
+    const userCtx = useContext(UserContext)!;
 
     const [dropdown, setDropdown] = createSignal(false);
 

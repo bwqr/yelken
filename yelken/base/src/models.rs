@@ -121,11 +121,51 @@ pub struct ModelField {
     pub required: bool,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
+pub enum ContentStage {
+    Published,
+    Draft,
+}
+
+impl ToSql<Text, Pg> for ContentStage {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
+        match *self {
+            ContentStage::Published => out.write_all(b"published")?,
+            ContentStage::Draft => out.write_all(b"draft")?,
+        }
+
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<Text, Pg> for ContentStage {
+    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"published" => Ok(ContentStage::Published),
+            b"draft" => Ok(ContentStage::Draft),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentValue {
+    pub id: i32,
+    pub content_id: i32,
+    pub model_field_id: i32,
+    pub locale: Option<String>,
+    pub value: String,
+}
+
 #[derive(Queryable, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Content {
     pub id: i32,
     pub model_id: i32,
     pub name: String,
+    pub stage: ContentStage,
     pub created_at: NaiveDateTime,
 }

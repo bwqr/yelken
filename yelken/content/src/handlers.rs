@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
-use crate::requests::{
-    ContentValue, CreateContent, CreateModel, FilterByModel, Model, ModelField, UpdateContentValue,
+use crate::{
+    requests::{
+        ContentValue, CreateContent, CreateModel, FilterByModel, Model, ModelField,
+        UpdateContentStage, UpdateContentValue,
+    },
+    responses::ContentWithValues,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -78,6 +82,25 @@ pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Mode
             })
             .collect(),
     ))
+}
+
+pub async fn fetch_content(
+    State(state): State<AppState>,
+    Path(content_id): Path<i32>,
+) -> Result<Json<ContentWithValues>, HttpError> {
+    let mut conn = state.pool.get().await?;
+
+    let content = contents::table
+        .filter(contents::id.eq(content_id))
+        .first::<Content>(&mut conn)
+        .await?;
+
+    let values = content_values::table
+        .filter(content_values::content_id.eq(content_id))
+        .load::<base::models::ContentValue>(&mut conn)
+        .await?;
+
+    Ok(Json(ContentWithValues { content, values }))
 }
 
 pub async fn create_model(
@@ -371,6 +394,24 @@ pub async fn create_content_value(
         ))
         .execute(&mut conn)
         .await?;
+
+    Ok(Json(()))
+}
+
+pub async fn update_content_stage(
+    State(state): State<AppState>,
+    Path(content_id): Path<i32>,
+    Json(req): Json<UpdateContentStage>,
+) -> Result<Json<()>, HttpError> {
+    let effected_row: usize = diesel::update(contents::table)
+        .filter(contents::id.eq(content_id))
+        .set(contents::stage.eq(req.stage))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("content_not_found"));
+    }
 
     Ok(Json(()))
 }
