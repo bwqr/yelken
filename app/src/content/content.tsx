@@ -368,7 +368,7 @@ export const Content = () => {
                         <div class="d-flex align-items-center mb-4">
                             <div class="flex-grow-1">
                                 <h2 class="m-0">{c().content.name}</h2>
-                                <small>Content</small>
+                                <small>Content created by {c().user?.name}</small>
                             </div>
                             <Show when={content()}>
                                 {c => (

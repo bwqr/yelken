@@ -18,7 +18,9 @@ diesel::table! {
         name -> Text,
         #[max_length = 16]
         stage -> Varchar,
+        created_by -> Nullable<Int4>,
         created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -185,6 +187,7 @@ diesel::joinable!(content_values -> contents (content_id));
 diesel::joinable!(content_values -> locales (locale));
 diesel::joinable!(content_values -> model_fields (model_field_id));
 diesel::joinable!(contents -> models (model_id));
+diesel::joinable!(contents -> users (created_by));
 diesel::joinable!(enum_options -> fields (field_id));
 diesel::joinable!(model_fields -> fields (field_id));
 diesel::joinable!(model_fields -> models (model_id));

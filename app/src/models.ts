@@ -68,7 +68,9 @@ export interface Content {
     modelId: number,
     name: string,
     stage: ContentStage,
+    createdBy: number | null,
     createdAt: string;
+    updatedAt: string;
 }
 
 export interface ContentValue {
@@ -78,7 +80,8 @@ export interface ContentValue {
     value: string;
 }
 
-export interface ContentWithValues {
-    content: Content,
-    values: ContentValue[],
+export interface ContentDetails {
+    content: Content;
+    values: ContentValue[];
+    user: User | null;
 }

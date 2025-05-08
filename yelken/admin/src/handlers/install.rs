@@ -7,7 +7,8 @@ use axum::{
 };
 use base::{
     config::Options,
-    models::Field,
+    middlewares::auth::AuthUser,
+    models::{ContentStage, Field},
     responses::HttpError,
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
     types::Connection,
@@ -125,6 +126,7 @@ pub async fn uninstall_theme(
 
 pub async fn install_theme(
     State(state): State<AppState>,
+    user: AuthUser,
     mut multipart: Multipart,
 ) -> Result<(), HttpError> {
     let field = multipart
@@ -160,6 +162,7 @@ pub async fn install_theme(
         &mut state.pool.get().await?,
         reader,
         tmp_theme_dir.clone(),
+        user.id,
     )
     .await;
 
@@ -177,6 +180,7 @@ async fn install<'a>(
     conn: &mut Connection<'a>,
     reader: impl Read + Send + 'static,
     dir: PathBuf,
+    user_id: i32,
 ) -> Result<(), HttpError> {
     let extract_dir = dir.clone();
     let (manifest, files) = tokio::runtime::Handle::current()
@@ -186,8 +190,10 @@ async fn install<'a>(
 
     let theme_id = manifest.id.clone();
 
-    conn.transaction(|conn| async move { create_theme(conn, manifest).await }.scope_boxed())
-        .await?;
+    conn.transaction(move |conn| {
+        async move { create_theme(conn, manifest, user_id).await }.scope_boxed()
+    })
+    .await?;
 
     for file in files {
         let mut src_path = dir.clone();
@@ -301,6 +307,7 @@ fn extract_archive(
 async fn create_theme<'a>(
     conn: &mut Connection<'a>,
     manifest: ThemeManifest,
+    user_id: i32,
 ) -> Result<(), HttpError> {
     diesel::insert_into(themes::table)
         .values((
@@ -432,6 +439,8 @@ async fn create_theme<'a>(
                 .values((
                     contents::model_id.eq(model_id),
                     contents::name.eq(&content.name),
+                    contents::stage.eq(ContentStage::Published),
+                    contents::created_by.eq(user_id),
                 ))
                 .get_result::<base::models::Content>(conn)
                 .await?

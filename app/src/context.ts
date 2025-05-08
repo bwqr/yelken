@@ -1,5 +1,5 @@
 import { Accessor, Context, createContext, createSignal, Setter } from "solid-js";
-import { Content, ContentStage, ContentWithValues, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
+import { Content, ContentStage, ContentDetails, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
 import { Api } from "./api";
 
 export interface AlertStore {
@@ -39,7 +39,7 @@ export interface ContentStore {
     loadModels(): Promise<void>;
 
     fetchContents(modelId: number): Promise<Content[]>;
-    fetchContent(contentId: number): Promise<ContentWithValues>;
+    fetchContent(contentId: number): Promise<ContentDetails>;
 
     createModel(model: CreateModel): Promise<void>;
     createContent(model: CreateContent): Promise<void>;
@@ -95,7 +95,7 @@ export class ContentService implements ContentStore {
         return Api.get(`/content/contents?modelId=${modelId}`)
     }
 
-    async fetchContent(contentId: number): Promise<ContentWithValues> {
+    async fetchContent(contentId: number): Promise<ContentDetails> {
         return Api.get(`/content/content/${contentId}`)
     }
 

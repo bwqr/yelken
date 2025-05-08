@@ -101,9 +101,18 @@ create table contents(
     model_id   int          not null,
     name       text         not null,
     stage      varchar(16)  not null default 'draft' check (stage in ('published', 'draft')),
+    created_by int          default null,
     created_at timestamp    not null default current_timestamp,
-    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action
+    updated_at  timestamp   not null default current_timestamp,
+    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action,
+    constraint fk_contents_created_by foreign key (created_by) references users (id) on delete no action on update no action
 );
+
+create trigger contents_updated_at
+    before update
+    on contents
+    for each row
+execute procedure update_timestamp();
 
 create table content_values(
     id             serial primary key not null,

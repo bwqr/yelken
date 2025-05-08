@@ -4,6 +4,7 @@ drop table pages;
 
 drop table content_values;
 
+drop trigger contents_updated_at on contents;
 drop table contents;
 
 drop table model_fields;

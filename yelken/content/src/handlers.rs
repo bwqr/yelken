@@ -5,7 +5,7 @@ use crate::{
         ContentValue, CreateContent, CreateModel, FilterByModel, Model, ModelField,
         UpdateContentStage, UpdateContentValue,
     },
-    responses::ContentWithValues,
+    responses::ContentDetails,
 };
 use axum::{
     extract::{Path, Query, State},
@@ -13,9 +13,10 @@ use axum::{
 };
 use base::{
     config::Options,
-    models::{Content, Field, Locale},
+    middlewares::auth::AuthUser,
+    models::{Content, ContentStage, Field, Locale},
     responses::HttpError,
-    schema::{content_values, contents, fields, locales, model_fields, models},
+    schema::{content_values, contents, fields, locales, model_fields, models, users},
     AppState,
 };
 use diesel::prelude::*;
@@ -87,12 +88,14 @@ pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Mode
 pub async fn fetch_content(
     State(state): State<AppState>,
     Path(content_id): Path<i32>,
-) -> Result<Json<ContentWithValues>, HttpError> {
+) -> Result<Json<ContentDetails>, HttpError> {
     let mut conn = state.pool.get().await?;
 
-    let content = contents::table
+    let (content, user) = contents::table
+        .left_join(users::table)
         .filter(contents::id.eq(content_id))
-        .first::<Content>(&mut conn)
+        .select((contents::all_columns, (users::id, users::name).nullable()))
+        .first::<(Content, Option<(i32, String)>)>(&mut conn)
         .await?;
 
     let values = content_values::table
@@ -100,7 +103,13 @@ pub async fn fetch_content(
         .load::<base::models::ContentValue>(&mut conn)
         .await?;
 
-    Ok(Json(ContentWithValues { content, values }))
+    let user = user.map(|u| crate::responses::User { id: u.0, name: u.1 });
+
+    Ok(Json(ContentDetails {
+        content,
+        values,
+        user,
+    }))
 }
 
 pub async fn create_model(
@@ -195,6 +204,7 @@ pub async fn create_model(
 pub async fn create_content(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
+    user: AuthUser,
     Json(req): Json<CreateContent>,
 ) -> Result<Json<()>, HttpError> {
     let mut conn = state.pool.get().await?;
@@ -275,6 +285,8 @@ pub async fn create_content(
                 .values((
                     contents::model_id.eq(req.model_id),
                     contents::name.eq(req.name),
+                    contents::stage.eq(ContentStage::Draft),
+                    contents::created_by.eq(user.id),
                 ))
                 .get_result::<base::models::Content>(conn)
                 .await?;
