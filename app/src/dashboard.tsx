@@ -1,8 +1,8 @@
-import { Component, JSX } from "solid-js";
+import { Component, JSX, useContext } from "solid-js";
 import { UserContext } from "./context";
 
 export default function Dashboard(): JSX.Element {
-    const userCtx = UserContext.ctx();
+    const userCtx = useContext(UserContext)!;
 
     return (
         <div class="container mt-4">

@@ -1,6 +1,5 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import { SearchParams } from "@solidjs/router/dist/types";
 import * as config from "../../config";
 
 const STATE_LENGTH = 32;
@@ -35,7 +34,7 @@ export const OauthRedirect = () => {
     return (<></>);
 }
 
-function finishOauth(params: Partial<SearchParams>) {
+function finishOauth(params: Record<string, string | string[] | undefined>) {
     const item = localStorage.getItem(STATE_KEY);
 
     if (item === null) {

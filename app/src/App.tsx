@@ -1,17 +1,61 @@
-import { createResource, Match, Suspense, Switch, type Component, type JSX } from 'solid-js';
+import { createResource, For, Match, Show, Suspense, Switch, type Component, type JSX } from 'solid-js';
 import { Router, Route } from "@solidjs/router";
 import { SideNav, TopBar } from './nav';
-import { ContentContext, UserContext } from './context';
+import { AlertContext, AlertStore, ContentContext, ContentService, UserContext, UserService } from './context';
 import { CreateModel, Model, Models } from './content/model';
 import Dashboard from './dashboard';
-import { Contents } from './content/content';
+import { Content, ContentRoot, Contents, CreateContent } from './content/content';
 import EmailLogin from './auth/login/email';
 import { OauthLogin, OauthRedirect } from './auth/login/oauth';
 import * as config from './config';
+import { createStore, produce, reconcile } from 'solid-js/store';
+import XCircle from 'bootstrap-icons/icons/x-circle.svg';
+
+enum AlertState {
+    Success,
+    Failure,
+}
+
+interface Alert {
+    title: string;
+    state: AlertState;
+}
+
+interface DisposableAlert extends Alert {
+    expire: number;
+}
+
+function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: DisposableAlert) => void }) {
+    return <Show when={props.alerts.length > 0}>
+        <div style="position: fixed; top: 3vh; right: 2rem; z-index: 99">
+            <For each={props.alerts}>
+                {alert =>
+                    <div
+                        class="border rounded border-2 px-3 py-3 d-flex"
+                        class:border-success={alert.state === AlertState.Success}
+                        class:border-danger={alert.state === AlertState.Failure}
+                        role="alert"
+                        style="background-color: var(--bs-body-bg); min-width: 18rem;"
+                    >
+                        <span class="flex-grow-1">{alert.title}</span>
+                        <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
+                            <XCircle viewBox="0 0 16 16" />
+                        </button>
+                    </div>
+                }
+            </For>
+        </div>
+    </Show>
+}
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
-    const [contentContext, ContentProvider] = ContentContext.create();
-    const [promises] = createResource(() => Promise.all([UserContext.fetchUser(), contentContext.loadModels(), contentContext.loadFields()]));
+    const contentService = new ContentService();
+    const [promises] = createResource(() => Promise.all([
+        UserService.fetchUser(),
+        contentService.loadFields(),
+        contentService.loadLocales(),
+        contentService.loadModels()
+    ]));
 
     return (
         <Suspense fallback={<p>Loading...</p>}>
@@ -23,12 +67,12 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                     {promises => {
                         const [user] = promises();
 
-                        const [userContext, UserProvider] = UserContext.create(user);
+                        const userService = new UserService(user);
 
                         return (
-                            <ContentProvider value={contentContext}>
-                                <UserProvider value={userContext}>{props.children}</UserProvider>
-                            </ContentProvider>
+                            <ContentContext.Provider value={contentService}>
+                                <UserContext.Provider value={userService}>{props.children}</UserContext.Provider>
+                            </ContentContext.Provider>
                         );
                     }}
                 </Match>
@@ -46,39 +90,101 @@ const App: Component = () => {
         baseUrl = baseUrl.slice(0, baseUrl.length - 1);
     }
 
+    const [alerts, setAlerts] = createStore<DisposableAlert[]>([]);
+    let timeoutId: NodeJS.Timeout | undefined = undefined;
+    const timeout = 5 * 1000;
+
+    const fireAlert = (state: AlertState, title: string) => {
+        const alert: DisposableAlert = {
+            expire: new Date().getTime() + timeout,
+            title,
+            state,
+        };
+
+        setAlerts(produce(alerts => alerts.push(alert)));
+
+        if (timeoutId === undefined) {
+            timeoutId = setTimeout(cleanAlerts, timeout);
+        }
+    };
+
+    const alertService: AlertStore = {
+        success: (title) => fireAlert(AlertState.Success, title),
+        fail: (title) => fireAlert(AlertState.Failure, title),
+    };
+
+    function removeAlert(alert: DisposableAlert) {
+        const index = alerts.findIndex(a => a === alert);
+
+        if (index > -1) {
+            setAlerts(produce(alerts => alerts.splice(index, 1)));
+        }
+    }
+
+    function cleanAlerts() {
+        const now = new Date().getTime();
+
+        setAlerts(reconcile(alerts.filter(alert => alert.expire > now)));
+        timeoutId = undefined;
+
+        const earliestExpire = alerts.reduce<number | undefined>((expire, alert) => {
+            if (expire === undefined) {
+                return alert.expire;
+            }
+
+            return alert.expire < expire ? alert.expire : expire;
+        }, undefined);
+
+        if (earliestExpire !== undefined) {
+            timeoutId = setTimeout(cleanAlerts, earliestExpire - now);
+        }
+    }
+
     return (
-        <Router base={baseUrl} root={props => (<>{props.children}</>)}>
-            <Route path="/auth" component={props => (<>{props.children}</>)}>
-                <Route path="/login" component={EmailLogin} />
-                <Route path="/oauth/saas" component={OauthRedirect} />
-                <Route path="/oauth/login" component={OauthLogin} />
-            </Route>
-
-            <Route path="/" component={props => (
-                <div class="d-flex">
-                    <SideNav />
-
-                    <main class="flex-grow-1">
-                        <BackgroundServices>
-                            <TopBar />
-
-                            {props.children}
-                        </BackgroundServices>
-                    </main>
-                </div>
-            )}>
-                <Route path="/" component={Dashboard} />
-                <Route path="/profile" component={props => <p>Profile</p>} />
-
-                <Route path="/content" component={props => (<>{props.children}</>)}>
-                    <Route path="/contents" component={Contents} />
-                    <Route path="/create-model" component={CreateModel} />
-                    <Route path="/models" component={Models} />
-                    <Route path="/model/:namespace/:name" component={Model} />
-                    <Route path="/model/:name" component={Model} />
+        <AlertContext.Provider value={alertService}>
+            <Router base={baseUrl} root={props => (<>{props.children}</>)}>
+                <Route path="/auth" component={props => (<>{props.children}</>)}>
+                    <Route path="/login" component={EmailLogin} />
+                    <Route path="/oauth/saas" component={OauthRedirect} />
+                    <Route path="/oauth/login" component={OauthLogin} />
                 </Route>
-            </Route>
-        </Router>
+
+                <Route path="/" component={props => (
+                    <div class="d-flex">
+                        <SideNav />
+
+                        <main class="flex-grow-1 d-flex flex-column">
+                            <BackgroundServices>
+                                <TopBar />
+
+                                {props.children}
+                            </BackgroundServices>
+                        </main>
+                    </div>
+                )}>
+                    <Route path="/" component={Dashboard} />
+                    <Route path="/profile" component={props => <p>Profile</p>} />
+
+                    <Route path="/model" component={props => (<>{props.children}</>)}>
+                        <Route path="/" component={Models} />
+                        <Route path="/model/:namespace/:name" component={Model} />
+                        <Route path="/model/:name" component={Model} />
+                        <Route path="/create-model" component={CreateModel} />
+                    </Route>
+
+                    <Route path="/content" component={ContentRoot}>
+                        <Route path="/" component={() => (<></>)} />
+                        <Route path="/:namespace/:name/create-content" component={CreateContent} />
+                        <Route path="/:name/create-content" component={CreateContent} />
+                        <Route path="/:namespace/:name/contents" component={Contents} />
+                        <Route path="/:name/contents" component={Contents} />
+                        <Route path="/content/:id" component={Content} />
+                    </Route>
+                </Route>
+            </Router>
+
+            <Alerts alerts={alerts} removeAlert={removeAlert} />
+        </AlertContext.Provider>
     );
 };
 

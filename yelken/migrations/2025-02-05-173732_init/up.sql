@@ -100,6 +100,7 @@ create table contents(
     id         serial primary key not null,
     model_id   int          not null,
     name       text         not null,
+    stage      varchar(16)  not null default 'draft' check (stage in ('published', 'draft')),
     created_at timestamp    not null default current_timestamp,
     constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );

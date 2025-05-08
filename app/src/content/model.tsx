@@ -1,9 +1,12 @@
-import { createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show, useContext } from "solid-js";
 import { ContentContext } from "../context";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
 import { CreateModelField } from "../models";
 import { HttpError } from "../api";
+import XLg from 'bootstrap-icons/icons/x-lg.svg';
+import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
+import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
 
 const CreateModelFieldModal = (props: { close: () => void; create: (field: CreateModelField) => void; }) => {
     enum ValidationError {
@@ -11,7 +14,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
         Field
     }
 
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
 
     const [name, setName] = createSignal('');
     const [fieldId, setFieldId] = createSignal(undefined as number | undefined);
@@ -63,7 +66,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         type="text"
                                         id="modelFieldName"
                                         class="form-control"
-                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        class:is-invalid={validationErrors().has(ValidationError.Name)}
                                         name="name"
                                         value={name()}
                                         onInput={ev => setName(ev.target.value)}
@@ -77,9 +80,9 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                     <select
                                         id="modelFieldId"
                                         class="form-select"
-                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        class:is-invalid={validationErrors().has(ValidationError.Field)}
                                         name="fieldId"
-                                        value={fieldId() || ''}
+                                        value={fieldId() ?? ''}
                                         onChange={ev => setFieldId(parseInt(ev.target.value))}
                                     >
                                         <option value="" disabled selected>Select a field</option>
@@ -95,7 +98,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                 </div>
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" checked={localized()} onChange={ev => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
-                                    <label class="form-check-label icon-link" for="modelFieldLocalized">
+                                    <label class="form-check-label" for="modelFieldLocalized">
                                         Localized
                                     </label>
                                 </div>
@@ -137,7 +140,7 @@ export const CreateModel = () => {
         Theme,
     }
 
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const navigate = useNavigate();
 
     const [name, setName] = createSignal('');
@@ -182,7 +185,7 @@ export const CreateModel = () => {
             modelFields: unwrap(fields),
             themeScoped: scope() === ModelScope.Theme
         })
-            .then(() => navigate('/content/models'))
+            .then(() => navigate('/model/models'))
             .catch(e => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
@@ -204,7 +207,7 @@ export const CreateModel = () => {
                         <input
                             type="text"
                             class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                            class:is-invalid={validationErrors().has(ValidationError.Name)}
                             id="modelName"
                             name="name"
                             value={name()}
@@ -244,6 +247,8 @@ export const CreateModel = () => {
 
                     <label class="form-label">Fields</label>
 
+                    <hr class="mt-0" />
+
                     <For each={fields}>
                         {(mf) => {
                             const field = contentCtx.fields().find(f => f.id === mf.fieldId);
@@ -256,9 +261,7 @@ export const CreateModel = () => {
                                     </div>
                                     <div>
                                         <button type="button" class="btn btn-outline-danger icon-link p-1" onClick={() => setFields(fields.filter(f => f !== mf))}>
-                                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#x-lg" />
-                                            </svg>
+                                            <XLg viewBox="0 0 16 16" />
                                         </button>
                                     </div>
                                 </div>
@@ -270,12 +273,10 @@ export const CreateModel = () => {
                         <button
                             type="button"
                             class="btn btn-outline-secondary icon-link justify-content-center w-100"
-                            classList={{ 'btn-outline-danger': validationErrors().has(ValidationError.Field) }}
+                            class:btn-outline-danger={validationErrors().has(ValidationError.Field)}
                             onClick={() => setShowModal(true)}
                         >
-                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-square-dotted" />
-                            </svg>
+                            <PlusSquareDotted viewBox="0 0 16 16" />
                             Add field
                         </button>
                         <Show when={validationErrors().has(ValidationError.Field)}>
@@ -284,22 +285,19 @@ export const CreateModel = () => {
                     </div>
 
                     <div class="mb-3">
+                        <Show when={serverError()}>
+                            <small class="text-danger">{serverError()}</small>
+                        </Show>
                         <button type="submit" class="btn btn-primary icon-link justify-content-center w-100" disabled={inProgress()}>
                             <Show when={inProgress()}>
                                 <div class="spinner-border" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
                             </Show>
-                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
-                            </svg>
+                            <PlusLg viewBox="0 0 16 16" />
                             Create
                         </button>
-                        <Show when={serverError()}>
-                            <small class="text-danger">{serverError()}</small>
-                        </Show>
                     </div>
-
                 </form>
             </div>
 
@@ -314,7 +312,7 @@ export const CreateModel = () => {
 };
 
 export const Models = () => {
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
 
     return (
         <div class="container mt-4">
@@ -322,10 +320,8 @@ export const Models = () => {
                 <div class="flex-grow-1">
                     <h1>Models</h1>
                 </div>
-                <A class="btn btn-outline-primary icon-link" href="/content/create-model">
-                    <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                        <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
-                    </svg>
+                <A class="btn btn-outline-primary icon-link" href="/model/create-model">
+                    <PlusLg viewBox="0 0 16 16" />
                     Create model
                 </A>
             </div>
@@ -344,10 +340,10 @@ export const Models = () => {
                         <For each={contentCtx.models()}>
                             {model => (
                                 <tr>
-                                    <td scope="row">{model.id}</td>
+                                    <td>{model.id}</td>
                                     <td>{model.namespace ? model.namespace : '-'}</td>
                                     <td>
-                                        <A href={model.namespace ? `/content/model/${model.namespace}/${model.name}` : `/content/model/${model.name}`}>
+                                        <A href={model.namespace ? `/model/model/${model.namespace}/${model.name}` : `/model/model/${model.name}`}>
                                             {model.name}
                                         </A>
                                     </td>
@@ -363,15 +359,15 @@ export const Models = () => {
 };
 
 export const Model = () => {
-    const contentCtx = ContentContext.ctx();
+    const contentCtx = useContext(ContentContext)!;
     const params = useParams();
 
-    const model = () => {
+    const model = createMemo(() => {
         const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace);
         const name = decodeURIComponent(params.name);
 
         return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
-    }
+    });
 
     return (
         <Show when={model()}>
@@ -410,6 +406,9 @@ export const Model = () => {
                             </div>
 
                             <label class="form-label">Fields</label>
+
+                            <hr class="mt-0" />
+
                             <For each={m().fields}>
                                 {mf => {
                                     const field = contentCtx.fields().find(f => f.id === mf.fieldId);

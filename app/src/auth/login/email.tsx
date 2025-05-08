@@ -79,6 +79,7 @@ export default function() {
                                 id="login-email"
                                 type="email"
                                 class="form-control"
+                                class:is-invalid={validationErrors().has(ValidationError.Email)}
                                 placeholder="Email"
                                 name="email"
                                 value={email()}
@@ -94,6 +95,7 @@ export default function() {
                                 id="login-password"
                                 type="password"
                                 class="form-control"
+                                class:is-invalid={validationErrors().has(ValidationError.Password)}
                                 placeholder="Password"
                                 name="password"
                                 value={password()}
@@ -104,20 +106,28 @@ export default function() {
                             </Show>
                         </div>
 
-                        <Show when={serverError()}>
-                            <small class="text-danger">{serverError()}</small>
-                        </Show>
 
-                        <button
-                            type="submit"
-                            class="btn btn-primary w-100 form-group"
-                            disabled={inProgress()}
-                        >
-                            Login
-                        </button>
+                        <div>
+                            <Show when={serverError()}>
+                                <small class="text-danger">{serverError()}</small>
+                            </Show>
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary w-100 form-group"
+                                disabled={inProgress()}
+                            >
+                                <Show when={inProgress()}>
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </Show>
+                                Login
+                            </button>
+                        </div>
                     </form>
-                </div >
-            </div >
-        </div >
+                </div>
+            </div>
+        </div>
     );
 };

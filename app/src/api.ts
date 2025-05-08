@@ -7,12 +7,16 @@ export class HttpError extends Error {
 }
 
 export class Api {
+    static async get<Resp>(path: string): Promise<Resp> {
+        return Api.request(path);
+    }
+
     static async post<Req, Resp>(path: string, body: Req): Promise<Resp> {
         return Api.request(path, 'POST', body);
     }
 
-    static async get<Resp>(path: string): Promise<Resp> {
-        return Api.request(path);
+    static async put<Req, Resp>(path: string, body: Req): Promise<Resp> {
+        return Api.request(path, 'PUT', body);
     }
 
     static async request<Req, Resp>(path: string, method: 'GET' | 'POST' | 'PUT' = 'GET', body?: Req): Promise<Resp> {

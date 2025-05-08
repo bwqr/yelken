@@ -1,11 +1,10 @@
+use base::models::ContentStage;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Field {
-    pub id: i32,
-    pub name: String,
-    pub kind: String,
+pub struct FilterByModel {
+    pub model_id: i32,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -29,7 +28,7 @@ pub struct Model {
     pub fields: Vec<ModelField>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateModelField {
     pub field_id: i32,
@@ -39,7 +38,7 @@ pub struct CreateModelField {
     pub required: bool,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateModel {
     pub name: String,
@@ -48,20 +47,29 @@ pub struct CreateModel {
 }
 
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ContentValue {
     pub model_field_id: i32,
     pub value: String,
     pub locale: Option<String>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CreateContent {
     pub model_id: i32,
     pub name: String,
     pub values: Vec<ContentValue>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateContentStage {
+    pub stage: ContentStage,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateContentValue {
     pub value: String,
 }

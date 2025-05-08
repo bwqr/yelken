@@ -42,9 +42,7 @@ $spinner-border-width: 0.15em;
 
 // 8. Add additional custom code here
 
-#sidenav {
-  width: 260px;
-
+#sidenav, #second-nav {
   .navbar-nav a[aria-current="page"] {
     background: rgba(0, 62, 129, 0.24);
     border-left: 3px solid rgb(60, 60, 180);

@@ -1,33 +1,25 @@
-import { Accessor, Context, ContextProviderComponent, createContext, createSignal, Setter, useContext } from "solid-js";
-import { CreateModel, Field, Model, User } from "./models";
+import { Accessor, Context, createContext, createSignal, Setter } from "solid-js";
+import { Content, ContentStage, ContentWithValues, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
 import { Api } from "./api";
 
-export class UserContext {
-    private static _ctx: Context<UserContext | undefined> | undefined = undefined;
+export interface AlertStore {
+    success(title: string): void;
+    fail(title: string): void;
+}
 
+export const AlertContext: Context<AlertStore | undefined> = createContext();
+
+export interface UserStore {
+    user: Accessor<User>,
+}
+
+export const UserContext: Context<UserStore | undefined> = createContext();
+
+export class UserService implements UserStore {
     public user: Accessor<User>;
-    private setUser: Setter<User>;
 
-    private constructor(user: User) {
-        [this.user, this.setUser] = createSignal(user);
-    }
-
-    public static create(user: User): [UserContext, ContextProviderComponent<UserContext>] {
-        if (UserContext._ctx !== undefined) {
-            throw ('UserContext is already created');
-        }
-
-        UserContext._ctx = createContext();
-
-        return [new UserContext(user), UserContext._ctx.Provider];
-    }
-
-    public static ctx(): UserContext {
-        if (UserContext._ctx === undefined) {
-            throw ('UserContext is not created');
-        }
-
-        return useContext(UserContext._ctx!)!;
+    constructor(user: User) {
+        [this.user] = createSignal(user);
     }
 
     public static async fetchUser(): Promise<User> {
@@ -35,36 +27,46 @@ export class UserContext {
     }
 }
 
-export class ContentContext {
-    private static _ctx: Context<ContentContext | undefined> | undefined = undefined;
+export interface ContentStore {
+    fields: Accessor<Field[]>;
+    models: Accessor<Model[]>;
+    locales: Accessor<Locale[]>;
 
+    activeLocales(): Locale[];
+
+    loadFields(): Promise<void>;
+    loadLocales(): Promise<void>;
+    loadModels(): Promise<void>;
+
+    fetchContents(modelId: number): Promise<Content[]>;
+    fetchContent(contentId: number): Promise<ContentWithValues>;
+
+    createModel(model: CreateModel): Promise<void>;
+    createContent(model: CreateContent): Promise<void>;
+
+    updateContentStage(contentId: number, stage: ContentStage): Promise<void>;
+}
+
+export const ContentContext: Context<ContentStore | undefined> = createContext();
+
+export class ContentService implements ContentStore {
     fields: Accessor<Field[]>;
     private setFields: Setter<Field[]>;
 
     models: Accessor<Model[]>;
     private setModels: Setter<Model[]>;
 
-    private constructor() {
+    locales: Accessor<Locale[]>;
+    private setLocales: Setter<Locale[]>;
+
+    constructor() {
         [this.models, this.setModels] = createSignal([] as Model[]);
         [this.fields, this.setFields] = createSignal([] as Field[]);
+        [this.locales, this.setLocales] = createSignal([] as Locale[]);
     }
 
-    static create(): [ContentContext, ContextProviderComponent<ContentContext>] {
-        if (ContentContext._ctx !== undefined) {
-            throw ('UserContext is already created');
-        }
-
-        ContentContext._ctx = createContext();
-
-        return [new ContentContext(), ContentContext._ctx.Provider];
-    }
-
-    static ctx(): ContentContext {
-        if (ContentContext._ctx === undefined) {
-            throw ('ContentContext is not created');
-        }
-
-        return useContext(ContentContext._ctx!)!;
+    activeLocales(): Locale[] {
+        return this.locales().filter(l => !l.disabled);
     }
 
     async createModel(model: CreateModel): Promise<void> {
@@ -73,11 +75,31 @@ export class ContentContext {
         return this.loadModels();
     }
 
+    async createContent(content: CreateContent): Promise<void> {
+        return Api.post('/content/content', content);
+    }
+
     async loadFields(): Promise<void> {
         this.setFields(await Api.get('/content/fields'));
     }
 
+    async loadLocales(): Promise<void> {
+        this.setLocales(await Api.get('/content/locales'));
+    }
+
     async loadModels(): Promise<void> {
         this.setModels(await Api.get('/content/models'));
+    }
+
+    async fetchContents(modelId: number): Promise<Content[]> {
+        return Api.get(`/content/contents?modelId=${modelId}`)
+    }
+
+    async fetchContent(contentId: number): Promise<ContentWithValues> {
+        return Api.get(`/content/content/${contentId}`)
+    }
+
+    async updateContentStage(contentId: number, stage: ContentStage): Promise<void> {
+        return Api.put(`/content/content/${contentId}/stage`, { stage });
     }
 }
