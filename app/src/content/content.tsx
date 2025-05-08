@@ -229,7 +229,7 @@ export const CreateContent = () => {
                                 <hr class="mt-0" />
 
                                 <For each={m().fields}>
-                                    {(mf, idx) => {
+                                    {(mf) => {
                                         const field = contentCtx.fields().find(f => f.id === mf.fieldId);
                                         const locales = contentCtx.activeLocales();
 
@@ -242,7 +242,7 @@ export const CreateContent = () => {
                                                 <label for={`modelField-${mf.id}-0`} class="form-label">{mf.name}</label>
 
                                                 <For each={values[mf.id]}>
-                                                    {(value, idx) => {
+                                                    {(_, idx) => {
                                                         return (
                                                             <div class="d-flex w-100 mb-2">
                                                                 <input
