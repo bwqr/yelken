@@ -82,7 +82,7 @@ export const OauthLogin = () => {
     }
     return (
         <Show when={error()}>
-            {e => <p>Failed to login {e()}</p>}
+            {(e) => <p>Failed to login {e()}</p>}
         </Show>
     );
 }

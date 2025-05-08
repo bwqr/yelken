@@ -1,61 +1,61 @@
 export interface User {
-    id: number;
-    name: string;
+    id: number,
+    name: string,
 }
 
 export interface Locale {
-    key: string;
-    name: string;
-    disabled: boolean;
+    key: string,
+    name: string,
+    disabled: boolean,
 }
 
 export interface ModelField {
-    id: number;
-    fieldId: number;
-    modelId: number;
-    name: string;
-    localized: boolean;
-    multiple: boolean;
-    required: boolean;
+    id: number,
+    fieldId: number,
+    modelId: number,
+    name: string,
+    localized: boolean,
+    multiple: boolean,
+    required: boolean,
 }
 
 export interface Model {
-    id: number;
-    namespace: string | null;
-    name: string;
-    fields: ModelField[];
+    id: number,
+    namespace: string | null,
+    name: string,
+    fields: ModelField[],
 }
 
 export interface Field {
-    id: number;
-    name: string;
-    kind: string;
+    id: number,
+    name: string,
+    kind: string,
 }
 
 export interface CreateModelField {
-    fieldId: number;
-    name: string;
-    localized: boolean;
-    multiple: boolean;
-    required: boolean;
+    fieldId: number,
+    name: string,
+    localized: boolean,
+    multiple: boolean,
+    required: boolean,
 }
 
 export interface CreateModel {
-    name: string;
-    modelFields: CreateModelField[];
-    themeScoped: boolean;
+    name: string,
+    modelFields: CreateModelField[],
+    themeScoped: boolean,
 }
 
 export interface CreateContentValue {
-    modelFieldId: number;
-    locale?: string;
-    value: string;
+    modelFieldId: number,
+    locale?: string,
+    value: string,
 }
 
 export interface CreateContent {
-    name: string;
-    modelId: number;
-    values: CreateContentValue[];
+    name: string,
+    modelId: number,
+    values: CreateContentValue[],
 }
 
 export enum ContentStage {
@@ -69,19 +69,19 @@ export interface Content {
     name: string,
     stage: ContentStage,
     createdBy: number | null,
-    createdAt: string;
-    updatedAt: string;
+    createdAt: string,
+    updatedAt: string,
 }
 
 export interface ContentValue {
-    id: number;
-    modelFieldId: number;
-    locale: string | null;
-    value: string;
+    id: number,
+    modelFieldId: number,
+    locale: string | null,
+    value: string,
 }
 
 export interface ContentDetails {
-    content: Content;
-    values: ContentValue[];
-    user: User | null;
+    content: Content,
+    values: ContentValue[],
+    user: User | null,
 }

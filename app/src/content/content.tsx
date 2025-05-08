@@ -20,7 +20,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
                 <p class="text-secondary ps-3 mt-4 mb-2 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Models</b></p>
                 <ul class="navbar-nav mb-4">
                     <For each={models}>
-                        {model => (
+                        {(model) => (
                             <li class="nav-item">
                                 <A
                                     href={model.namespace ? `/content/${model.namespace}/${model.name}/contents` : `/content/${model.name}/contents`}
@@ -48,7 +48,7 @@ export const Contents = () => {
         const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace);
         const name = decodeURIComponent(params.name);
 
-        return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
+        return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
 
     const [contents] = createResource(model, (m) => contentCtx.fetchContents(m.id));
@@ -60,7 +60,7 @@ export const Contents = () => {
                     <h1>Contents</h1>
                 </div>
                 <Show when={model()}>
-                    {m => (
+                    {(m) => (
                         <A class="btn btn-outline-primary icon-link" href={m().namespace ? `/content/${m().namespace}/${m().name}/create-content` : `/content/${m().name}/create-content`}>
                             <PlusLg viewBox="0 0 16 16" />
                             Create content
@@ -85,7 +85,7 @@ export const Contents = () => {
                             </thead>
                             <tbody class="table-group-divider">
                                 <For each={contents()}>
-                                    {content => (
+                                    {(content) => (
                                         <tr>
                                             <td>{content.id}</td>
                                             <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
@@ -117,7 +117,7 @@ export const CreateContent = () => {
         const namespace = typeof params.namespace === 'string' ? decodeURIComponent(params.namespace) : null;
         const name = typeof params.name === 'string' ? decodeURIComponent(params.name) : null;
 
-        return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
+        return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
 
     const [name, setName] = createSignal('');
@@ -177,7 +177,7 @@ export const CreateContent = () => {
                     navigate(m.namespace ? `/content/${m.namespace}/${m.name}/contents` : `/content/${m.name}/contents`)
                 }
             })
-            .catch(e => {
+            .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
                 } else {
@@ -193,7 +193,7 @@ export const CreateContent = () => {
 
             <div class="row">
                 <Show when={model()}>
-                    {m => {
+                    {(m) => {
                         return (
                             <form class="col-md-4" onSubmit={onSubmit}>
                                 <div class="mb-4">
@@ -205,7 +205,7 @@ export const CreateContent = () => {
                                         class:is-invalid={validationErrors().has(ValidationError.Name)}
                                         name="contentName"
                                         value={name()}
-                                        onInput={ev => setName(ev.target.value)}
+                                        onInput={(ev) => setName(ev.target.value)}
                                     />
                                     <Show when={validationErrors().has(ValidationError.Name)}>
                                         <small class="invalid-feedback">Please enter a name.</small>
@@ -230,7 +230,7 @@ export const CreateContent = () => {
 
                                 <For each={m().fields}>
                                     {(mf) => {
-                                        const field = contentCtx.fields().find(f => f.id === mf.fieldId);
+                                        const field = contentCtx.fields().find((f) => f.id === mf.fieldId);
                                         const locales = contentCtx.activeLocales();
 
                                         if (field === undefined) {
@@ -251,7 +251,7 @@ export const CreateContent = () => {
                                                                     style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
                                                                     class="form-control flex-grow-1"
                                                                     name={`modelField-${mf.id}-${idx()}`}
-                                                                    onInput={ev => setValues(mf.id, idx(), 'value', ev.target.value)}
+                                                                    onInput={(ev) => setValues(mf.id, idx(), 'value', ev.target.value)}
                                                                 />
                                                                 <Show when={mf.localized}>
                                                                     <select
@@ -259,10 +259,10 @@ export const CreateContent = () => {
                                                                         name={`modelFieldLocale-${mf.id}-${idx()}`}
                                                                         style="width: unset;"
                                                                         value={values[mf.id][idx()].locale}
-                                                                        onChange={ev => setValues(mf.id, idx(), 'locale', ev.target.value)}
+                                                                        onChange={(ev) => setValues(mf.id, idx(), 'locale', ev.target.value)}
                                                                     >
                                                                         <For each={locales}>
-                                                                            {locale => (<option value={locale.key}>{locale.name}</option>)}
+                                                                            {(locale) => (<option value={locale.key}>{locale.name}</option>)}
                                                                         </For>
                                                                     </select>
                                                                 </Show>
@@ -345,7 +345,7 @@ export const Content = () => {
 
                 alertCtx.success(stage === ContentStage.Published ? 'Content is published' : 'Content is marked as draft');
             })
-            .catch(e => {
+            .catch((e) => {
                 if (e instanceof HttpError) {
                     alertCtx.fail(e.error);
                 } else {
@@ -363,7 +363,7 @@ export const Content = () => {
             <Switch>
                 <Match when={content.loading}>Loading ...</Match>
                 <Match when={content.error}>Error: {content.error}</Match>
-                <Match when={content()}>{c => (
+                <Match when={content()}>{(c) => (
                     <>
                         <div class="d-flex align-items-center mb-4">
                             <div class="flex-grow-1">
@@ -371,7 +371,7 @@ export const Content = () => {
                                 <small>Content created by {c().user?.name}</small>
                             </div>
                             <Show when={content()}>
-                                {c => (
+                                {(c) => (
                                     <button class={`btn icon-link ${contentUpdateClass()}`} onClick={updateContentStage} disabled={inProgress()}>
                                         <Show when={inProgress()}>
                                             <div class="spinner-border" role="status">
@@ -389,7 +389,7 @@ export const Content = () => {
                         </div>
                         <div>
                             <For each={c().values}>
-                                {v => (
+                                {(v) => (
                                     <p>{v.value}</p>
                                 )}
                             </For>

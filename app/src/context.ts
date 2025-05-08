@@ -66,7 +66,7 @@ export class ContentService implements ContentStore {
     }
 
     activeLocales(): Locale[] {
-        return this.locales().filter(l => !l.disabled);
+        return this.locales().filter((l) => !l.disabled);
     }
 
     async createModel(model: CreateModel): Promise<void> {

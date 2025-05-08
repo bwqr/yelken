@@ -46,12 +46,12 @@ export default function() {
             '/auth/login',
             { email: email(), password: password() }
         )
-            .then(token => {
+            .then((token) => {
                 localStorage.setItem('token', token.token);
 
                 window.location.assign(config.BASE_URL);
             })
-            .catch(e => {
+            .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
                 } else {

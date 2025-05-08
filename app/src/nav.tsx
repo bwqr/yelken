@@ -23,7 +23,7 @@ export function TopBar(): JSX.Element {
                     class="btn icon-link fs-4"
                     type="button"
                     aria-expanded={dropdown()}
-                    on:click={ev => { ev.stopPropagation(); setDropdown(!dropdown()) }}
+                    on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()) }}
                 >
                     <PersonCircle viewBox="0 0 16 16" />
                 </button>
@@ -80,7 +80,7 @@ export function SideNav(): JSX.Element {
             <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Apps</b></p>
             <ul class="navbar-nav mb-4">
                 <For each={links}>
-                    {link => (<li class="nav-item"><A href={link.href} class="nav-link d-block ps-3 pe-5 py-2">{link.title}</A></li>)}
+                    {(link) => (<li class="nav-item"><A href={link.href} class="nav-link d-block ps-3 pe-5 py-2">{link.title}</A></li>)}
                 </For>
             </ul>
 

@@ -29,7 +29,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
     return <Show when={props.alerts.length > 0}>
         <div style="position: fixed; top: 3vh; right: 2rem; z-index: 99">
             <For each={props.alerts}>
-                {alert =>
+                {(alert) =>
                     <div
                         class="border rounded border-2 px-3 py-3 d-flex"
                         class:border-success={alert.state === AlertState.Success}
@@ -64,7 +64,7 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                     <span>Error: {promises.error.message}</span>
                 </Match>
                 <Match when={promises()}>
-                    {promises => {
+                    {(promises) => {
                         const [user] = promises();
 
                         const userService = new UserService(user);
@@ -101,7 +101,7 @@ const App: Component = () => {
             state,
         };
 
-        setAlerts(produce(alerts => alerts.push(alert)));
+        setAlerts(produce((alerts) => alerts.push(alert)));
 
         if (timeoutId === undefined) {
             timeoutId = setTimeout(cleanAlerts, timeout);
@@ -114,17 +114,17 @@ const App: Component = () => {
     };
 
     function removeAlert(alert: DisposableAlert) {
-        const index = alerts.findIndex(a => a === alert);
+        const index = alerts.findIndex((a) => a === alert);
 
         if (index > -1) {
-            setAlerts(produce(alerts => alerts.splice(index, 1)));
+            setAlerts(produce((alerts) => alerts.splice(index, 1)));
         }
     }
 
     function cleanAlerts() {
         const now = new Date().getTime();
 
-        setAlerts(reconcile(alerts.filter(alert => alert.expire > now)));
+        setAlerts(reconcile(alerts.filter((alert) => alert.expire > now)));
         timeoutId = undefined;
 
         const earliestExpire = alerts.reduce<number | undefined>((expire, alert) => {
@@ -142,14 +142,14 @@ const App: Component = () => {
 
     return (
         <AlertContext.Provider value={alertService}>
-            <Router base={baseUrl} root={props => (<>{props.children}</>)}>
-                <Route path="/auth" component={props => (<>{props.children}</>)}>
+            <Router base={baseUrl} root={(props) => (<>{props.children}</>)}>
+                <Route path="/auth" component={(props) => (<>{props.children}</>)}>
                     <Route path="/login" component={EmailLogin} />
                     <Route path="/oauth/saas" component={OauthRedirect} />
                     <Route path="/oauth/login" component={OauthLogin} />
                 </Route>
 
-                <Route path="/" component={props => (
+                <Route path="/" component={(props) => (
                     <div class="d-flex">
                         <SideNav />
 
@@ -163,9 +163,9 @@ const App: Component = () => {
                     </div>
                 )}>
                     <Route path="/" component={Dashboard} />
-                    <Route path="/profile" component={props => <p>Profile</p>} />
+                    <Route path="/profile" component={(props) => <p>Profile</p>} />
 
-                    <Route path="/model" component={props => (<>{props.children}</>)}>
+                    <Route path="/model" component={(props) => (<>{props.children}</>)}>
                         <Route path="/" component={Models} />
                         <Route path="/model/:namespace/:name" component={Model} />
                         <Route path="/model/:name" component={Model} />

@@ -59,7 +59,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                             <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Add Field</h1>
                         </div>
                         <div class="modal-body">
-                            <form onSubmit={ev => { ev.preventDefault(); createField(); }}>
+                            <form onSubmit={(ev) => { ev.preventDefault(); createField(); }}>
                                 <div class="mb-4">
                                     <label for="modelFieldName" class="form-label">Name</label>
                                     <input
@@ -69,7 +69,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         class:is-invalid={validationErrors().has(ValidationError.Name)}
                                         name="name"
                                         value={name()}
-                                        onInput={ev => setName(ev.target.value)}
+                                        onInput={(ev) => setName(ev.target.value)}
                                     />
                                     <Show when={validationErrors().has(ValidationError.Name)}>
                                         <small class="invalid-feedback">Please enter name.</small>
@@ -83,7 +83,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         class:is-invalid={validationErrors().has(ValidationError.Field)}
                                         name="fieldId"
                                         value={fieldId() ?? ''}
-                                        onChange={ev => setFieldId(parseInt(ev.target.value))}
+                                        onChange={(ev) => setFieldId(parseInt(ev.target.value))}
                                     >
                                         <option value="" disabled selected>Select a field</option>
                                         <For each={contentCtx.fields()}>
@@ -97,19 +97,19 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                     </Show>
                                 </div>
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" checked={localized()} onChange={ev => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
+                                    <input class="form-check-input" type="checkbox" checked={localized()} onChange={(ev) => setLocalized(ev.target.checked)} id="modelFieldLocalized" />
                                     <label class="form-check-label" for="modelFieldLocalized">
                                         Localized
                                     </label>
                                 </div>
                                 <div class="form-check mb-3">
-                                    <input class="form-check-input" type="checkbox" checked={multiple()} onChange={ev => setMultiple(ev.target.checked)} id="modelFieldMultiple" />
+                                    <input class="form-check-input" type="checkbox" checked={multiple()} onChange={(ev) => setMultiple(ev.target.checked)} id="modelFieldMultiple" />
                                     <label class="form-check-label" for="modelFieldMultiple">
                                         Multiple
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" checked={required()} onChange={ev => setRequired(ev.target.checked)} id="modelFieldRequired" />
+                                    <input class="form-check-input" type="checkbox" checked={required()} onChange={(ev) => setRequired(ev.target.checked)} id="modelFieldRequired" />
                                     <label class="form-check-label" for="modelFieldRequired">
                                         Required
                                     </label>
@@ -186,7 +186,7 @@ export const CreateModel = () => {
             themeScoped: scope() === ModelScope.Theme
         })
             .then(() => navigate('/model/models'))
-            .catch(e => {
+            .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
                 } else {
@@ -211,7 +211,7 @@ export const CreateModel = () => {
                             id="modelName"
                             name="name"
                             value={name()}
-                            onInput={ev => setName(ev.target.value)}
+                            onInput={(ev) => setName(ev.target.value)}
                         />
                         <Show when={validationErrors().has(ValidationError.Name)}>
                             <small class="invalid-feedback">Please enter a name.</small>
@@ -251,7 +251,7 @@ export const CreateModel = () => {
 
                     <For each={fields}>
                         {(mf) => {
-                            const field = contentCtx.fields().find(f => f.id === mf.fieldId);
+                            const field = contentCtx.fields().find((f) => f.id === mf.fieldId);
 
                             return (
                                 <div class="d-flex border rounded p-2 border-1 border-black mb-3" style="border-style: dashed !important;">
@@ -260,7 +260,7 @@ export const CreateModel = () => {
                                         <small>Field: {field?.name}{mf.localized ? ', Localized' : ''}{mf.multiple ? ', Multiple' : ''}{mf.required ? ', Required' : ''}</small>
                                     </div>
                                     <div>
-                                        <button type="button" class="btn btn-outline-danger icon-link p-1" onClick={() => setFields(fields.filter(f => f !== mf))}>
+                                        <button type="button" class="btn btn-outline-danger icon-link p-1" onClick={() => setFields(fields.filter((f) => f !== mf))}>
                                             <XLg viewBox="0 0 16 16" />
                                         </button>
                                     </div>
@@ -303,7 +303,7 @@ export const CreateModel = () => {
 
             <Show when={showModal()}>
                 <CreateModelFieldModal
-                    create={field => { setFields(fields.length, field); setShowModal(false) }}
+                    create={(field) => { setFields(fields.length, field); setShowModal(false) }}
                     close={() => setShowModal(false)}
                 />
             </Show>
@@ -338,7 +338,7 @@ export const Models = () => {
                     </thead>
                     <tbody class="table-group-divider">
                         <For each={contentCtx.models()}>
-                            {model => (
+                            {(model) => (
                                 <tr>
                                     <td>{model.id}</td>
                                     <td>{model.namespace ? model.namespace : '-'}</td>
@@ -366,12 +366,12 @@ export const Model = () => {
         const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace);
         const name = decodeURIComponent(params.name);
 
-        return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
+        return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
 
     return (
         <Show when={model()}>
-            {m => (
+            {(m) => (
                 <div class="container mt-4">
                     <div>
                         <h2 class="m-0">{m().name}</h2>
@@ -410,8 +410,8 @@ export const Model = () => {
                             <hr class="mt-0" />
 
                             <For each={m().fields}>
-                                {mf => {
-                                    const field = contentCtx.fields().find(f => f.id === mf.fieldId);
+                                {(mf) => {
+                                    const field = contentCtx.fields().find((f) => f.id === mf.fieldId);
 
                                     return (
                                         <div class="d-flex border rounded p-2 border-1 border-black mb-3">
