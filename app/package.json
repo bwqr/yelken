@@ -11,13 +11,15 @@
   },
   "license": "BSL 1.1",
   "devDependencies": {
+    "@types/node": "^22.15.16",
     "bootstrap": "^5.3.5",
     "bootstrap-icons": "^1.12.1",
     "sass-embedded": "^1.87.0",
-    "typescript": "^5.7.2",
+    "typescript": "^5.8.3",
     "vite": "^6.0.0",
     "vite-plugin-checker": "^0.9.3",
-    "vite-plugin-solid": "^2.11.6"
+    "vite-plugin-solid": "^2.11.6",
+    "vite-plugin-solid-svg": "^0.8.1"
   },
   "dependencies": {
     "@solidjs/router": "^0.15.3",

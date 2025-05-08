@@ -9,6 +9,7 @@ import EmailLogin from './auth/login/email';
 import { OauthLogin, OauthRedirect } from './auth/login/oauth';
 import * as config from './config';
 import { createStore, produce, reconcile } from 'solid-js/store';
+import XCircle from 'bootstrap-icons/icons/x-circle.svg';
 
 enum AlertState {
     Success,
@@ -38,9 +39,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                     >
                         <span class="flex-grow-1">{alert.title}</span>
                         <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
-                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#x-circle" />
-                            </svg>
+                            <XCircle viewBox="0 0 16 16" />
                         </button>
                     </div>
                 }
@@ -95,7 +94,7 @@ const App: Component = () => {
     let timeoutId: NodeJS.Timeout | undefined = undefined;
     const timeout = 5 * 1000;
 
-    const fireAlert = (state: AlertState, title: string) =>{
+    const fireAlert = (state: AlertState, title: string) => {
         const alert: DisposableAlert = {
             expire: new Date().getTime() + timeout,
             title,
@@ -167,7 +166,7 @@ const App: Component = () => {
                     <Route path="/profile" component={props => <p>Profile</p>} />
 
                     <Route path="/model" component={props => (<>{props.children}</>)}>
-                        <Route path="/models" component={Models} />
+                        <Route path="/" component={Models} />
                         <Route path="/model/:namespace/:name" component={Model} />
                         <Route path="/model/:name" component={Model} />
                         <Route path="/create-model" component={CreateModel} />

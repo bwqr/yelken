@@ -2,6 +2,9 @@ import { A } from "@solidjs/router";
 import { createSignal, For, JSX, Show, useContext } from "solid-js";
 import { UserContext } from "./context";
 import * as config from './config';
+import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
+import Person from 'bootstrap-icons/icons/person.svg';
+import BoxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg';
 
 export function TopBar(): JSX.Element {
     const userCtx = useContext(UserContext)!;
@@ -22,25 +25,21 @@ export function TopBar(): JSX.Element {
                     aria-expanded={dropdown()}
                     on:click={ev => { ev.stopPropagation(); setDropdown(!dropdown()) }}
                 >
-                    <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                        <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#person-circle" />
-                    </svg>
+                    <PersonCircle viewBox="0 0 16 16" />
                 </button>
 
                 <Show when={dropdown()}>
                     <ul class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 15rem;">
                         <li>
                             <a class="dropdown-item disabled icon-link py-2" aria-disabled="true">
-                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true"></svg>
+                                <svg class="bi" viewBox="0 0 16 16"></svg>
                                 {userCtx.user().name}
                             </a>
                         </li>
                         <li><hr class="dropdown-divider" /></li>
                         <li>
                             <A class="dropdown-item icon-link py-2" href="/profile">
-                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                    <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#person" />
-                                </svg>
+                                <Person viewBox="0 0 16 16" />
                                 Profile
                             </A>
                         </li>
@@ -51,9 +50,7 @@ export function TopBar(): JSX.Element {
                                 on:click={_ => localStorage.removeItem('token')}
                                 rel="external"
                             >
-                                <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                    <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#box-arrow-right" />
-                                </svg>
+                                <BoxArrowRight viewBox="0 0 16 16" />
 
                                 Logout
                             </a>
@@ -68,7 +65,7 @@ export function TopBar(): JSX.Element {
 export function SideNav(): JSX.Element {
     const links = [
         { title: 'Dashboard', href: '/' },
-        { title: 'Models', href: '/model/models' },
+        { title: 'Models', href: '/model' },
         { title: 'Contents', href: '/content' },
         { title: 'Plugin Manager', href: '/plugin-manager' },
         { title: 'Settings', href: '/settings' },

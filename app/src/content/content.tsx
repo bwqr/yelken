@@ -1,9 +1,15 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { AlertContext, ContentContext } from "../context";
-import { createEffect, createResource, createSignal, For, JSX, Match, Show, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, JSX, Match, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../api";
 import { createStore, unwrap } from "solid-js/store";
-import { Content as ContentModel, ContentStage, CreateContentValue } from "../models";
+import { ContentStage, CreateContentValue } from "../models";
+import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
+import XLg from 'bootstrap-icons/icons/x-lg.svg';
+import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
+import BookmarkCheck from 'bootstrap-icons/icons/bookmark-check.svg';
+import BookmarkCheckFill from 'bootstrap-icons/icons/bookmark-check-fill.svg';
+import { Dynamic } from "solid-js/web";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -38,21 +44,14 @@ export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
 
-    const model = () => {
+    const model = createMemo(() => {
         const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace);
         const name = decodeURIComponent(params.name);
 
         return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
-    }
-
-    const [contents, setContents] = createSignal([] as ContentModel[]);
-
-    createEffect(async () => {
-        const m = model();
-        if (m) {
-            setContents(await contentCtx.fetchContents(m.id))
-        }
     });
+
+    const [contents] = createResource(model, (m) => contentCtx.fetchContents(m.id));
 
     return (
         <div class="container mt-4">
@@ -63,9 +62,7 @@ export const Contents = () => {
                 <Show when={model()}>
                     {m => (
                         <A class="btn btn-outline-primary icon-link" href={m().namespace ? `/content/${m().namespace}/${m().name}/create-content` : `/content/${m().name}/create-content`}>
-                            <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
-                            </svg>
+                            <PlusLg viewBox="0 0 16 16" />
                             Create content
                         </A>
                     )}
@@ -73,28 +70,34 @@ export const Contents = () => {
             </div>
 
             <div class="border border-1 border-secondary-subtle rounded p-2 shadow-sm">
-                <table class="table table-hover m-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Stage</th>
-                            <th scope="col">Created At</th>
-                        </tr>
-                    </thead>
-                    <tbody class="table-group-divider">
-                        <For each={contents()}>
-                            {content => (
+                <Switch>
+                    <Match when={contents.loading}>Loading ...</Match>
+                    <Match when={contents.error}>Error: {contents.error}</Match>
+                    <Match when={contents()}>
+                        <table class="table table-hover m-0">
+                            <thead>
                                 <tr>
-                                    <td>{content.id}</td>
-                                    <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
-                                    <td>{content.stage}</td>
-                                    <td>{content.createdAt}</td>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Stage</th>
+                                    <th scope="col">Created At</th>
                                 </tr>
-                            )}
-                        </For>
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody class="table-group-divider">
+                                <For each={contents()}>
+                                    {content => (
+                                        <tr>
+                                            <td>{content.id}</td>
+                                            <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
+                                            <td>{content.stage}</td>
+                                            <td>{content.createdAt}</td>
+                                        </tr>
+                                    )}
+                                </For>
+                            </tbody>
+                        </table>
+                    </Match>
+                </Switch>
             </div>
         </div>
     );
@@ -110,12 +113,12 @@ export const CreateContent = () => {
     const params = useParams();
     const navigate = useNavigate();
 
-    const model = () => {
+    const model = createMemo(() => {
         const namespace = typeof params.namespace === 'string' ? decodeURIComponent(params.namespace) : null;
         const name = typeof params.name === 'string' ? decodeURIComponent(params.name) : null;
 
         return contentCtx.models().find(m => m.namespace === namespace && m.name === name);
-    };
+    });
 
     const [name, setName] = createSignal('');
     const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);
@@ -226,7 +229,7 @@ export const CreateContent = () => {
                                 <hr class="mt-0" />
 
                                 <For each={m().fields}>
-                                    {mf => {
+                                    {(mf, idx) => {
                                         const field = contentCtx.fields().find(f => f.id === mf.fieldId);
                                         const locales = contentCtx.activeLocales();
 
@@ -236,7 +239,7 @@ export const CreateContent = () => {
 
                                         return (
                                             <div class="mb-3">
-                                                <label for={`modelField${mf.id}`} class="form-label">{mf.name}</label>
+                                                <label for={`modelField-${mf.id}-0`} class="form-label">{mf.name}</label>
 
                                                 <For each={values[mf.id]}>
                                                     {(value, idx) => {
@@ -244,15 +247,16 @@ export const CreateContent = () => {
                                                             <div class="d-flex w-100 mb-2">
                                                                 <input
                                                                     type={field.name === 'integer' ? 'number' : 'text'}
-                                                                    id={`modelField${mf.id}`}
+                                                                    id={`modelField-${mf.id}-${idx()}`}
                                                                     style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
                                                                     class="form-control flex-grow-1"
-                                                                    name={`modelField${mf.id}`}
+                                                                    name={`modelField-${mf.id}-${idx()}`}
                                                                     onInput={ev => setValues(mf.id, idx(), 'value', ev.target.value)}
                                                                 />
                                                                 <Show when={mf.localized}>
                                                                     <select
                                                                         class="form-select rounded-0"
+                                                                        name={`modelFieldLocale-${mf.id}-${idx()}`}
                                                                         style="width: unset;"
                                                                         value={values[mf.id][idx()].locale}
                                                                         onChange={ev => setValues(mf.id, idx(), 'locale', ev.target.value)}
@@ -267,9 +271,7 @@ export const CreateContent = () => {
                                                                     class="btn btn-outline-danger icon-link"
                                                                     style=" border-top-left-radius: 0; border-bottom-left-radius: 0;"
                                                                     onClick={() => setValues(mf.id, values[mf.id].filter((_, i) => i !== idx()))}>
-                                                                    <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                                                        <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#x-lg" />
-                                                                    </svg>
+                                                                    <XLg viewBox="0 0 16 16" />
                                                                 </button>
                                                             </div>
                                                         );
@@ -286,9 +288,7 @@ export const CreateContent = () => {
                                                             setValues(mf.id, values[mf.id].length, { modelFieldId: mf.id, value: '', locale });
                                                         }}
                                                     >
-                                                        <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                                            <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-square-dotted" />
-                                                        </svg>
+                                                        <PlusSquareDotted viewBox="0 0 16 16"/>
                                                         Add value
                                                     </button>
                                                 </Show>
@@ -307,9 +307,7 @@ export const CreateContent = () => {
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                            <use href="/node_modules/bootstrap-icons/bootstrap-icons.svg#plus-lg" />
-                                        </svg>
+                                        <PlusLg viewBox="0 0 16 16" />
                                         Create
                                     </button>
                                 </div>
@@ -358,7 +356,7 @@ export const Content = () => {
     };
 
     const contentUpdateClass = () => content()?.content.stage === ContentStage.Published ? 'btn-secondary' : 'btn-primary';
-    const contentUpdateIcon = () => content()?.content.stage === ContentStage.Published ? 'bookmark-check' : 'bookmark-check-fill';
+    const contentUpdateIcon = () => content()?.content.stage === ContentStage.Published ? BookmarkCheck : BookmarkCheckFill;
 
     return (
         <div class="container mt-4">
@@ -380,9 +378,7 @@ export const Content = () => {
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <svg class="bi" viewBox="0 0 16 16" aria-hidden="true">
-                                            <use href={`/node_modules/bootstrap-icons/bootstrap-icons.svg#${contentUpdateIcon()}`} />
-                                        </svg>
+                                        <Dynamic component={contentUpdateIcon()} />
                                         <Switch>
                                             <Match when={c().content.stage === ContentStage.Draft}>Publish</Match>
                                             <Match when={c().content.stage === ContentStage.Published}>Mark as Draft</Match>
