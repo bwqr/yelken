@@ -22,7 +22,7 @@ pub fn router() -> Router<AppState> {
 
         router
             .route("/oauth/redirect", get(oauth::redirect_oauth_provider))
-            .route("/oauth/saas", get(oauth::saas_oauth))
+            .route("/oauth/cloud", get(oauth::cloud_oauth))
             .layer(Extension(auth_config))
     };
 

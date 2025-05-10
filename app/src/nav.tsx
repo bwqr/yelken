@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createSignal, For, JSX, Show, useContext } from "solid-js";
+import { createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { UserContext } from "./context";
 import * as config from './config';
 import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
@@ -11,7 +11,27 @@ export function TopBar(): JSX.Element {
 
     const [dropdown, setDropdown] = createSignal(false);
 
-    window.document.addEventListener('click', () => setDropdown(false));
+    window.document.addEventListener('click', (ev) => {
+        let close = true;
+        let target = ev.target;
+
+        while (target) {
+            if (!(target instanceof HTMLElement)) {
+                break;
+            }
+
+            if (target.id === 'topbar-dropdown') {
+                close = false;
+                break;
+            }
+
+            target = target.parentElement;
+        }
+
+        if (close) {
+            setDropdown(false);
+        }
+    });
 
     return (
         <nav class="navbar px-4 py-2" style="border-bottom: 1px solid #d8d8d8;">

@@ -1,4 +1,4 @@
-import { Component, JSX, useContext } from "solid-js";
+import { type JSX, useContext } from "solid-js";
 import { UserContext } from "./context";
 
 export default function Dashboard(): JSX.Element {

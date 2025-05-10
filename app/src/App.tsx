@@ -1,7 +1,7 @@
 import { createResource, For, Match, Show, Suspense, Switch, type Component, type JSX } from 'solid-js';
 import { Router, Route } from "@solidjs/router";
 import { SideNav, TopBar } from './nav';
-import { AlertContext, AlertStore, ContentContext, ContentService, UserContext, UserService } from './context';
+import { AlertContext, type AlertStore, ContentContext, ContentService, UserContext, UserService } from './context';
 import { CreateModel, Model, Models } from './content/model';
 import Dashboard from './dashboard';
 import { Content, ContentRoot, Contents, CreateContent } from './content/content';
@@ -145,7 +145,7 @@ const App: Component = () => {
             <Router base={baseUrl} root={(props) => (<>{props.children}</>)}>
                 <Route path="/auth" component={(props) => (<>{props.children}</>)}>
                     <Route path="/login" component={EmailLogin} />
-                    <Route path="/oauth/saas" component={OauthRedirect} />
+                    <Route path="/oauth/cloud" component={OauthRedirect} />
                     <Route path="/oauth/login" component={OauthLogin} />
                 </Route>
 

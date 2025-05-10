@@ -1,5 +1,6 @@
-import { Accessor, Context, createContext, createSignal, Setter } from "solid-js";
-import { Content, ContentStage, ContentDetails, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
+import type { Accessor, Context, Setter } from 'solid-js';
+import { createContext, createSignal } from "solid-js";
+import type { Content, ContentStage, ContentDetails, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
 import { Api } from "./api";
 
 export interface AlertStore {

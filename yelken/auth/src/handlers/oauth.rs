@@ -27,7 +27,7 @@ pub(crate) struct OauthProviderConfig {
 }
 
 pub struct AuthConfigInner {
-    pub saas: OauthProviderConfig,
+    pub cloud: OauthProviderConfig,
 }
 
 #[derive(Clone)]
@@ -37,22 +37,22 @@ impl AuthConfig {
     pub fn from_env() -> anyhow::Result<Self> {
         use anyhow::Context;
 
-        let saas_redirect_endpoint = std::env::var("YELKEN_SAAS_OAUTH_REDIRECT_ENDPOINT")
-            .context("YELKEN_SAAS_OAUTH_REDIRECT_ENDPOINT is not defined")?;
-        let saas_token_endpoint = std::env::var("YELKEN_SAAS_OAUTH_TOKEN_ENDPOINT")
-            .context("YELKEN_SAAS_OAUTH_TOKEN_ENDPOINT is not defined")?;
+        let cloud_redirect_endpoint = std::env::var("YELKEN_CLOUD_OAUTH_REDIRECT_ENDPOINT")
+            .context("YELKEN_CLOUD_OAUTH_REDIRECT_ENDPOINT is not defined")?;
+        let cloud_token_endpoint = std::env::var("YELKEN_CLOUD_OAUTH_TOKEN_ENDPOINT")
+            .context("YELKEN_CLOUD_OAUTH_TOKEN_ENDPOINT is not defined")?;
 
-        let saas_client_id = std::env::var("YELKEN_SAAS_OAUTH_CLIENT_ID")
-            .context("YELKEN_SAAS_OAUTH_CLIENT_ID is not defined")?;
-        let saas_client_secret = std::env::var("YELKEN_SAAS_OAUTH_CLIENT_SECRET")
-            .context("YELKEN_SAAS_OAUTH_CLIENT_SECRET is not defined")?;
+        let cloud_client_id = std::env::var("YELKEN_CLOUD_OAUTH_CLIENT_ID")
+            .context("YELKEN_CLOUD_OAUTH_CLIENT_ID is not defined")?;
+        let cloud_client_secret = std::env::var("YELKEN_CLOUD_OAUTH_CLIENT_SECRET")
+            .context("YELKEN_CLOUD_OAUTH_CLIENT_SECRET is not defined")?;
 
         Ok(Self(Arc::new(AuthConfigInner {
-            saas: OauthProviderConfig {
-                redirect_endpoint: saas_redirect_endpoint,
-                token_endpoint: saas_token_endpoint,
-                client_id: saas_client_id,
-                client_secret: saas_client_secret,
+            cloud: OauthProviderConfig {
+                redirect_endpoint: cloud_redirect_endpoint,
+                token_endpoint: cloud_token_endpoint,
+                client_id: cloud_client_id,
+                client_secret: cloud_client_secret,
             },
         })))
     }
@@ -93,12 +93,12 @@ pub async fn redirect_oauth_provider(
     let oauth_state_hash = crypto.sign512(oauth_state.as_bytes());
 
     let location = Url::parse_with_params(
-        &auth_config.saas.redirect_endpoint,
+        &auth_config.cloud.redirect_endpoint,
         &[
-            ("client_id", auth_config.saas.client_id.as_str()),
+            ("client_id", auth_config.cloud.client_id.as_str()),
             (
                 "redirect_uri",
-                format!("{}/api/auth/oauth/saas", state.config.backend_origin).as_str(),
+                format!("{}/api/auth/oauth/cloud", state.config.backend_origin).as_str(),
             ),
             (
                 "state",
@@ -120,7 +120,7 @@ pub struct OauthProviderResponse {
     error: Option<String>,
 }
 
-pub async fn saas_oauth(
+pub async fn cloud_oauth(
     State(state): State<AppState>,
     Extension(crypto): Extension<Crypto>,
     Extension(auth_config): Extension<AuthConfig>,
@@ -166,12 +166,12 @@ pub async fn saas_oauth(
     let client = reqwest::ClientBuilder::default().build().unwrap();
 
     let resp = match client
-        .post(&auth_config.saas.token_endpoint)
+        .post(&auth_config.cloud.token_endpoint)
         .form(&UserInfoRequest {
             code: &code,
-            client_id: &auth_config.saas.client_id,
-            client_secret: &auth_config.saas.client_secret,
-            redirect_uri: format!("{}/api/auth/oauth/saas", state.config.backend_origin).as_str(),
+            client_id: &auth_config.cloud.client_id,
+            client_secret: &auth_config.cloud.client_secret,
+            redirect_uri: format!("{}/api/auth/oauth/cloud", state.config.backend_origin).as_str(),
         })
         .send()
         .await
@@ -201,7 +201,7 @@ pub async fn saas_oauth(
         .filter(
             users::openid
                 .eq(&user_info.id)
-                .and(users::login_kind.eq(LoginKind::Saas)),
+                .and(users::login_kind.eq(LoginKind::Cloud)),
         )
         .select((users::id, users::email))
         .first::<(i32, String)>(&mut conn)
@@ -230,7 +230,7 @@ pub async fn saas_oauth(
                     users::username.eq(generate_username(&user_info.name)),
                     users::name.eq(user_info.name),
                     users::email.eq(&user_info.email),
-                    users::login_kind.eq(LoginKind::Saas),
+                    users::login_kind.eq(LoginKind::Cloud),
                     users::openid.eq(user_info.id),
                 ))
                 .get_result::<User>(&mut conn)

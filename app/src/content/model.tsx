@@ -2,7 +2,7 @@ import { createMemo, createSignal, For, Show, useContext } from "solid-js";
 import { ContentContext } from "../context";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
-import { CreateModelField } from "../models";
+import type { CreateModelField } from "../models";
 import { HttpError } from "../api";
 import XLg from 'bootstrap-icons/icons/x-lg.svg';
 import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';

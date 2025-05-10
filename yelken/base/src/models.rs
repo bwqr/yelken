@@ -44,14 +44,14 @@ impl FromSql<Text, Pg> for UserState {
 #[diesel(sql_type = Text)]
 pub enum LoginKind {
     Email,
-    Saas,
+    Cloud,
 }
 
 impl ToSql<Text, Pg> for LoginKind {
     fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
         match *self {
             LoginKind::Email => out.write_all(b"email")?,
-            LoginKind::Saas => out.write_all(b"saas")?,
+            LoginKind::Cloud => out.write_all(b"cloud")?,
         }
 
         Ok(IsNull::No)
@@ -62,7 +62,7 @@ impl FromSql<Text, Pg> for LoginKind {
     fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
         match bytes.as_bytes() {
             b"email" => Ok(LoginKind::Email),
-            b"saas" => Ok(LoginKind::Saas),
+            b"cloud" => Ok(LoginKind::Cloud),
             _ => Err("Unrecognized enum variant".into()),
         }
     }
