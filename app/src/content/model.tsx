@@ -66,7 +66,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                         type="text"
                                         id="modelFieldName"
                                         class="form-control"
-                                        class:is-invalid={validationErrors().has(ValidationError.Name)}
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                         name="name"
                                         value={name()}
                                         onInput={(ev) => setName(ev.target.value)}
@@ -80,7 +80,7 @@ const CreateModelFieldModal = (props: { close: () => void; create: (field: Creat
                                     <select
                                         id="modelFieldId"
                                         class="form-select"
-                                        class:is-invalid={validationErrors().has(ValidationError.Field)}
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Field) }}
                                         name="fieldId"
                                         value={fieldId() ?? ''}
                                         onChange={(ev) => setFieldId(parseInt(ev.target.value))}
@@ -207,7 +207,7 @@ export const CreateModel = () => {
                         <input
                             type="text"
                             class="form-control"
-                            class:is-invalid={validationErrors().has(ValidationError.Name)}
+                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                             id="modelName"
                             name="name"
                             value={name()}
@@ -273,7 +273,7 @@ export const CreateModel = () => {
                         <button
                             type="button"
                             class="btn btn-outline-secondary icon-link justify-content-center w-100"
-                            class:btn-outline-danger={validationErrors().has(ValidationError.Field)}
+                            classList={{ 'btn-outline-danger': validationErrors().has(ValidationError.Field) }}
                             onClick={() => setShowModal(true)}
                         >
                             <PlusSquareDotted viewBox="0 0 16 16" />

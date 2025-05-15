@@ -32,8 +32,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                 {(alert) =>
                     <div
                         class="border rounded border-2 px-3 py-3 d-flex"
-                        class:border-success={alert.state === AlertState.Success}
-                        class:border-danger={alert.state === AlertState.Failure}
+                        classList={{ 'border-success': alert.state === AlertState.Success, 'border-danger': alert.state === AlertState.Failure }}
                         role="alert"
                         style="background-color: var(--bs-body-bg); min-width: 18rem;"
                     >

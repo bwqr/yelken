@@ -202,7 +202,7 @@ export const CreateContent = () => {
                                         type="text"
                                         id="contentName"
                                         class="form-control"
-                                        class:is-invalid={validationErrors().has(ValidationError.Name)}
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                         name="contentName"
                                         value={name()}
                                         onInput={(ev) => setName(ev.target.value)}
@@ -288,7 +288,7 @@ export const CreateContent = () => {
                                                             setValues(mf.id, values[mf.id].length, { modelFieldId: mf.id, value: '', locale });
                                                         }}
                                                     >
-                                                        <PlusSquareDotted viewBox="0 0 16 16"/>
+                                                        <PlusSquareDotted viewBox="0 0 16 16" />
                                                         Add value
                                                     </button>
                                                 </Show>
