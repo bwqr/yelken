@@ -2,9 +2,39 @@ use std::net::SocketAddrV4;
 
 use anyhow::{Context, Result};
 
+pub struct DatabaseConfig {
+    pub url: String,
+}
+
+impl DatabaseConfig {
+    pub fn from_env() -> Result<Self> {
+        if let Ok(url) = std::env::var("YELKEN_DATABASE_URL") {
+            return Ok(Self { url });
+        }
+
+        let backend = std::env::var("YELKEN_DATABASE_PROTOCOL")
+            .context("YELKEN_DATABASE_PROTOCOL is not defined")?;
+
+        let host =
+            std::env::var("YELKEN_DATABASE_HOST").context("YELKEN_DATABASE_HOST is not defined")?;
+
+        let database =
+            std::env::var("YELKEN_DATABASE_NAME").context("YELKEN_DATABASE_NAME is not defined")?;
+
+        let user =
+            std::env::var("YELKEN_DATABASE_USER").context("YELKEN_DATABASE_USER is not defined")?;
+
+        let password = std::env::var("YELKEN_DATABASE_PASSWORD")
+            .context("YELKEN_DATABASE_PASSWORD is not defined")?;
+
+        Ok(Self {
+            url: format!("{backend}://{user}:{password}@{host}/{database}"),
+        })
+    }
+}
+
 pub struct ServerConfig {
     pub address: SocketAddrV4,
-    pub database_url: String,
     pub app_assets_dir: String,
     pub storage_dir: String,
 }
@@ -18,9 +48,6 @@ impl ServerConfig {
             .parse()
             .context("invalid YELKEN_BIND_ADDRESS is given")?;
 
-        let database_url =
-            std::env::var("YELKEN_DATABASE_URL").context("YELKEN_DATABASE_URL is not defined")?;
-
         let app_assets_dir = std::env::var("YELKEN_APP_ASSETS_DIR")
             .context("YELKEN_APP_ASSETS_DIR is not defined")?;
 
@@ -29,7 +56,6 @@ impl ServerConfig {
 
         Ok(Self {
             address,
-            database_url,
             app_assets_dir,
             storage_dir,
         })

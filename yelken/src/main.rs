@@ -14,7 +14,7 @@ use base::{
     types::{Connection, Pool},
     AppState,
 };
-use config::ServerConfig;
+use config::{DatabaseConfig, ServerConfig};
 use diesel::prelude::*;
 use diesel_async::{
     pooled_connection::{bb8, AsyncDieselConnectionManager},
@@ -85,6 +85,22 @@ async fn main() {
 
     env_logger::init();
 
+    let command = std::env::args().nth(1).unwrap_or("".to_string());
+
+    if command == "migrate" || command == "migrate-run" {
+        let db_config = DatabaseConfig::from_env().unwrap();
+
+        setup::migrate(
+            &mut <diesel::PgConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
+        )
+        .unwrap();
+
+        if command != "migrate-run" {
+            return;
+        }
+    }
+
+    let db_config = DatabaseConfig::from_env().unwrap();
     let config = Config::from_env().unwrap();
     let server_config = ServerConfig::from_env().unwrap();
 
@@ -94,8 +110,7 @@ async fn main() {
         Operator::new(builder).unwrap().finish()
     };
 
-    let db_config =
-        AsyncDieselConnectionManager::<AsyncPgConnection>::new(&server_config.database_url);
+    let db_config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(&db_config.url);
     let pool: Pool = bb8::Pool::builder().build(db_config).await.unwrap();
 
     let crypto = Crypto::new(

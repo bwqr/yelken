@@ -7,6 +7,7 @@ members = [
   "content",
   "form",
   "plugin",
+  "setup",
   "ui",
   "user",
 ]
@@ -45,6 +46,7 @@ form = { path = "./form", optional = true }
 plugin = { path = "./plugin", optional = true }
 ui = { path = "./ui", optional = true }
 user = { path = "./user", optional = true }
+setup = { path = "./setup", optional = true }
 
 anyhow.workspace = true
 axum.workspace = true
@@ -74,12 +76,13 @@ inherits = "dev"
 lto = true
 
 [features]
-default = ["admin", "app", "auth", "content", "ui", "user"]
+default = ["admin", "app", "auth", "content", "setup", "ui", "user"]
 admin = ["dep:admin"]
 app = ["dep:app"]
 auth = ["dep:auth", "auth?/email"]
 content = ["dep:content"]
 form = ["dep:form"]
 plugin = ["dep:plugin", "ui?/plugin"]
+setup = ["dep:setup"]
 ui = ["dep:ui"]
 user = ["dep:user"]
