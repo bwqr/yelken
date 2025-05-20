@@ -10,28 +10,30 @@ members = [
   "setup",
   "ui",
   "user",
+  "wasm",
 ]
 
 [package]
 name = "yelken"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.95"
 arc-swap = "1.7.1"
-axum = "0.8.1"
+axum = { version = "0.8.4", default-features = false, features = ["json", "query"] }
 chrono = { version = "0.4.39", default-features = false, features = ["clock", "serde"] }
-diesel = { version = "2.2.7", features = ["postgres", "chrono"] }
-diesel-async = { version = "0.5.2", features = ["bb8", "postgres"] }
+diesel = { git = "https://github.com/bwqr/diesel.git", branch = "master", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35"] }
+diesel-async = { git = "https://github.com/bwqr/diesel_async.git", branch = "async-sqlite-batch-insert", features = ["deadpool", "sqlite"] }
 fluent = { version = "0.16.1", default-features = false }
-log = "0.4.25"
+futures = { version = "0.3.31", default-features = false }
+log = "0.4.27"
 rand = "0.9.0"
 reqwest = { version = "0.12.12", default-features = false, features = ["json", "rustls-tls"] }
-opendal = "0.53.0"
+opendal = { version = "0.53.0", default-features = false, features = ["services-memory"] }
 serde = { version = "1.0.217", features = ["rc", "serde_derive"] }
 serde_json = "1.0.140"
-tokio = { version = "1.43.0", features = ["full"] }
+tokio = { version = "1.43.0", default-features = false }
 tower = "0.5.2"
 tower-http = { version = "0.6.2" }
 unic-langid = "0.9.5"
@@ -55,13 +57,11 @@ diesel-async.workspace = true
 dotenvy = "0.15.7"
 env_logger = "0.11.6"
 log.workspace = true
-serde.workspace = true
-tokio.workspace = true
+rand.workspace = true
+opendal.workspace = true
+tokio = { workspace = true, optional = true }
 tower.workspace = true
-tower-http = { workspace = true, features = ["cors", "fs"] }
-unic-langid.workspace = true
-
-opendal = { workspace = true, features = ["services-fs"] }
+tower-http = { workspace = true, features = ["cors"] }
 
 [profile.dev]
 debug = false
@@ -69,14 +69,14 @@ debug = false
 [profile.dev.package."*"]
 opt-level = 3
 
-[profile.dev-wasm]
-inherits = "dev"
-
 [profile.release]
 lto = true
 
 [features]
-default = ["admin", "app", "auth", "content", "setup", "ui", "user"]
+default = [
+  "admin", "app", "auth", "content", "setup", "ui", "user",
+  "axum/default", "tokio/full"
+]
 admin = ["dep:admin"]
 app = ["dep:app"]
 auth = ["dep:auth", "auth?/email"]

@@ -1,0 +1,282 @@
+use std::{sync::Arc, time::Instant};
+
+use axum::{extract::Request, http::{self, HeaderValue}, middleware::Next, response::Response, Extension, Router};
+use base::{
+    AppState,
+    async_sqlite::AsyncSqliteConnection,
+    config::{Config, Options},
+    crypto::Crypto,
+    schema::options,
+    types::Pool,
+};
+use config::{DatabaseConfig, ServerConfig};
+use diesel::prelude::*;
+use diesel_async::{
+    RunQueryDsl,
+    pooled_connection::{AsyncDieselConnectionManager, deadpool},
+};
+use tower::ServiceBuilder;
+use tower_http::cors::CorsLayer;
+
+pub mod config;
+
+async fn logger(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_owned();
+
+    let start = Instant::now();
+
+    let res = next.run(req).await;
+
+    log::info!(
+        "{:?} - {} - {}",
+        path,
+        res.status(),
+        Instant::now().duration_since(start).as_secs_f32()
+    );
+
+    res
+}
+
+async fn load_options(mut conn: base::types::Connection) -> Options {
+    let option_values = options::table
+        .filter(options::namespace.is_null())
+        .filter(options::name.eq_any(&["theme", "default_locale"]))
+        .select((options::name, options::value))
+        .load::<(String, String)>(&mut conn)
+        .await
+        .unwrap();
+
+    let theme: Arc<str> = match option_values.iter().find(|opt| opt.0 == "theme") {
+        Some((_, theme)) => Into::<Arc<str>>::into(theme.as_str()),
+        None => {
+            log::warn!("No value found for \"theme\" option, using default \"yelken.default\"");
+
+            "yelken.default".into()
+        }
+    };
+
+    let default_locale = match option_values
+        .iter()
+        .find(|opt| opt.0 == "default_locale")
+        .and_then(|opt| opt.1.parse().ok())
+    {
+        Some(default_locale) => default_locale,
+        None => {
+            log::warn!(
+                "No value or an invalid one found for \"default_locale\" option, using default \"en\""
+            );
+
+            "en".parse().unwrap()
+        }
+    };
+
+    let locales = Options::load_locales(&mut conn).await.unwrap();
+
+    Options::new(theme, locales, default_locale)
+}
+
+pub async fn router() -> Router<()> {
+    let db_config = DatabaseConfig::from_env().unwrap();
+    let config = Config::from_env().unwrap();
+    let server_config = ServerConfig::from_env().unwrap();
+
+    let storage = {
+        // let builder = opendal::services::Fs::default().root(&server_config.storage_dir);
+        let builder = opendal::services::Memory::default();
+
+        opendal::Operator::new(builder).unwrap().finish()
+    };
+
+    let db_config = AsyncDieselConnectionManager::<AsyncSqliteConnection>::new(&db_config.url);
+    let pool: Pool = deadpool::Pool::builder(db_config).build().unwrap();
+
+    let crypto = Crypto::new(
+        std::env::var("YELKEN_SECRET_KEY")
+            .expect("YELKEN_SECRET_KEY is not provided in env")
+            .as_str(),
+    );
+
+    let options = load_options(pool.get().await.unwrap()).await;
+
+    let cors = CorsLayer::new()
+        .allow_methods([
+            http::Method::GET,
+            http::Method::POST,
+            http::Method::PUT,
+            http::Method::DELETE,
+        ])
+        .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
+        .allow_origin(config.frontend_origin.parse::<HeaderValue>().unwrap());
+
+    let state = AppState::new(config, pool, storage.clone());
+
+    let layers = ServiceBuilder::new()
+        .layer(cors)
+        .layer(Extension(crypto))
+        .layer(Extension(options.clone()));
+
+    let app = Router::new();
+    // let app = Router::new()
+    //     .nest_service(
+    //         "/assets/static",
+    //         ServeDir::new(format!("{}/assets", server_config.storage_dir)),
+    //     )
+    //     .nest_service(
+    //         "/assets/content",
+    //         ServeDir::new(format!("{}/content", server_config.storage_dir)),
+    //     );
+
+    #[cfg(feature = "admin")]
+    let app = app.nest("/api/admin", admin::router(state.clone()));
+
+    #[cfg(feature = "app")]
+    let app = app.nest(
+        "/yk/app/",
+        app::router(&state.config.backend_origin, &server_config.app_assets_dir),
+    );
+
+    #[cfg(feature = "app")]
+    let app = app.route(
+        "/yk/app",
+        axum::routing::get((
+            axum::http::StatusCode::PERMANENT_REDIRECT,
+            [(
+                axum::http::header::LOCATION,
+                axum::http::HeaderValue::from_static("/yk/app/"),
+            )],
+        )),
+    );
+
+    #[cfg(feature = "auth")]
+    let app = app.nest("/api/auth", auth::router());
+
+    #[cfg(feature = "content")]
+    let app = app.nest("/api/content", content::router(state.clone()));
+
+    #[cfg(feature = "form")]
+    let app = app.nest("/yk/form", form::router());
+
+    #[cfg(feature = "plugin")]
+    let (app, layers, plugin_host) = {
+        let plugin_host = plugin::PluginHost::new(
+            &format!("{}/plugins", server_config.storage_dir),
+            state.pool.get().await.unwrap(),
+        )
+        .await
+        .unwrap();
+
+        (
+            app.nest("/api/plugin", plugin::router(state.clone())),
+            layers.layer(Extension(plugin_host.clone())),
+            plugin_host,
+        )
+    };
+
+    #[cfg(feature = "ui")]
+    let (app, layers) = {
+        let l10n = ui::L10n::new(
+            &storage,
+            &options.locale_locations(),
+            &options.locales(),
+            options.default_locale(),
+        )
+        .await;
+
+        #[cfg(feature = "plugin")]
+        let resources = (l10n.clone(), state.pool.clone(), plugin_host);
+        #[cfg(not(feature = "plugin"))]
+        let resources = (l10n.clone(), state.pool.clone());
+
+        let render = ui::Render::new(
+            &storage,
+            &options.template_locations(),
+            Some(resources.clone()),
+        )
+        .await
+        .inspect_err(|e| log::error!("Failed to initialize Render, using an empty instance, {e:?}"))
+        .unwrap_or_else(|_| ui::Render::empty(Some(resources)));
+
+        (
+            app.nest("/api/ui", ui::router(state.clone()))
+                .fallback(ui::serve_page),
+            layers.layer(Extension(l10n)).layer(Extension(render)),
+        )
+    };
+
+    #[cfg(feature = "user")]
+    let app = app.nest("/api/user", user::router(state.clone()));
+
+    let app = app
+        .with_state(state)
+        .layer(layers.layer(axum::middleware::from_fn(logger)));
+
+    app
+}
+
+pub async fn router2() -> Router<()> {
+    let mut conn = SqliteConnection::establish("/file.db").unwrap();
+
+    let db_config = AsyncDieselConnectionManager::<AsyncSqliteConnection>::new("/file.db");
+    let pool: Pool = deadpool::Pool::builder(db_config).build().unwrap();
+
+    let storage = opendal::Operator::new(opendal::services::Memory::default())
+        .unwrap()
+        .finish();
+
+    let crypto = Crypto::new("super_secret");
+
+    let options = load_options(pool.get().await.unwrap()).await;
+
+    // crate::setup::load_theme(&*options.theme(), &storage).await;
+
+    let state = AppState::new(
+        Config {
+            env: "dev".to_string(),
+            tmp_dir: "/tmp".to_string(),
+            backend_origin: "http://localhost:5173".to_string(),
+            frontend_origin: "http://localhost:5173".to_string(),
+            reload_templates: false,
+        },
+        pool,
+        storage,
+    );
+
+    // crate::setup::create_admin_user(
+    //     &crypto,
+    //     &mut state.pool.get().await.unwrap(),
+    //     name,
+    //     email,
+    //     password,
+    // )
+    // .await;
+
+    let l10n = ui::L10n::new(
+        &state.storage,
+        &options.locale_locations(),
+        &options.locales(),
+        options.default_locale(),
+    )
+    .await;
+    let resources = (l10n.clone(), state.pool.clone());
+    let render = ui::Render::new(
+        &state.storage,
+        &options.template_locations(),
+        Some(resources.clone()),
+    )
+    .await
+    .inspect_err(|e| ::log::error!("Failed to initialize Render, using an empty instance, {e:?}"))
+    .unwrap_or_else(|_| ui::Render::empty(Some(resources)));
+
+    Router::new()
+        // .nest("/yk/app/", app::router(&state.config.backend_origin))
+        .nest("/api/auth", auth::router())
+        .nest("/api/user", user::router(state.clone()))
+        .nest("/api/content", content::router(state.clone()))
+        .nest("/api/ui", ui::router(state.clone()))
+        .fallback(ui::serve_page)
+        .layer(Extension(l10n))
+        .layer(Extension(render))
+        .layer(Extension(crypto))
+        .layer(Extension(options))
+        .with_state(state)
+}

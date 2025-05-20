@@ -2,7 +2,10 @@ use axum::{
     extract::{Path, Query, State},
     Extension, Json,
 };
-use base::{config::Options, models::Locale, responses::HttpError, schema::locales, AppState};
+use base::{
+    config::Options, models::Locale, responses::HttpError, schema::locales, AppState,
+    IntoSendFuture,
+};
 use diesel::{
     prelude::*,
     result::{DatabaseErrorKind, Error},
@@ -170,6 +173,7 @@ pub async fn update_locale_resource(
     state
         .storage
         .write(&path, req.resource)
+        .into_send_future()
         .await
         .inspect_err(|e| log::error!("Failed to write resource at path {path}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_writing_resource"))?;
@@ -217,6 +221,7 @@ pub async fn delete_locale_resource(
     state
         .storage
         .delete(&path)
+        .into_send_future()
         .await
         .inspect_err(|e| log::error!("Failed to remove locale resource at path {path}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_deleting_resource"))?;

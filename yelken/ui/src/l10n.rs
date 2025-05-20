@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use arc_swap::ArcSwap;
+use base::IntoSendFuture;
 use fluent::{concurrent::FluentBundle, FluentArgs, FluentResource, FluentValue};
 use opendal::Operator;
 use unic_langid::LanguageIdentifier;
@@ -9,6 +10,7 @@ use unic_langid::LanguageIdentifier;
 async fn load_resource(storage: &Operator, path: &str) -> Result<FluentResource> {
     let ftl = storage
         .read(&path)
+        .into_send_future()
         .await
         .map(|buf| std::str::from_utf8(&*buf.to_bytes()).map(|s| s.to_string()))??;
 

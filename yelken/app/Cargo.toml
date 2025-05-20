@@ -10,4 +10,7 @@ axum.workspace = true
 log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tower-http = { workspace = true, features = ["fs"] }
+tower.workspace = true
+
+include_dir = "0.7.4"
+mime_guess = "2.0.5"

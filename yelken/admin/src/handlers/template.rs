@@ -2,7 +2,7 @@ use axum::{
     extract::{Query, State},
     Extension, Json,
 };
-use base::{config::Options, responses::HttpError, AppState};
+use base::{config::Options, responses::HttpError, AppState, IntoSendFuture};
 use ui::Render;
 
 use crate::requests::{DeleteTemplate, UpdateTemplate};
@@ -25,6 +25,7 @@ pub async fn update_template(
     state
         .storage
         .write(&path, req.template)
+        .into_send_future()
         .await
         .inspect_err(|e| log::error!("Failed to write template at path {path:?}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_writing_template"))?;
@@ -32,6 +33,7 @@ pub async fn update_template(
     // TODO handle invalid template case before writing the received template
     render
         .reload(&state.storage, &options.template_locations())
+        .into_send_future()
         .await
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
@@ -57,12 +59,14 @@ pub async fn delete_template(
     state
         .storage
         .delete(&path)
+        .into_send_future()
         .await
         .inspect_err(|e| log::error!("Failed to remove template at path {path:?}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_deleting_resource"))?;
 
     render
         .reload(&state.storage, &options.template_locations())
+        .into_send_future()
         .await
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;

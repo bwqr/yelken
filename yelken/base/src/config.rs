@@ -133,8 +133,8 @@ impl Options {
 }
 
 impl Options {
-    pub async fn load_locales<'a>(
-        conn: &mut Connection<'a>,
+    pub async fn load_locales(
+        conn: &mut Connection,
     ) -> diesel::QueryResult<Arc<[LanguageIdentifier]>> {
         use diesel::prelude::*;
         use diesel_async::RunQueryDsl;
