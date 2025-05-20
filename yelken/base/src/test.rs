@@ -1,4 +1,4 @@
-use crate::async_sqlite::AsyncSqliteConnection;
+use crate::types::Connection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncConnection};
 
 use crate::types::Pool;
@@ -10,7 +10,7 @@ pub const DB_CONFIG: &'static str = if let Some(env) = option_env!("YELKEN_TEST_
 };
 
 pub async fn create_pool(conn_str: &str) -> Pool {
-    let manager = AsyncDieselConnectionManager::<AsyncSqliteConnection>::new(conn_str);
+    let manager = AsyncDieselConnectionManager::<Connection>::new(conn_str);
 
     let pool: Pool = Pool::builder(manager).build().unwrap();
 

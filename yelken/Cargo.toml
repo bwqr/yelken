@@ -23,8 +23,8 @@ anyhow = "1.0.95"
 arc-swap = "1.7.1"
 axum = { version = "0.8.4", default-features = false, features = ["json", "query"] }
 chrono = { version = "0.4.39", default-features = false, features = ["clock", "serde"] }
-diesel = { git = "https://github.com/bwqr/diesel.git", branch = "master", features = ["sqlite", "chrono", "returning_clauses_for_sqlite_3_35"] }
-diesel-async = { git = "https://github.com/bwqr/diesel_async.git", branch = "async-sqlite-batch-insert", features = ["deadpool", "sqlite"] }
+diesel = { git = "https://github.com/bwqr/diesel.git", branch = "master", features = ["chrono"] }
+diesel-async = { git = "https://github.com/bwqr/diesel_async.git", branch = "async-sqlite-batch-insert", features = ["deadpool"] }
 fluent = { version = "0.16.1", default-features = false }
 futures = { version = "0.3.31", default-features = false }
 log = "0.4.27"
@@ -75,6 +75,7 @@ lto = true
 [features]
 default = [
   "admin", "app", "auth", "content", "setup", "ui", "user",
+  "base/postgres",
   "axum/default", "tokio/full"
 ]
 admin = ["dep:admin"]

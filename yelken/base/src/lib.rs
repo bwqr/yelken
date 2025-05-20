@@ -4,6 +4,7 @@ use config::Config;
 use opendal::Operator;
 use types::Pool;
 
+#[cfg(feature = "sqlite")]
 pub mod async_sqlite;
 pub mod config;
 pub mod crypto;

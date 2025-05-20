@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
+base.path = "../base"
 yelken = { path = "../", default-features = false }
 
 axum.workspace = true
@@ -24,4 +25,7 @@ wasm-bindgen-futures = "0.4.50"
 web-sys = { version = "0.3.77", features = ["Headers", "Response", "ResponseInit"] }
 
 [features]
-default = ["yelken/admin", "yelken/app", "yelken/auth", "yelken/content", "yelken/setup", "yelken/ui", "yelken/user"]
+default = [
+  "yelken/admin", "yelken/app", "yelken/auth", "yelken/content", "yelken/setup", "yelken/ui", "yelken/user",
+  "base/sqlite",
+]

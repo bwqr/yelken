@@ -1,13 +1,18 @@
 use std::{sync::Arc, time::Instant};
 
-use axum::{extract::Request, http::{self, HeaderValue}, middleware::Next, response::Response, Extension, Router};
+use axum::{
+    Extension, Router,
+    extract::Request,
+    http::{self, HeaderValue},
+    middleware::Next,
+    response::Response,
+};
 use base::{
     AppState,
-    async_sqlite::AsyncSqliteConnection,
     config::{Config, Options},
     crypto::Crypto,
     schema::options,
-    types::Pool,
+    types::{Connection, Pool, PooledConnection},
 };
 use config::{DatabaseConfig, ServerConfig};
 use diesel::prelude::*;
@@ -37,7 +42,7 @@ async fn logger(req: Request, next: Next) -> Response {
     res
 }
 
-async fn load_options(mut conn: base::types::Connection) -> Options {
+async fn load_options(mut conn: PooledConnection) -> Options {
     let option_values = options::table
         .filter(options::namespace.is_null())
         .filter(options::name.eq_any(&["theme", "default_locale"]))
@@ -87,7 +92,7 @@ pub async fn router() -> Router<()> {
         opendal::Operator::new(builder).unwrap().finish()
     };
 
-    let db_config = AsyncDieselConnectionManager::<AsyncSqliteConnection>::new(&db_config.url);
+    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
     let pool: Pool = deadpool::Pool::builder(db_config).build().unwrap();
 
     let crypto = Crypto::new(
@@ -211,72 +216,4 @@ pub async fn router() -> Router<()> {
         .layer(layers.layer(axum::middleware::from_fn(logger)));
 
     app
-}
-
-pub async fn router2() -> Router<()> {
-    let mut conn = SqliteConnection::establish("/file.db").unwrap();
-
-    let db_config = AsyncDieselConnectionManager::<AsyncSqliteConnection>::new("/file.db");
-    let pool: Pool = deadpool::Pool::builder(db_config).build().unwrap();
-
-    let storage = opendal::Operator::new(opendal::services::Memory::default())
-        .unwrap()
-        .finish();
-
-    let crypto = Crypto::new("super_secret");
-
-    let options = load_options(pool.get().await.unwrap()).await;
-
-    // crate::setup::load_theme(&*options.theme(), &storage).await;
-
-    let state = AppState::new(
-        Config {
-            env: "dev".to_string(),
-            tmp_dir: "/tmp".to_string(),
-            backend_origin: "http://localhost:5173".to_string(),
-            frontend_origin: "http://localhost:5173".to_string(),
-            reload_templates: false,
-        },
-        pool,
-        storage,
-    );
-
-    // crate::setup::create_admin_user(
-    //     &crypto,
-    //     &mut state.pool.get().await.unwrap(),
-    //     name,
-    //     email,
-    //     password,
-    // )
-    // .await;
-
-    let l10n = ui::L10n::new(
-        &state.storage,
-        &options.locale_locations(),
-        &options.locales(),
-        options.default_locale(),
-    )
-    .await;
-    let resources = (l10n.clone(), state.pool.clone());
-    let render = ui::Render::new(
-        &state.storage,
-        &options.template_locations(),
-        Some(resources.clone()),
-    )
-    .await
-    .inspect_err(|e| ::log::error!("Failed to initialize Render, using an empty instance, {e:?}"))
-    .unwrap_or_else(|_| ui::Render::empty(Some(resources)));
-
-    Router::new()
-        // .nest("/yk/app/", app::router(&state.config.backend_origin))
-        .nest("/api/auth", auth::router())
-        .nest("/api/user", user::router(state.clone()))
-        .nest("/api/content", content::router(state.clone()))
-        .nest("/api/ui", ui::router(state.clone()))
-        .fallback(ui::serve_page)
-        .layer(Extension(l10n))
-        .layer(Extension(render))
-        .layer(Extension(crypto))
-        .layer(Extension(options))
-        .with_state(state)
 }

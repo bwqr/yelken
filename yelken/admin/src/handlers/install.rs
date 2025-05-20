@@ -12,7 +12,7 @@ use base::{
     models::{ContentStage, Field},
     responses::HttpError,
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
-    types::Connection,
+    types::PooledConnection,
     AppState,
 };
 use bytes::Buf;
@@ -180,7 +180,7 @@ pub async fn install_theme(
 
 async fn install(
     storage: Operator,
-    conn: &mut Connection,
+    conn: &mut PooledConnection,
     reader: impl Read + Send + 'static,
     dir: PathBuf,
     user_id: i32,
@@ -305,7 +305,7 @@ fn extract_archive(
 }
 
 async fn create_theme(
-    conn: &mut Connection,
+    conn: &mut PooledConnection,
     manifest: ThemeManifest,
     user_id: i32,
 ) -> Result<(), HttpError> {

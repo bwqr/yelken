@@ -9,10 +9,10 @@ async fn main() {
     if command == "migrate" || command == "migrate-run" {
         let db_config = yelken::config::DatabaseConfig::from_env().unwrap();
 
-        setup::migrate(
-            &mut <diesel::SqliteConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
-        )
-        .unwrap();
+        // setup::migrate(
+        //     &mut <diesel::SqliteConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
+        // )
+        // .unwrap();
 
         if command != "migrate-run" {
             return;

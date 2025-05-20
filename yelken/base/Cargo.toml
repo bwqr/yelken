@@ -22,3 +22,7 @@ futures-util = { version = "0.3.31", default-features = false }
 jsonwebtoken = { version = "9.3.1", default-features = false }
 ring = "0.17.8"
 send_wrapper = { version = "0.6.0", features = ["futures"] }
+
+[features]
+postgres = ["diesel/postgres", "diesel-async/postgres"]
+sqlite = ["diesel/sqlite", "diesel/returning_clauses_for_sqlite_3_35", "diesel-async/sqlite"]
