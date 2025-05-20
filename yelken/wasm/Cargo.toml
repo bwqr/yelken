@@ -7,13 +7,17 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-base.path = "../base"
+base = { path = "../base", default-features = false }
+setup = { path = "../setup", features = ["sqlite"] }
 yelken = { path = "../", default-features = false }
 
 axum.workspace = true
 chrono = { workspace = true, features = ["wasmbind"] }
+diesel.workspace = true
+diesel-async.workspace = true
 log.workspace = true
 futures.workspace = true
+opendal.workspace = true
 tower.workspace = true
 
 console_error_panic_hook = { version = "0.1.7" }
@@ -26,6 +30,6 @@ web-sys = { version = "0.3.77", features = ["Headers", "Response", "ResponseInit
 
 [features]
 default = [
-  "yelken/admin", "yelken/app", "yelken/auth", "yelken/content", "yelken/setup", "yelken/ui", "yelken/user",
+  "yelken/admin", "yelken/app", "yelken/auth", "yelken/content", "yelken/ui", "yelken/user",
   "base/sqlite",
 ]

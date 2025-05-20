@@ -1,45 +1,24 @@
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 
 use axum::{
     Extension, Router,
-    extract::Request,
     http::{self, HeaderValue},
-    middleware::Next,
-    response::Response,
 };
 use base::{
     AppState,
     config::{Config, Options},
     crypto::Crypto,
     schema::options,
-    types::{Connection, Pool, PooledConnection},
+    types::{Pool, PooledConnection},
 };
-use config::{DatabaseConfig, ServerConfig};
 use diesel::prelude::*;
-use diesel_async::{
-    RunQueryDsl,
-    pooled_connection::{AsyncDieselConnectionManager, deadpool},
-};
+use diesel_async::RunQueryDsl;
+use opendal::Operator;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
-pub mod config;
-
-async fn logger(req: Request, next: Next) -> Response {
-    let path = req.uri().path().to_owned();
-
-    let start = Instant::now();
-
-    let res = next.run(req).await;
-
-    log::info!(
-        "{:?} - {} - {}",
-        path,
-        res.status(),
-        Instant::now().duration_since(start).as_secs_f32()
-    );
-
-    res
+pub struct DatabaseConfig {
+    pub url: String,
 }
 
 async fn load_options(mut conn: PooledConnection) -> Options {
@@ -80,27 +59,7 @@ async fn load_options(mut conn: PooledConnection) -> Options {
     Options::new(theme, locales, default_locale)
 }
 
-pub async fn router() -> Router<()> {
-    let db_config = DatabaseConfig::from_env().unwrap();
-    let config = Config::from_env().unwrap();
-    let server_config = ServerConfig::from_env().unwrap();
-
-    let storage = {
-        // let builder = opendal::services::Fs::default().root(&server_config.storage_dir);
-        let builder = opendal::services::Memory::default();
-
-        opendal::Operator::new(builder).unwrap().finish()
-    };
-
-    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
-    let pool: Pool = deadpool::Pool::builder(db_config).build().unwrap();
-
-    let crypto = Crypto::new(
-        std::env::var("YELKEN_SECRET_KEY")
-            .expect("YELKEN_SECRET_KEY is not provided in env")
-            .as_str(),
-    );
-
+pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operator) -> Router<()> {
     let options = load_options(pool.get().await.unwrap()).await;
 
     let cors = CorsLayer::new()
@@ -135,10 +94,7 @@ pub async fn router() -> Router<()> {
     let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
-    let app = app.nest(
-        "/yk/app/",
-        app::router(&state.config.backend_origin, &server_config.app_assets_dir),
-    );
+    let app = app.nest("/yk/app/", app::router(&state.config.backend_origin));
 
     #[cfg(feature = "app")]
     let app = app.route(
@@ -213,7 +169,7 @@ pub async fn router() -> Router<()> {
 
     let app = app
         .with_state(state)
-        .layer(layers.layer(axum::middleware::from_fn(logger)));
+        .layer(layers);
 
     app
 }

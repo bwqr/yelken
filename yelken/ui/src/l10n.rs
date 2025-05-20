@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use arc_swap::ArcSwap;
-use base::IntoSendFuture;
+use base::runtime::IntoSendFuture;
 use fluent::{concurrent::FluentBundle, FluentArgs, FluentResource, FluentValue};
 use opendal::Operator;
 use unic_langid::LanguageIdentifier;

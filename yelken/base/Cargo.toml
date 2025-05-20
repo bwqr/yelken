@@ -10,6 +10,7 @@ axum.workspace = true
 chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
+futures.workspace = true
 log.workspace = true
 opendal.workspace = true
 serde.workspace = true
@@ -17,11 +18,13 @@ tower.workspace = true
 unic-langid.workspace = true
 
 base64 = "0.22.1"
-futures.workspace = true
 futures-util = { version = "0.3.31", default-features = false }
 jsonwebtoken = { version = "9.3.1", default-features = false }
 ring = "0.17.8"
 send_wrapper = { version = "0.6.0", features = ["futures"] }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = { workspace = true, features = ["rt"] }
 
 [features]
 postgres = ["diesel/postgres", "diesel-async/postgres"]

@@ -1,4 +1,4 @@
-use std::{future::IntoFuture, ops::Deref, sync::Arc};
+use std::{ops::Deref, sync::Arc};
 
 use config::Config;
 use opendal::Operator;
@@ -12,39 +12,10 @@ pub mod middlewares;
 pub mod models;
 pub mod permission;
 pub mod responses;
+pub mod runtime;
 pub mod schema;
 pub mod test;
 pub mod types;
-
-pub trait IntoSendFuture {
-    type Output;
-
-    type IntoFuture: std::future::Future<Output = Self::Output>;
-
-    fn into_send_future(self) -> Self::IntoFuture;
-}
-
-#[cfg(not(target_family = "wasm"))]
-impl<T: IntoFuture + Send> IntoSendFuture for T {
-    type Output = T::Output;
-
-    type IntoFuture = T::IntoFuture;
-
-    fn into_send_future(self) -> Self::IntoFuture {
-        self.into_future()
-    }
-}
-
-#[cfg(target_family = "wasm")]
-impl<T: IntoFuture> IntoSendFuture for T {
-    type Output = T::Output;
-
-    type IntoFuture = send_wrapper::SendWrapper<T::IntoFuture>;
-
-    fn into_send_future(self) -> Self::IntoFuture {
-        send_wrapper::SendWrapper::new(self.into_future())
-    }
-}
 
 #[derive(Clone)]
 pub struct AppState(Arc<Inner>);

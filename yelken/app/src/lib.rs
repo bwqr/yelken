@@ -92,7 +92,7 @@ async fn handle_req(Extension(index): Extension<Index>, req: Request) -> Respons
     resp
 }
 
-pub fn router(backend_origin: &str, _app_assets_dir: &str) -> Router<AppState> {
+pub fn router(backend_origin: &str) -> Router<AppState> {
     let index = YK_APP
         .get_file("index.html")
         .unwrap()

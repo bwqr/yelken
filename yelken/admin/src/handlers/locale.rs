@@ -3,8 +3,8 @@ use axum::{
     Extension, Json,
 };
 use base::{
-    config::Options, models::Locale, responses::HttpError, schema::locales, AppState,
-    IntoSendFuture,
+    config::Options, models::Locale, responses::HttpError, runtime::IntoSendFuture,
+    schema::locales, AppState,
 };
 use diesel::{
     prelude::*,

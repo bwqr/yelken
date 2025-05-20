@@ -244,11 +244,14 @@ pub async fn serve_page(
         )),
         options.theme().to_string(),
     );
-    let res = {
+
+    let res = base::runtime::spawn_blocking(move || {
         let ctx = Value::from_object(ctx);
 
         render.render(&template, ctx)
-    };
+    })
+    .await
+    .unwrap();
 
     match res {
         Ok(html) => Ok(Html(html).into_response()),

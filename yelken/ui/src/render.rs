@@ -6,7 +6,7 @@ use base::models::ContentStage;
 use base::responses::HttpError;
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use base::types::Pool;
-use base::IntoSendFuture;
+use base::runtime::{block_on, IntoSendFuture};
 use context::{LocaleContext, PageContext};
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};
@@ -14,28 +14,6 @@ use opendal::{EntryMode, Operator};
 use unic_langid::LanguageIdentifier;
 
 use crate::l10n::L10n;
-
-fn block_on<F: std::future::Future>(f: F) -> F::Output {
-    use core::ptr::null;
-    use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
-    use core::{hint, pin::pin};
-
-    static WAKER: Waker = {
-        const RAW_WAKER: RawWaker = RawWaker::new(
-            null(),
-            &RawWakerVTable::new(|_| RAW_WAKER, |_| (), |_| (), |_| ()),
-        );
-        unsafe { Waker::from_raw(RAW_WAKER) }
-    };
-
-    let mut f = pin!(f);
-    loop {
-        match f.as_mut().poll(&mut Context::from_waker(&WAKER)) {
-            Poll::Ready(r) => break r,
-            Poll::Pending => hint::spin_loop(),
-        }
-    }
-}
 
 pub mod context {
     use minijinja::value::{Object, Value};

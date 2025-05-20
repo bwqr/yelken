@@ -9,6 +9,8 @@ use axum::{
     extract::Request,
     http::{HeaderName, HeaderValue},
 };
+use base::{crypto::Crypto, types::{Connection, SyncConnection}};
+use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use futures::StreamExt;
 use tower::Service;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -94,7 +96,32 @@ pub async fn app_init(name: String, email: String, password: String) {
 
     console_error_panic_hook::set_once();
 
-    let app = yelken::router().await;
+    let db_url = "/file.db";
+
+    setup::migrate(
+        &mut <SyncConnection as diesel::Connection>::establish(db_url).unwrap(),
+    )
+    .unwrap();
+
+    let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
+    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+
+    let crypto = Crypto::new("super_secret_key");
+    let config = base::config::Config {
+        env: "dev".to_string(),
+        tmp_dir: "/tmp".to_string(),
+        backend_origin: "http://localhost:5173".to_string(),
+        frontend_origin: "http://localhost:5173".to_string(),
+        reload_templates: false,
+    };
+
+    let storage = {
+        let builder = opendal::services::Memory::default();
+
+        opendal::Operator::new(builder).unwrap().finish()
+    };
+
+    let app = yelken::router(crypto, config, pool, storage).await;
 
     APP.set(Mutex::new(app)).unwrap();
 }
