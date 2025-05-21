@@ -9,7 +9,10 @@ pub trait IntoSendFuture {
 }
 
 #[cfg(not(target_family = "wasm"))]
-impl<T: IntoFuture + Send> IntoSendFuture for T {
+impl<T: IntoFuture + Send> IntoSendFuture for T
+where
+    T::IntoFuture: Send,
+{
     type Output = T::Output;
 
     type IntoFuture = T::IntoFuture;
@@ -54,13 +57,13 @@ pub fn block_on<F: std::future::Future>(f: F) -> F::Output {
 }
 
 #[cfg(target_family = "wasm")]
-/// Use this fn wisely. Any future that does not return immediately Poll:Ready will cause an infinite spin loop.
+/// Use this fn wisely. Any future that does not return immediately Poll:Ready will panic.
 /// This fn is used for running AsyncSqliteConnection futures to be used inside render.
 /// This is copied from [worst_executor](https://docs.rs/worst-executor/latest/worst_executor/).
 pub fn block_on<F: std::future::Future>(f: F) -> F::Output {
+    use core::pin::pin;
     use core::ptr::null;
     use core::task::{Context, Poll, RawWaker, RawWakerVTable, Waker};
-    use core::{hint, pin::pin};
 
     static WAKER: Waker = {
         const RAW_WAKER: RawWaker = RawWaker::new(
@@ -74,7 +77,9 @@ pub fn block_on<F: std::future::Future>(f: F) -> F::Output {
     loop {
         match f.as_mut().poll(&mut Context::from_waker(&WAKER)) {
             Poll::Ready(r) => break r,
-            Poll::Pending => hint::spin_loop(),
+            Poll::Pending => panic!(
+                "cannot block on not ready futures since wasm does not provide a blocking api"
+            ),
         }
     }
 }

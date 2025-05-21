@@ -33,7 +33,6 @@ pub async fn update_template(
     // TODO handle invalid template case before writing the received template
     render
         .reload(&state.storage, &options.template_locations())
-        .into_send_future()
         .await
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
@@ -66,7 +65,6 @@ pub async fn delete_template(
 
     render
         .reload(&state.storage, &options.template_locations())
-        .into_send_future()
         .await
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
