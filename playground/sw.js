@@ -1,13 +1,9 @@
 import wasmUrl from 'wasm/wasm_bg.wasm?url';
+import * as config from './src/config';
 import { app_init, serve_request, initSync } from 'wasm';
 
 const origin = new URL(import.meta.url).origin;
-const bypassPaths = [
-  '/@vite',
-  '/playground',
-  '/src',
-  '/node_modules',
-];
+const baseUrl = `${origin}${config.PREFIX}`;
 
 function sendRequest(request) {
   const header_keys = [];
@@ -19,7 +15,7 @@ function sendRequest(request) {
   });
 
   return request.bytes()
-    .then((bytes) => serve_request(request.method, request.url.replace('/playground', ''), header_keys, header_values, bytes));
+    .then((bytes) => serve_request(request.method, request.url, header_keys, header_values, bytes));
 }
 
 self.addEventListener('install', (event) => {
@@ -27,10 +23,10 @@ self.addEventListener('install', (event) => {
 
   event.waitUntil(
     fetch(wasmUrl)
-      .then((resp) => resp.bytes())
+      .then((resp) => WebAssembly.compileStreaming(resp))
       .then((wasm) => {
         initSync({ module: wasm });
-        return app_init('Yelken User', 'my@email.com', 'password');
+        return app_init(baseUrl, config.USER.name, config.USER.email, config.USER.password);
       })
   );
 });
@@ -38,19 +34,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  if (!(url.origin === origin && url.pathname.startsWith('/playground'))) {
+  if (!(url.origin === origin && url.pathname.startsWith(config.PREFIX))) {
     return;
   }
 
-  console.log('Handling fetch', event.request.url);
-
   event.respondWith(
     sendRequest(event.request)
-      .then((resp) => {
-        console.log('Responding with', resp);
-
-        return resp;
-      })
       .catch((e) => console.error(e))
   );
 });

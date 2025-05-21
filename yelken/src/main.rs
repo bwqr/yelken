@@ -69,11 +69,11 @@ fn config_from_env() -> Result<Config> {
 
     let tmp_dir = std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
 
-    let backend_origin =
-        std::env::var("YELKEN_BACKEND_ORIGIN").context("YELKEN_BACKEND_ORIGIN is not defined")?;
+    let backend_url =
+        std::env::var("YELKEN_BACKEND_URL").context("YELKEN_BACKEND_URL is not defined")?;
 
-    let frontend_origin =
-        std::env::var("YELKEN_FRONTEND_ORIGIN").context("YELKEN_FRONTEND_ORIGIN is not defined")?;
+    let frontend_url =
+        std::env::var("YELKEN_FRONTEND_URL").context("YELKEN_FRONTEND_URL is not defined")?;
 
     let reload_templates = std::env::var("YELKEN_RELOAD_TEMPLATES")
         .map(|var| var.as_str() == "on" || var.as_str() == "true" || var.as_str() == "yes")
@@ -82,8 +82,8 @@ fn config_from_env() -> Result<Config> {
     Ok(Config {
         env,
         tmp_dir,
-        backend_origin,
-        frontend_origin,
+        backend_url,
+        frontend_url,
         reload_templates,
     })
 }

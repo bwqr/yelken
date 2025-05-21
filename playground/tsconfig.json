@@ -7,6 +7,13 @@
     "skipLibCheck": true,
     "allowJs": true,
 
+    /* Solid JS */
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "types": [
+      "vite/client"
+    ],
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

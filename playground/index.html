@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </head>
   <body>
-    <form id="send-request">
-      <input type="text" id="fetch-path" placeholder="Path" />
-      <button type="submit">Trigger Fetch</button>
-    </form>
-    <iframe id="inner-frame" src="/playground/"></iframe>
+    <div id="root"></div>
+
+    <iframe id="playground-frame" src="/playground/" style="width: 100%; flex-grow: 1; border: none;"></iframe>
   </body>
 </html>

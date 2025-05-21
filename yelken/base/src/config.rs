@@ -9,8 +9,8 @@ use crate::{schema::locales, types::Connection};
 pub struct Config {
     pub env: String,
     pub tmp_dir: String,
-    pub backend_origin: String,
-    pub frontend_origin: String,
+    pub backend_url: String,
+    pub frontend_url: String,
     pub reload_templates: bool,
 }
 

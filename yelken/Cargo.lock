@@ -3604,6 +3604,7 @@ dependencies = [
  "include_dir",
  "log",
  "opendal",
+ "rand 0.9.1",
  "setup",
  "sqlite-wasm-rs",
  "tower",
@@ -4456,6 +4457,7 @@ dependencies = [
  "tower",
  "tower-http",
  "ui",
+ "url",
  "user",
 ]
 

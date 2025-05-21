@@ -92,7 +92,7 @@ async fn handle_req(Extension(index): Extension<Index>, req: Request) -> Respons
     resp
 }
 
-pub fn router(backend_origin: &str) -> Router<AppState> {
+pub fn router(base_url: &str) -> Router<AppState> {
     let index = YK_APP
         .get_file("index.html")
         .unwrap()
@@ -102,13 +102,13 @@ pub fn router(backend_origin: &str) -> Router<AppState> {
     let index = index.replace(
         "{YELKEN_CONFIG_STRING}",
         &serde_json::to_string(&YelkenConfig {
-            api_url: format!("{backend_origin}/api"),
-            base_url: "/yk/app/".to_string(),
+            api_url: format!("{base_url}/api"),
+            base_url: format!("{base_url}/yk/app/"),
         })
         .unwrap(),
     );
 
-    let index = index.replace("/{YELKEN_BASE_URL}/", "/yk/app/");
+    let index = index.replace("/{YELKEN_BASE_URL}/", &format!("{base_url}/yk/app/"));
 
     Router::new()
         .nest_service("/assets", ServeStaticDir)

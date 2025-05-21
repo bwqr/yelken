@@ -16,6 +16,7 @@ use diesel_async::RunQueryDsl;
 use opendal::Operator;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
+use url::Url;
 
 pub struct DatabaseConfig {
     pub url: String,
@@ -70,7 +71,7 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
             http::Method::DELETE,
         ])
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
-        .allow_origin(config.frontend_origin.parse::<HeaderValue>().unwrap());
+        .allow_origin(config.frontend_url.parse::<HeaderValue>().unwrap());
 
     let state = AppState::new(config, pool, storage.clone());
 
@@ -78,6 +79,9 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
         .layer(cors)
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
+
+    let base_path = Url::parse(&state.config.backend_url).unwrap();
+    let base_path = base_path.path();
 
     let app = Router::new();
     // let app = Router::new()
@@ -94,7 +98,7 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
     let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
-    let app = app.nest("/yk/app/", app::router(&state.config.backend_origin));
+    let app = app.nest("/yk/app/", app::router(base_path));
 
     #[cfg(feature = "app")]
     let app = app.route(
@@ -103,7 +107,7 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
             axum::http::StatusCode::PERMANENT_REDIRECT,
             [(
                 axum::http::header::LOCATION,
-                axum::http::HeaderValue::from_static("/yk/app/"),
+                axum::http::HeaderValue::from_str(&format!("{base_path}/yk/app/")).unwrap(),
             )],
         )),
     );
@@ -167,9 +171,20 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
     #[cfg(feature = "user")]
     let app = app.nest("/api/user", user::router(state.clone()));
 
-    let app = app
-        .with_state(state)
-        .layer(layers);
+    let app = app.with_state(state).layer(layers);
 
-    app
+    if base_path == "/" {
+        return app;
+    }
+
+    Router::new().route(
+        base_path,
+        axum::routing::get((
+            axum::http::StatusCode::PERMANENT_REDIRECT,
+            [(
+                axum::http::header::LOCATION,
+                axum::http::HeaderValue::from_str(&format!("{base_path}/")).unwrap(),
+            )],
+        )),
+    ).nest(&format!("{base_path}/"), app)
 }

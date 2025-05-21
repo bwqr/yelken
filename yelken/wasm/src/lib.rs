@@ -8,120 +8,131 @@ use axum::{
     body::Body,
     extract::Request,
     http::{HeaderName, HeaderValue},
+    middleware::Next,
+    response::Response,
 };
-use base::{crypto::Crypto, types::{Connection, SyncConnection}};
+use base::{
+    crypto::Crypto,
+    models::User,
+    schema::{permissions, users},
+    types::{Connection, SyncConnection},
+};
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use futures::StreamExt;
+use opendal::Operator;
 use tower::Service;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 static APP: OnceLock<Mutex<Router<()>>> = OnceLock::new();
 
-mod log {
-    use log::Log;
-    use wasm_bindgen::prelude::*;
+mod console_logger;
 
-    struct Logger;
+fn load_theme(storage: &Operator) {
+    use include_dir::{include_dir, Dir};
 
-    impl Logger {
-        fn init(self) {
-            log::set_logger(Box::leak(Box::new(self))).unwrap();
-            log::set_max_level(log::LevelFilter::Debug);
-        }
-    }
+    static THEME: Dir = include_dir!("../themes/default/");
 
-    impl Log for Logger {
-        fn enabled(&self, _: &log::Metadata) -> bool {
-            true
-        }
+    let mut dirs = vec![&THEME];
 
-        fn log(&self, record: &log::Record) {
-            match record.level() {
-                log::Level::Trace => log(record
-                    .args()
-                    .as_str()
-                    .unwrap_or(record.args().to_string().as_str())),
-                log::Level::Debug => debug(
-                    record
-                        .args()
-                        .as_str()
-                        .unwrap_or(record.args().to_string().as_str()),
-                ),
-                log::Level::Info => info(
-                    record
-                        .args()
-                        .as_str()
-                        .unwrap_or(record.args().to_string().as_str()),
-                ),
-                log::Level::Warn => warn(
-                    record
-                        .args()
-                        .as_str()
-                        .unwrap_or(record.args().to_string().as_str()),
-                ),
-                log::Level::Error => error(
-                    record
-                        .args()
-                        .as_str()
-                        .unwrap_or(record.args().to_string().as_str()),
-                ),
+    while let Some(dir) = dirs.pop() {
+        for entry in dir.entries() {
+            if let Some(dir) = entry.as_dir() {
+                dirs.push(dir);
+            } else if let Some(file) = entry.as_file() {
+                let path = format!("themes/default/{}", file.path().as_os_str().to_str().unwrap());
+
+                storage.blocking().write(&path, file.contents()).unwrap();
             }
         }
-
-        fn flush(&self) {}
-    }
-
-    pub fn init() {
-        Logger.init();
-    }
-
-    #[wasm_bindgen]
-    extern "C" {
-        #[wasm_bindgen(js_namespace = console)]
-        fn error(s: &str);
-        #[wasm_bindgen(js_namespace = console)]
-        fn warn(s: &str);
-        #[wasm_bindgen(js_namespace = console)]
-        fn info(s: &str);
-        #[wasm_bindgen(js_namespace = console)]
-        fn debug(s: &str);
-        #[wasm_bindgen(js_namespace = console)]
-        fn log(s: &str);
     }
 }
 
+fn create_user(
+    mut conn: SyncConnection,
+    crypto: &Crypto,
+    name: String,
+    email: String,
+    password: String,
+) {
+    use diesel::prelude::*;
+    use rand::{Rng, distr::Alphanumeric, rng};
+
+    let salt: String = (0..32)
+        .map(|_| rng().sample(Alphanumeric) as char)
+        .collect();
+
+    let password = crypto.sign512((password + salt.as_str()).as_bytes());
+
+    let user = diesel::insert_into(users::table)
+        .values((
+            users::username.eq("yelken_test_user"),
+            users::name.eq(name),
+            users::email.eq(email),
+            users::password.eq(salt + password.as_str()),
+        ))
+        .get_result::<User>(&mut conn)
+        .unwrap();
+
+    let perms = ["admin", "user.read", "content.read", "content.write"];
+
+    for perm in perms {
+        diesel::insert_into(permissions::table)
+            .values((permissions::user_id.eq(user.id), permissions::name.eq(perm)))
+            .execute(&mut conn)
+            .unwrap();
+    }
+}
+
+async fn logger(req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_owned();
+
+    let res = next.run(req).await;
+
+    ::log::info!("{:?} - {}", path, res.status(),);
+
+    res
+}
+
 #[wasm_bindgen]
-pub async fn app_init(name: String, email: String, password: String) {
-    crate::log::init();
+pub async fn app_init(base_url: String, name: String, email: String, password: String) {
+    console_logger::init();
 
     console_error_panic_hook::set_once();
 
-    let db_url = "/file.db";
-
-    setup::migrate(
-        &mut <SyncConnection as diesel::Connection>::establish(db_url).unwrap(),
-    )
-    .unwrap();
-
-    let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
-    let pool = deadpool::Pool::builder(db_config).build().unwrap();
-
     let crypto = Crypto::new("super_secret_key");
-    let config = base::config::Config {
-        env: "dev".to_string(),
-        tmp_dir: "/tmp".to_string(),
-        backend_origin: "http://localhost:5173".to_string(),
-        frontend_origin: "http://localhost:5173".to_string(),
-        reload_templates: false,
-    };
 
     let storage = {
         let builder = opendal::services::Memory::default();
 
-        opendal::Operator::new(builder).unwrap().finish()
+        Operator::new(builder).unwrap().finish()
     };
 
-    let app = yelken::router(crypto, config, pool, storage).await;
+    let db_url = "/file.db";
+
+    {
+        let mut conn = <SyncConnection as diesel::Connection>::establish(db_url).unwrap();
+
+        setup::migrate(&mut conn).unwrap();
+
+        create_user(conn, &crypto, name, email, password);
+
+        load_theme(&storage);
+    }
+
+    let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
+    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+
+    let config = base::config::Config {
+        env: "dev".to_string(),
+        tmp_dir: "/tmp".to_string(),
+        backend_url: base_url.clone(),
+        frontend_url: base_url,
+        reload_templates: true,
+    };
+
+    let app = yelken::router(crypto, config, pool, storage)
+        .await
+        .layer(axum::middleware::from_fn(logger));
 
     APP.set(Mutex::new(app)).unwrap();
 }
@@ -134,8 +145,6 @@ pub async fn serve_request(
     header_values: Vec<String>,
     body: Vec<u8>,
 ) -> web_sys::Response {
-    ::log::info!("Received {uri}, {header_keys:?}, {header_values:?}");
-
     let mut request: Request<Body> = Request::builder()
         .uri(uri)
         .method(method.as_str())
