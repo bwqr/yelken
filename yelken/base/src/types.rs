@@ -1,5 +1,8 @@
 use diesel_async::{pooled_connection::deadpool::{self, Object}, AsyncConnection};
 
+#[cfg(all(not(feature = "sqlite"), not(feature = "postgres")))]
+compile_error!("Either \"sqlite\" or \"postgres\" feature needs to be enabled");
+
 #[cfg(feature = "sqlite")]
 pub type Connection = crate::async_sqlite::AsyncSqliteConnection;
 #[cfg(feature = "sqlite")]

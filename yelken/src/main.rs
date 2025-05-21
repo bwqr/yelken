@@ -14,6 +14,7 @@ pub struct ServerConfig {
     pub address: SocketAddrV4,
     pub app_assets_dir: String,
     pub storage_dir: String,
+    pub tmp_dir: String,
 }
 
 impl ServerConfig {
@@ -31,10 +32,14 @@ impl ServerConfig {
         let storage_dir =
             std::env::var("YELKEN_STORAGE_DIR").context("YELKEN_STORAGE_DIR is not defined")?;
 
+        let tmp_dir =
+            std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
+
         Ok(Self {
             address,
             app_assets_dir,
             storage_dir,
+            tmp_dir,
         })
     }
 }
@@ -67,8 +72,6 @@ fn db_config_from_env() -> Result<DatabaseConfig> {
 fn config_from_env() -> Result<Config> {
     let env = std::env::var("YELKEN_ENV").context("YELKEN_ENV is not defined")?;
 
-    let tmp_dir = std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
-
     let backend_url =
         std::env::var("YELKEN_BACKEND_URL").context("YELKEN_BACKEND_URL is not defined")?;
 
@@ -81,7 +84,6 @@ fn config_from_env() -> Result<Config> {
 
     Ok(Config {
         env,
-        tmp_dir,
         backend_url,
         frontend_url,
         reload_templates,
@@ -143,7 +145,13 @@ async fn main() {
         opendal::Operator::new(builder).unwrap().finish()
     };
 
-    let app = yelken::router(crypto, config, pool, storage)
+    let tmp_storage = {
+        let builder = opendal::services::Fs::default().root(&server_config.tmp_dir);
+
+        opendal::Operator::new(builder).unwrap().finish()
+    };
+
+    let app = yelken::router(crypto, config, pool, storage, tmp_storage)
         .await
         .layer(axum::middleware::from_fn(logger));
 

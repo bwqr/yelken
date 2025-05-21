@@ -29,11 +29,12 @@ impl Deref for AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config, pool: Pool, storage: Operator) -> Self {
+    pub fn new(config: Config, pool: Pool, storage: Operator, tmp_storage: Operator) -> Self {
         Self(Arc::new(Inner {
             config,
             pool,
             storage,
+            tmp_storage,
         }))
     }
 }
@@ -42,4 +43,5 @@ pub struct Inner {
     pub config: Config,
     pub pool: Pool,
     pub storage: Operator,
+    pub tmp_storage: Operator,
 }

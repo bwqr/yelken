@@ -25,10 +25,13 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 static APP: OnceLock<Mutex<Router<()>>> = OnceLock::new();
 
+#[cfg(not(feature = "sqlite"))]
+compile_error!("\"sqlite\" feature needs to be enabled");
+
 mod console_logger;
 
 fn load_theme(storage: &Operator) {
-    use include_dir::{include_dir, Dir};
+    use include_dir::{Dir, include_dir};
 
     static THEME: Dir = include_dir!("../themes/default/");
 
@@ -39,7 +42,10 @@ fn load_theme(storage: &Operator) {
             if let Some(dir) = entry.as_dir() {
                 dirs.push(dir);
             } else if let Some(file) = entry.as_file() {
-                let path = format!("themes/default/{}", file.path().as_os_str().to_str().unwrap());
+                let path = format!(
+                    "themes/default/{}",
+                    file.path().as_os_str().to_str().unwrap()
+                );
 
                 storage.blocking().write(&path, file.contents()).unwrap();
             }
@@ -101,11 +107,13 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
 
     let crypto = Crypto::new("super_secret_key");
 
-    let storage = {
-        let builder = opendal::services::Memory::default();
+    let storage = Operator::new(opendal::services::Memory::default())
+        .unwrap()
+        .finish();
 
-        Operator::new(builder).unwrap().finish()
-    };
+    let tmp_storage = Operator::new(opendal::services::Memory::default())
+        .unwrap()
+        .finish();
 
     let db_url = "/file.db";
 
@@ -124,13 +132,12 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
 
     let config = base::config::Config {
         env: "dev".to_string(),
-        tmp_dir: "/tmp".to_string(),
         backend_url: base_url.clone(),
         frontend_url: base_url,
         reload_templates: true,
     };
 
-    let app = yelken::router(crypto, config, pool, storage)
+    let app = yelken::router(crypto, config, pool, storage, tmp_storage)
         .await
         .layer(axum::middleware::from_fn(logger));
 

@@ -60,7 +60,13 @@ async fn load_options(mut conn: PooledConnection) -> Options {
     Options::new(theme, locales, default_locale)
 }
 
-pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operator) -> Router<()> {
+pub async fn router(
+    crypto: Crypto,
+    config: Config,
+    pool: Pool,
+    storage: Operator,
+    tmp_storage: Operator,
+) -> Router<()> {
     let options = load_options(pool.get().await.unwrap()).await;
 
     let cors = CorsLayer::new()
@@ -73,7 +79,7 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
         .allow_origin(config.frontend_url.parse::<HeaderValue>().unwrap());
 
-    let state = AppState::new(config, pool, storage.clone());
+    let state = AppState::new(config, pool, storage.clone(), tmp_storage);
 
     let layers = ServiceBuilder::new()
         .layer(cors)
@@ -177,14 +183,16 @@ pub async fn router(crypto: Crypto, config: Config, pool: Pool, storage: Operato
         return app;
     }
 
-    Router::new().route(
-        base_path,
-        axum::routing::get((
-            axum::http::StatusCode::PERMANENT_REDIRECT,
-            [(
-                axum::http::header::LOCATION,
-                axum::http::HeaderValue::from_str(&format!("{base_path}/")).unwrap(),
-            )],
-        )),
-    ).nest(&format!("{base_path}/"), app)
+    Router::new()
+        .route(
+            base_path,
+            axum::routing::get((
+                axum::http::StatusCode::PERMANENT_REDIRECT,
+                [(
+                    axum::http::header::LOCATION,
+                    axum::http::HeaderValue::from_str(&format!("{base_path}/")).unwrap(),
+                )],
+            )),
+        )
+        .nest(&format!("{base_path}/"), app)
 }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::OsStr, io::Read, path::PathBuf};
+use std::{collections::HashMap, ffi::OsStr, io::Read};
 
 use axum::{
     extract::{Multipart, Path, State},
@@ -10,7 +10,7 @@ use base::{
     middlewares::auth::AuthUser,
     models::{ContentStage, Field},
     responses::HttpError,
-    runtime::IntoSendFuture,
+    runtime::{spawn_blocking, IntoSendFuture},
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
     types::PooledConnection,
     AppState,
@@ -152,16 +152,13 @@ pub async fn install_theme(
         .map_err(|_| bad_request("invalid_multipart"))?
         .reader();
 
-    let tmp_theme_dir: PathBuf = {
-        let random: String = (0..32)
-            .map(|_| rng().sample(Alphanumeric) as char)
-            .collect();
-
-        [&state.config.tmp_dir, &random].iter().collect()
-    };
+    let tmp_theme_dir = (0..32)
+        .map(|_| rng().sample(Alphanumeric) as char)
+        .collect::<String>();
 
     let result = install(
         state.storage.clone(),
+        state.tmp_storage.clone(),
         &mut state.pool.get().await?,
         reader,
         tmp_theme_dir.clone(),
@@ -169,7 +166,12 @@ pub async fn install_theme(
     )
     .await;
 
-    if let Err(e) = std::fs::remove_dir_all(&tmp_theme_dir) {
+    if let Err(e) = state
+        .tmp_storage
+        .remove_all(&tmp_theme_dir)
+        .into_send_future()
+        .await
+    {
         log::warn!(
             "Failed to remove tmp theme dir during installation cleanup, {tmp_theme_dir:?}, {e:?}"
         );
@@ -180,13 +182,20 @@ pub async fn install_theme(
 
 async fn install(
     storage: Operator,
+    tmp_storage: Operator,
     conn: &mut PooledConnection,
     reader: impl Read + Send + 'static,
-    dir: PathBuf,
+    dir: String,
     user_id: i32,
 ) -> Result<(), HttpError> {
-    let extract_dir = dir.clone();
-    let (manifest, files) = extract_archive(reader, extract_dir)?;
+    let (manifest, files) = {
+        let tmp_storage = tmp_storage.clone();
+        let extract_dir = dir.clone();
+
+        spawn_blocking(move || extract_archive(reader, tmp_storage.clone(), extract_dir))
+            .await
+            .map_err(|_| HttpError::internal_server_error("blocking_error"))
+    }??;
 
     let theme_id = manifest.id.clone();
 
@@ -196,14 +205,16 @@ async fn install(
     .await?;
 
     for file in files {
-        let mut src_path = dir.clone();
-        src_path.push(&file);
+        let src_path = format!("{dir}/{file}");
 
         let dest_path = ["themes", &theme_id, &file].join("/");
 
-        log::debug!("Paths are {src_path:?} and {dest_path}");
+        log::debug!("Paths are {src_path} and {dest_path}");
 
-        let file = std::fs::read(&src_path)
+        let file = tmp_storage
+            .read(&src_path)
+            .into_send_future()
+            .await
             .inspect_err(|e| {
                 log::warn!("Failed to read file to copy to persistent storage, {src_path:?}, {e:?}")
             })
@@ -224,12 +235,13 @@ async fn install(
 
 fn extract_archive(
     mut reader: impl Read,
-    dir: PathBuf,
+    tmp_storage: Operator,
+    dir: String,
 ) -> Result<(ThemeManifest, Vec<String>), HttpError> {
     let mut theme_manifest: Option<ThemeManifest> = None;
     let mut files = Vec::new();
 
-    while let Some(mut file) = zip::read::read_zipfile_from_stream(&mut reader)
+    while let Some(file) = zip::read::read_zipfile_from_stream(&mut reader)
         .map_err(|_| HttpError::internal_server_error("failed_reading_zip"))?
     {
         if !file.is_file() {
@@ -257,34 +269,28 @@ fn extract_archive(
             continue;
         }
 
-        if let Some(parent) = outpath.parent() {
-            let mut dir = dir.clone();
-            dir.push(parent);
-
-            std::fs::create_dir_all(dir)
-                .inspect_err(|e| log::warn!("Failed to create dirs {e:?}"))
-                .map_err(|_| HttpError::internal_server_error("io_error"))?;
-        }
-
         let outpath = outpath
             .to_str()
             .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
 
-        let mut dest_file_path = dir.clone();
-        dest_file_path.push(outpath);
+        let bytes = file
+            .bytes()
+            .collect::<Result<Vec<u8>, std::io::Error>>()
+            .inspect_err(|e| log::warn!("Failed to read file bytes {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
-        {
-            let mut dest_file = std::fs::File::create(&dest_file_path)
-                .inspect_err(|e| log::warn!("Failed to create file {e:?}"))
-                .map_err(|_| HttpError::internal_server_error("io_error"))?;
+        let dest_file_path = format!("{dir}/{outpath}");
 
-            std::io::copy(&mut file, &mut dest_file)
-                .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
-                .map_err(|_| HttpError::internal_server_error("io_error"))?;
-        }
+        tmp_storage
+            .blocking()
+            .write(&dest_file_path, bytes)
+            .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
         if outpath == "Yelken.json" {
-            let dest_file = std::fs::File::open(&dest_file_path)
+            let dest_file = tmp_storage
+                .blocking()
+                .read(&dest_file_path)
                 .inspect_err(|e| log::warn!("Failed to read Yelken.json, {e:?}"))
                 .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
