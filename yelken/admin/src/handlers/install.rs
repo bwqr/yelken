@@ -95,9 +95,9 @@ pub async fn uninstall_theme(
         .await?;
 
     let locations = [
-        format!("themes/{theme}/"),
-        format!("locales/themes/{theme}/"),
-        format!("templates/themes/{theme}/"),
+        ["themes", &theme].join("/"),
+        ["locales", "themes", &theme].join("/"),
+        ["templates", "themes", &theme].join("/"),
     ];
 
     for location in locations {
@@ -205,7 +205,7 @@ async fn install(
     .await?;
 
     for file in files {
-        let src_path = format!("{dir}/{file}");
+        let src_path = [dir.as_str(), file.as_str()].join("/");
 
         let dest_path = ["themes", &theme_id, &file].join("/");
 
@@ -216,7 +216,7 @@ async fn install(
             .into_send_future()
             .await
             .inspect_err(|e| {
-                log::warn!("Failed to read file to copy to persistent storage, {src_path:?}, {e:?}")
+                log::warn!("Failed to read file to copy to persistent storage, {src_path}, {e:?}")
             })
             .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
@@ -279,7 +279,7 @@ fn extract_archive(
             .inspect_err(|e| log::warn!("Failed to read file bytes {e:?}"))
             .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
-        let dest_file_path = format!("{dir}/{outpath}");
+        let dest_file_path = [dir.as_str(), outpath].join("/");
 
         tmp_storage
             .blocking()
