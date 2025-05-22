@@ -829,7 +829,7 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.2.4"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "git+https://github.com/diesel-rs/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -846,7 +846,7 @@ dependencies = [
 [[package]]
 name = "diesel-async"
 version = "0.5.2"
-source = "git+https://github.com/bwqr/diesel_async.git?branch=async-sqlite-batch-insert#745be01f01ac6c3c3c5daf69542e68080e0ad715"
+source = "git+https://github.com/weiznich/diesel_async.git?branch=main#c6f9dc853555b9dae4672d5e2edd2c961bdc5417"
 dependencies = [
  "deadpool",
  "diesel",
@@ -859,7 +859,7 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.2.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "git+https://github.com/diesel-rs/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
 dependencies = [
  "diesel_table_macro_syntax",
  "dsl_auto_type",
@@ -871,7 +871,8 @@ dependencies = [
 [[package]]
 name = "diesel_migrations"
 version = "2.2.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a73ce704bad4231f001bff3314d91dce4aba0770cee8b233991859abc15c1f6"
 dependencies = [
  "diesel",
  "migrations_internals",
@@ -881,7 +882,7 @@ dependencies = [
 [[package]]
 name = "diesel_table_macro_syntax"
 version = "0.2.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "git+https://github.com/diesel-rs/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
 dependencies = [
  "syn",
 ]
@@ -944,7 +945,7 @@ checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
 [[package]]
 name = "dsl_auto_type"
 version = "0.1.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "git+https://github.com/diesel-rs/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
 dependencies = [
  "darling",
  "either",
@@ -2016,7 +2017,8 @@ checksum = "38d1115007560874e373613744c6fba374c17688327a71c1476d1a5954cc857b"
 [[package]]
 name = "migrations_internals"
 version = "2.2.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd01039851e82f8799046eabbb354056283fb265c8ec0996af940f4e85a380ff"
 dependencies = [
  "serde",
  "toml",
@@ -2025,7 +2027,8 @@ dependencies = [
 [[package]]
 name = "migrations_macros"
 version = "2.2.0"
-source = "git+https://github.com/bwqr/diesel.git?branch=master#325b926b6022761d5b79dc3dbd1dfe7d3ba2df62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb161cc72176cb37aa47f1fc520d3ef02263d67d661f44f05d05a079e1237fd"
 dependencies = [
  "migrations_internals",
  "proc-macro2",

@@ -27,7 +27,7 @@ pub async fn update_template(
         .write(&path, req.template)
         .into_send_future()
         .await
-        .inspect_err(|e| log::error!("Failed to write template at path {path:?}, {e:?}"))
+        .inspect_err(|e| log::error!("Failed to write template at path {path}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_writing_template"))?;
 
     // TODO handle invalid template case before writing the received template
@@ -60,7 +60,7 @@ pub async fn delete_template(
         .delete(&path)
         .into_send_future()
         .await
-        .inspect_err(|e| log::error!("Failed to remove template at path {path:?}, {e:?}"))
+        .inspect_err(|e| log::error!("Failed to remove template at path {path}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_deleting_resource"))?;
 
     render

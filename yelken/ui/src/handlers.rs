@@ -286,9 +286,9 @@ mod tests {
     };
     use base::{
         config::Config,
+        db::Connection,
         schema::{locales, pages},
         test::{create_pool, DB_CONFIG},
-        types::Connection,
         AppState,
     };
     use diesel::prelude::*;

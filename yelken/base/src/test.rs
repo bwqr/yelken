@@ -1,7 +1,5 @@
-use crate::types::Connection;
+use crate::db::{Connection, Pool};
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncConnection};
-
-use crate::types::Pool;
 
 pub const DB_CONFIG: &'static str = if let Some(env) = option_env!("YELKEN_TEST_DATABASE_URL") {
     env

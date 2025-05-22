@@ -13,9 +13,9 @@ use axum::{
 };
 use base::{
     crypto::Crypto,
+    db::{Connection, SyncConnection},
     models::User,
     schema::{permissions, users},
-    types::{Connection, SyncConnection},
 };
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use futures::StreamExt;

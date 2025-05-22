@@ -8,8 +8,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use crate::{
-    crypto::Crypto, models::UserState, responses::HttpError, schema::users,
-    types::PooledConnection, AppState,
+    crypto::Crypto, db::PooledConnection, models::UserState, responses::HttpError, schema::users,
+    AppState,
 };
 
 use axum::{

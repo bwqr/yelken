@@ -5,7 +5,7 @@ use axum::{extract::Request, middleware::Next, response::Response};
 use base::{
     config::Config,
     crypto::Crypto,
-    types::{Connection, SyncConnection},
+    db::{Connection, SyncConnection},
 };
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use yelken::DatabaseConfig;
@@ -32,8 +32,7 @@ impl ServerConfig {
         let storage_dir =
             std::env::var("YELKEN_STORAGE_DIR").context("YELKEN_STORAGE_DIR is not defined")?;
 
-        let tmp_dir =
-            std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
+        let tmp_dir = std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
 
         Ok(Self {
             address,

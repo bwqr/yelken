@@ -8,8 +8,8 @@ use base::{
     AppState,
     config::{Config, Options},
     crypto::Crypto,
+    db::{Pool, PooledConnection},
     schema::options,
-    types::{Pool, PooledConnection},
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;

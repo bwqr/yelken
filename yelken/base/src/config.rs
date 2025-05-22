@@ -3,7 +3,7 @@ use std::sync::Arc;
 use arc_swap::ArcSwap;
 use unic_langid::LanguageIdentifier;
 
-use crate::{schema::locales, types::Connection};
+use crate::{db::Connection, schema::locales};
 
 #[derive(Default)]
 pub struct Config {

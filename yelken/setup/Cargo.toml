@@ -9,7 +9,7 @@ base.path = "../base"
 axum.workspace = true
 diesel.workspace = true
 
-diesel_migrations = { version = "2.2.0", git = "https://github.com/bwqr/diesel.git", branch = "master", default-features = false }
+diesel_migrations = { version = "2.2.0", default-features = false }
 
 [features]
 postgres = ["diesel_migrations/postgres"]

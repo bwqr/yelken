@@ -7,12 +7,12 @@ use axum::{
 };
 use base::{
     config::Options,
+    db::PooledConnection,
     middlewares::auth::AuthUser,
     models::{ContentStage, Field},
     responses::HttpError,
     runtime::{spawn_blocking, IntoSendFuture},
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
-    types::PooledConnection,
     AppState,
 };
 use bytes::Buf;
@@ -173,7 +173,7 @@ pub async fn install_theme(
         .await
     {
         log::warn!(
-            "Failed to remove tmp theme dir during installation cleanup, {tmp_theme_dir:?}, {e:?}"
+            "Failed to remove tmp theme dir during installation cleanup, {tmp_theme_dir}, {e:?}"
         );
     }
 

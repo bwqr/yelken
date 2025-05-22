@@ -1,13 +1,12 @@
 use std::{ops::Deref, sync::Arc};
 
 use config::Config;
+use db::Pool;
 use opendal::Operator;
-use types::Pool;
 
-#[cfg(feature = "sqlite")]
-pub mod async_sqlite;
 pub mod config;
 pub mod crypto;
+pub mod db;
 pub mod middlewares;
 pub mod models;
 pub mod permission;
@@ -15,7 +14,6 @@ pub mod responses;
 pub mod runtime;
 pub mod schema;
 pub mod test;
-pub mod types;
 
 #[derive(Clone)]
 pub struct AppState(Arc<Inner>);

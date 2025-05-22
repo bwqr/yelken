@@ -14,9 +14,9 @@ use diesel_async::RunQueryDsl;
 use tower::{Layer, Service};
 
 use crate::{
+    db::Pool,
     responses::HttpError,
     schema::{permissions, users},
-    types::Pool,
 };
 
 use super::auth::AuthUser;

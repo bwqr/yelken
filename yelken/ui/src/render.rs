@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use base::db::Pool;
 use base::models::ContentStage;
 use base::responses::HttpError;
-use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
-use base::types::Pool;
 use base::runtime::{block_on, IntoSendFuture};
+use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use context::{LocaleContext, PageContext};
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};

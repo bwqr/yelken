@@ -8,7 +8,7 @@ use diesel::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::types::{Backend, BackendValue};
+use crate::db::{Backend, BackendValue};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
