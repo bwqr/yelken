@@ -10,6 +10,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::{Backend, BackendValue};
 
+#[cfg(feature = "sqlite")]
+fn read_value_bytes<'a>(value: &'a mut BackendValue) -> &'a [u8] {
+    value.read_blob()
+}
+#[cfg(feature = "postgres")]
+fn read_value_bytes<'a>(value: &'a BackendValue) -> &'a [u8] {
+    value.as_bytes()
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 #[serde(rename_all = "snake_case")]
@@ -30,13 +39,8 @@ impl ToSql<Text, Backend> for UserState {
 }
 
 impl FromSql<Text, Backend> for UserState {
-    fn from_sql(mut bytes: BackendValue) -> diesel::deserialize::Result<Self> {
-        #[cfg(feature = "sqlite")]
-        let bytes = bytes.read_blob();
-        #[cfg(feature = "postgres")]
-        let bytes = bytes.as_bytes();
-
-        match bytes {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"enabled" => Ok(UserState::Enabled),
             b"disabled" => Ok(UserState::Disabled),
             _ => Err("Unrecognized enum variant".into()),
@@ -63,13 +67,8 @@ impl ToSql<Text, Backend> for LoginKind {
 }
 
 impl FromSql<Text, Backend> for LoginKind {
-    fn from_sql(mut bytes: BackendValue) -> diesel::deserialize::Result<Self> {
-        #[cfg(feature = "sqlite")]
-        let bytes = bytes.read_blob();
-        #[cfg(feature = "postgres")]
-        let bytes = bytes.as_bytes();
-
-        match bytes {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"email" => Ok(LoginKind::Email),
             b"cloud" => Ok(LoginKind::Cloud),
             _ => Err("Unrecognized enum variant".into()),
@@ -150,13 +149,8 @@ impl ToSql<Text, Backend> for ContentStage {
 }
 
 impl FromSql<Text, Backend> for ContentStage {
-    fn from_sql(mut bytes: BackendValue) -> diesel::deserialize::Result<Self> {
-        #[cfg(feature = "sqlite")]
-        let bytes = bytes.read_blob();
-        #[cfg(feature = "postgres")]
-        let bytes = bytes.as_bytes();
-
-        match bytes {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"published" => Ok(ContentStage::Published),
             b"draft" => Ok(ContentStage::Draft),
             _ => Err("Unrecognized enum variant".into()),
