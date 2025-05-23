@@ -1,44 +1,16 @@
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
 use arc_swap::ArcSwap;
 use unic_langid::LanguageIdentifier;
 
-use crate::{schema::locales, types::Connection};
+use crate::{db::Connection, schema::locales};
 
 #[derive(Default)]
 pub struct Config {
     pub env: String,
-    pub tmp_dir: String,
-    pub backend_origin: String,
-    pub frontend_origin: String,
+    pub backend_url: String,
+    pub frontend_url: String,
     pub reload_templates: bool,
-}
-
-impl Config {
-    pub fn from_env() -> Result<Self> {
-        let env = std::env::var("YELKEN_ENV").context("YELKEN_ENV is not defined")?;
-
-        let tmp_dir = std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
-
-        let backend_origin = std::env::var("YELKEN_BACKEND_ORIGIN")
-            .context("YELKEN_BACKEND_ORIGIN is not defined")?;
-
-        let frontend_origin = std::env::var("YELKEN_FRONTEND_ORIGIN")
-            .context("YELKEN_FRONTEND_ORIGIN is not defined")?;
-
-        let reload_templates = std::env::var("YELKEN_RELOAD_TEMPLATES")
-            .map(|var| var.as_str() == "on" || var.as_str() == "true" || var.as_str() == "yes")
-            .unwrap_or(false);
-
-        Ok(Self {
-            env,
-            tmp_dir,
-            backend_origin,
-            frontend_origin,
-            reload_templates,
-        })
-    }
 }
 
 #[derive(Clone)]
@@ -133,8 +105,8 @@ impl Options {
 }
 
 impl Options {
-    pub async fn load_locales<'a>(
-        conn: &mut Connection<'a>,
+    pub async fn load_locales(
+        conn: &mut Connection,
     ) -> diesel::QueryResult<Arc<[LanguageIdentifier]>> {
         use diesel::prelude::*;
         use diesel_async::RunQueryDsl;

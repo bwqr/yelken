@@ -100,8 +100,8 @@ impl IntoResponse for HttpError {
     }
 }
 
-impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
-    fn from(e: diesel_async::pooled_connection::bb8::RunError) -> Self {
+impl From<diesel_async::pooled_connection::deadpool::PoolError> for HttpError {
+    fn from(e: diesel_async::pooled_connection::deadpool::PoolError) -> Self {
         log::error!("db pool error, {e:?}");
 
         HttpError {

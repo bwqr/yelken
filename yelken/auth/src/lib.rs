@@ -1,6 +1,5 @@
-use axum::{routing::post, Router};
+use axum::Router;
 use base::AppState;
-use handlers::email;
 
 mod handlers;
 mod requests;
@@ -9,9 +8,14 @@ pub fn router() -> Router<AppState> {
     let router = Router::new();
 
     #[cfg(feature = "email")]
-    let router = router
-        .route("/login", post(email::login))
-        .route("/sign-up", post(email::sign_up));
+    let router = {
+        use axum::routing::post;
+        use handlers::email;
+
+        router
+            .route("/login", post(email::login))
+            .route("/sign-up", post(email::sign_up))
+    };
 
     #[cfg(feature = "oauth")]
     let router = {

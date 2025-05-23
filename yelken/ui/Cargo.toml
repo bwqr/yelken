@@ -16,7 +16,6 @@ fluent.workspace = true
 log.workspace = true
 opendal.workspace = true
 serde.workspace = true
-tokio.workspace = true
 unic-langid.workspace = true
 
 matchit = "0.8.4"

@@ -16,7 +16,7 @@ rand.workspace = true
 reqwest = { workspace = true, optional = true }
 serde.workspace = true
 
-url = { version = "2.5.4", optional = true }
+url = { workspace = true, optional = true }
 
 [features]
 default = []

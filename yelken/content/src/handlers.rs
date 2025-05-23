@@ -154,24 +154,23 @@ pub async fn create_model(
                     .get_result::<base::models::Model>(conn)
                     .await?;
 
-                let model_fields = diesel::insert_into(model_fields::table)
-                    .values(
-                        req.model_fields
-                            .into_iter()
-                            .map(|mf| {
-                                (
-                                    model_fields::field_id.eq(mf.field_id),
-                                    model_fields::model_id.eq(model.id),
-                                    model_fields::name.eq(mf.name),
-                                    model_fields::localized.eq(mf.localized),
-                                    model_fields::multiple.eq(mf.multiple),
-                                    model_fields::required.eq(mf.required),
-                                )
-                            })
-                            .collect::<Vec<_>>(),
-                    )
-                    .get_results::<base::models::ModelField>(conn)
-                    .await?;
+                let mut model_fields = vec![];
+
+                for mf in req.model_fields {
+                    let model_field = diesel::insert_into(model_fields::table)
+                        .values((
+                            model_fields::field_id.eq(mf.field_id),
+                            model_fields::model_id.eq(model.id),
+                            model_fields::name.eq(mf.name),
+                            model_fields::localized.eq(mf.localized),
+                            model_fields::multiple.eq(mf.multiple),
+                            model_fields::required.eq(mf.required),
+                        ))
+                        .get_result::<base::models::ModelField>(conn)
+                        .await?;
+
+                    model_fields.push(model_field);
+                }
 
                 Result::<(base::models::Model, Vec<base::models::ModelField>), HttpError>::Ok((
                     model,
@@ -291,22 +290,17 @@ pub async fn create_content(
                 .get_result::<base::models::Content>(conn)
                 .await?;
 
-            diesel::insert_into(content_values::table)
-                .values(
-                    req.values
-                        .into_iter()
-                        .map(|v| {
-                            (
-                                content_values::content_id.eq(content.id),
-                                content_values::model_field_id.eq(v.model_field_id),
-                                content_values::locale.eq(v.locale),
-                                content_values::value.eq(v.value),
-                            )
-                        })
-                        .collect::<Vec<_>>(),
-                )
-                .execute(conn)
-                .await?;
+            for cv in req.values {
+                diesel::insert_into(content_values::table)
+                    .values((
+                        content_values::content_id.eq(content.id),
+                        content_values::model_field_id.eq(cv.model_field_id),
+                        content_values::locale.eq(cv.locale),
+                        content_values::value.eq(cv.value),
+                    ))
+                    .execute(conn)
+                    .await?;
+            }
 
             Result::<(), HttpError>::Ok(())
         }

@@ -1,8 +1,5 @@
-use diesel_async::{
-    pooled_connection::AsyncDieselConnectionManager, AsyncConnection, AsyncPgConnection,
-};
-
-use crate::types::Pool;
+use crate::db::{Connection, Pool};
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncConnection};
 
 pub const DB_CONFIG: &'static str = if let Some(env) = option_env!("YELKEN_TEST_DATABASE_URL") {
     env
@@ -11,9 +8,9 @@ pub const DB_CONFIG: &'static str = if let Some(env) = option_env!("YELKEN_TEST_
 };
 
 pub async fn create_pool(conn_str: &str) -> Pool {
-    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(conn_str);
+    let manager = AsyncDieselConnectionManager::<Connection>::new(conn_str);
 
-    let pool: Pool = Pool::builder().build(manager).await.unwrap();
+    let pool: Pool = Pool::builder(manager).build().unwrap();
 
     pool.get()
         .await
