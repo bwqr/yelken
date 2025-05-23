@@ -24,6 +24,67 @@ pub type PooledConnection = Object<Connection>;
 #[cfg(feature = "sqlite")]
 pub use async_sqlite::AsyncSqliteConnection;
 
+pub use helpers::BatchQuery;
+
+mod helpers {
+    use diesel::{
+        query_builder::{BatchInsert, InsertStatement},
+        QuerySource,
+    };
+    use diesel_async::{methods::ExecuteDsl, AsyncConnection};
+
+    #[cfg(feature = "sqlite")]
+    pub struct SqliteBatchInsertWrapper<T>(T);
+
+    #[cfg(feature = "sqlite")]
+    impl<T> ExecuteDsl<super::AsyncSqliteConnection> for SqliteBatchInsertWrapper<T>
+    where
+        T: diesel::query_dsl::methods::ExecuteDsl<diesel::sqlite::SqliteConnection>,
+    {
+        fn execute<'conn, 'query>(
+            query: Self,
+            conn: &'conn mut super::AsyncSqliteConnection,
+        ) -> <super::AsyncSqliteConnection as super::AsyncConnection>::ExecuteFuture<'conn, 'query> where T: 'query {
+            let ret = <_ as diesel::query_dsl::methods::ExecuteDsl<diesel::sqlite::SqliteConnection>>::execute(query.0, &mut conn.0);
+            Box::pin(async move { ret })
+        }
+    }
+
+    pub trait BatchQuery<Conn: AsyncConnection> {
+        type Output: ExecuteDsl<Conn>;
+
+        fn batched(self) -> Self::Output;
+    }
+
+    #[cfg(feature = "sqlite")]
+    impl<Tab, Val, Op, QId, const STATIC_QUERY_ID: bool> BatchQuery<super::AsyncSqliteConnection>
+        for InsertStatement<Tab, BatchInsert<Val, Tab, QId, STATIC_QUERY_ID>, Op>
+    where
+        Tab: QuerySource,
+        Self: diesel::query_dsl::methods::ExecuteDsl<diesel::sqlite::SqliteConnection>,
+    {
+        type Output = SqliteBatchInsertWrapper<Self>;
+
+        fn batched(self) -> Self::Output {
+            SqliteBatchInsertWrapper(self)
+        }
+    }
+
+    #[cfg(feature = "postgres")]
+    impl<Tab, Val, Op, QId, const STATIC_QUERY_ID: bool> BatchQuery<diesel_async::AsyncPgConnection>
+        for InsertStatement<Tab, BatchInsert<Val, Tab, QId, STATIC_QUERY_ID>, Op>
+    where
+        Tab: QuerySource,
+        Self: ExecuteDsl<diesel_async::AsyncPgConnection>,
+    {
+        type Output = Self;
+
+        fn batched(self) -> Self::Output {
+            self
+        }
+    }
+}
+
 #[cfg(feature = "sqlite")]
 mod async_sqlite {
     use diesel::{
@@ -42,7 +103,7 @@ mod async_sqlite {
     use futures::{future::BoxFuture, stream::BoxStream, StreamExt};
     use send_wrapper::SendWrapper;
 
-    pub struct AsyncSqliteConnection(SqliteConnection);
+    pub struct AsyncSqliteConnection(pub(crate) SqliteConnection);
 
     impl SimpleAsyncConnection for AsyncSqliteConnection {
         async fn batch_execute(&mut self, query: &str) -> diesel::QueryResult<()> {
