@@ -93,6 +93,9 @@ pub mod context {
     }
 }
 
+#[cfg(feature = "plugin")]
+pub type FnResources = (L10n, Pool, plugin::PluginHost);
+#[cfg(not(feature = "plugin"))]
 pub type FnResources = (L10n, Pool);
 
 async fn load_templates(storage: &Operator, locations: &[String]) -> Vec<(String, String)> {
@@ -217,6 +220,9 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     use diesel::prelude::*;
     use diesel_async::RunQueryDsl;
 
+    #[cfg(feature = "plugin")]
+    let (l10n, pool, plugin_host) = resources;
+    #[cfg(not(feature = "plugin"))]
     let (l10n, pool) = resources;
 
     env.add_function(
