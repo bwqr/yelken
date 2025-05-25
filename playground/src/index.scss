@@ -1,0 +1,63 @@
+// 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+@import "bootstrap/scss/functions";
+
+// 2. Include any default variable overrides here
+
+// 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/variables-dark";
+
+// 4. Include any default map overrides here
+
+// 5. Include remainder of required parts
+@import "bootstrap/scss/maps";
+@import "bootstrap/scss/mixins";
+@import "bootstrap/scss/root";
+
+// 6. Optionally include any other parts as needed
+@import "bootstrap/scss/utilities";
+@import "bootstrap/scss/type";
+@import "bootstrap/scss/reboot";
+@import "bootstrap/scss/buttons";
+@import "bootstrap/scss/button-group";
+@import "bootstrap/scss/containers";
+@import "bootstrap/scss/grid";
+@import "bootstrap/scss/spinners";
+
+body {
+  display: flex;
+  flex-flow: column;
+  height: 100vh;
+  background: var(--bs-secondary-bg-subtle);
+}
+
+#controller {
+  padding: 0.5rem;
+  display: flex;
+  flex-flow: row;
+
+  #navbar {
+    display: flex;
+    flex-grow: 1;
+  }
+
+  #navs {
+    display: flex;
+    align-items: center;
+  }
+
+  #playground-path {
+    border: 1px solid var(--bs-gray);
+    padding: 0.35rem 0.75rem;
+    margin: 0 1rem;
+    border-radius: 0.25rem;
+  }
+}
+
+#playground-frame {
+  flex-grow: 1;
+  padding: 0.25rem;
+  border: none;
+  border-radius: 0.75rem 0.75rem 0 0;
+  width: 100%;
+}

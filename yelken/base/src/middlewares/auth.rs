@@ -5,9 +5,12 @@ use axum::{
     response::Response,
 };
 use diesel::prelude::*;
-use diesel_async::{pooled_connection::bb8::PooledConnection, AsyncPgConnection, RunQueryDsl};
+use diesel_async::RunQueryDsl;
 
-use crate::{crypto::Crypto, models::UserState, responses::HttpError, schema::users, AppState};
+use crate::{
+    crypto::Crypto, db::PooledConnection, models::UserState, responses::HttpError, schema::users,
+    AppState,
+};
 
 use axum::{
     extract::{FromRequestParts, OptionalFromRequestParts},
@@ -128,10 +131,7 @@ pub async fn try_from_cookie(
     Ok(next.run(req).await)
 }
 
-async fn fetch_user(
-    conn: &mut PooledConnection<'_, AsyncPgConnection>,
-    user_id: i32,
-) -> Result<AuthUser, HttpError> {
+async fn fetch_user(conn: &mut PooledConnection, user_id: i32) -> Result<AuthUser, HttpError> {
     let Some(user) = users::table
         .select((users::id, users::name, users::state))
         .filter(users::id.eq(user_id))

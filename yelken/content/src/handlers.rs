@@ -13,6 +13,7 @@ use axum::{
 };
 use base::{
     config::Options,
+    db::BatchQuery,
     middlewares::auth::AuthUser,
     models::{Content, ContentStage, Field, Locale},
     responses::HttpError,
@@ -170,6 +171,7 @@ pub async fn create_model(
                             })
                             .collect::<Vec<_>>(),
                     )
+                    .batched()
                     .get_results::<base::models::ModelField>(conn)
                     .await?;
 
@@ -305,6 +307,7 @@ pub async fn create_content(
                         })
                         .collect::<Vec<_>>(),
                 )
+                .batched()
                 .execute(conn)
                 .await?;
 

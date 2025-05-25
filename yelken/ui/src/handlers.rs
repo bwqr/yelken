@@ -245,14 +245,13 @@ pub async fn serve_page(
         options.theme().to_string(),
     );
 
-    let res = tokio::runtime::Handle::current()
-        .spawn_blocking(move || {
-            let ctx = Value::from_object(ctx);
+    let res = base::runtime::spawn_blocking(move || {
+        let ctx = Value::from_object(ctx);
 
-            render.render(&template, ctx)
-        })
-        .await
-        .unwrap();
+        render.render(&template, ctx)
+    })
+    .await
+    .unwrap();
 
     match res {
         Ok(html) => Ok(Html(html).into_response()),
@@ -287,9 +286,9 @@ mod tests {
     };
     use base::{
         config::Config,
+        db::Connection,
         schema::{locales, pages},
         test::{create_pool, DB_CONFIG},
-        types::Connection,
         AppState,
     };
     use diesel::prelude::*;

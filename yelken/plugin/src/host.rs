@@ -2,7 +2,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use base::types::Connection;
+use base::db::Connection;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use log::{info, warn};

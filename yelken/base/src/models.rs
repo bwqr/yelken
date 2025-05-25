@@ -1,15 +1,23 @@
-use std::io::Write;
-
 use chrono::NaiveDateTime;
 use diesel::{
     deserialize::{FromSql, FromSqlRow},
     expression::AsExpression,
-    pg::{Pg, PgValue},
     prelude::Queryable,
-    serialize::{IsNull, Output, ToSql},
+    serialize::{Output, ToSql},
     sql_types::Text,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::db::{Backend, BackendValue};
+
+#[cfg(feature = "sqlite")]
+fn read_value_bytes<'a>(value: &'a mut BackendValue) -> &'a [u8] {
+    value.read_blob()
+}
+#[cfg(feature = "postgres")]
+fn read_value_bytes<'a>(value: &'a BackendValue) -> &'a [u8] {
+    value.as_bytes()
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
@@ -19,20 +27,20 @@ pub enum UserState {
     Disabled,
 }
 
-impl ToSql<Text, Pg> for UserState {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
-        match *self {
-            UserState::Enabled => out.write_all(b"enabled")?,
-            UserState::Disabled => out.write_all(b"disabled")?,
-        }
+impl ToSql<Text, Backend> for UserState {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            UserState::Enabled => "enabled",
+            UserState::Disabled => "disabled",
+        };
 
-        Ok(IsNull::No)
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
     }
 }
 
-impl FromSql<Text, Pg> for UserState {
-    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
-        match bytes.as_bytes() {
+impl FromSql<Text, Backend> for UserState {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"enabled" => Ok(UserState::Enabled),
             b"disabled" => Ok(UserState::Disabled),
             _ => Err("Unrecognized enum variant".into()),
@@ -47,20 +55,20 @@ pub enum LoginKind {
     Cloud,
 }
 
-impl ToSql<Text, Pg> for LoginKind {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
-        match *self {
-            LoginKind::Email => out.write_all(b"email")?,
-            LoginKind::Cloud => out.write_all(b"cloud")?,
-        }
+impl ToSql<Text, Backend> for LoginKind {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            LoginKind::Email => "email",
+            LoginKind::Cloud => "cloud",
+        };
 
-        Ok(IsNull::No)
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
     }
 }
 
-impl FromSql<Text, Pg> for LoginKind {
-    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
-        match bytes.as_bytes() {
+impl FromSql<Text, Backend> for LoginKind {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"email" => Ok(LoginKind::Email),
             b"cloud" => Ok(LoginKind::Cloud),
             _ => Err("Unrecognized enum variant".into()),
@@ -129,20 +137,20 @@ pub enum ContentStage {
     Draft,
 }
 
-impl ToSql<Text, Pg> for ContentStage {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> diesel::serialize::Result {
-        match *self {
-            ContentStage::Published => out.write_all(b"published")?,
-            ContentStage::Draft => out.write_all(b"draft")?,
-        }
+impl ToSql<Text, Backend> for ContentStage {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            ContentStage::Published => "published",
+            ContentStage::Draft => "draft",
+        };
 
-        Ok(IsNull::No)
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
     }
 }
 
-impl FromSql<Text, Pg> for ContentStage {
-    fn from_sql(bytes: PgValue) -> diesel::deserialize::Result<Self> {
-        match bytes.as_bytes() {
+impl FromSql<Text, Backend> for ContentStage {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
             b"published" => Ok(ContentStage::Published),
             b"draft" => Ok(ContentStage::Draft),
             _ => Err("Unrecognized enum variant".into()),
@@ -170,4 +178,13 @@ pub struct Content {
     pub created_by: Option<i32>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+}
+
+#[derive(Queryable)]
+pub struct Permission {
+    pub id: i32,
+    pub user_id: Option<i32>,
+    pub role_id: Option<i32>,
+    pub name: String,
+    pub created_at: NaiveDateTime,
 }
