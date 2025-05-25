@@ -81,12 +81,15 @@ fn create_user(
 
     let perms = ["admin", "user.read", "content.read", "content.write"];
 
-    for perm in perms {
-        diesel::insert_into(permissions::table)
-            .values((permissions::user_id.eq(user.id), permissions::name.eq(perm)))
-            .execute(&mut conn)
-            .unwrap();
-    }
+    diesel::insert_into(permissions::table)
+        .values(
+            perms
+                .into_iter()
+                .map(|perm| (permissions::user_id.eq(user.id), permissions::name.eq(perm)))
+                .collect::<Vec<_>>(),
+        )
+        .execute(&mut conn)
+        .unwrap();
 }
 
 async fn logger(req: Request, next: Next) -> Response {

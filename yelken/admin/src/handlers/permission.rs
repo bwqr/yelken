@@ -5,8 +5,8 @@ use axum::{
     Json,
 };
 use base::{
-    middlewares::auth::AuthUser,
-    middlewares::permission::Permission,
+    db::BatchQuery,
+    middlewares::{auth::AuthUser, permission::Permission},
     responses::HttpError,
     schema::{permissions, roles, users},
     AppState,
@@ -49,15 +49,21 @@ pub async fn update_role_permissions(
                     .await?;
 
                 if perms.len() > 0 {
-                    for perm in perms {
-                        diesel::insert_into(permissions::table)
-                            .values((
-                                permissions::role_id.eq(role_id),
-                                permissions::name.eq(perm.as_str()),
-                            ))
-                            .execute(conn)
-                            .await?;
-                    }
+                    diesel::insert_into(permissions::table)
+                        .values(
+                            perms
+                                .into_iter()
+                                .map(move |perm| {
+                                    (
+                                        permissions::role_id.eq(role_id),
+                                        permissions::name.eq(perm.as_str()),
+                                    )
+                                })
+                                .collect::<Vec<_>>(),
+                        )
+                        .batched()
+                        .execute(conn)
+                        .await?;
                 }
 
                 Result::<(), HttpError>::Ok(())
