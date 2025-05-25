@@ -19,6 +19,7 @@ use base::{
 };
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use futures::StreamExt;
+use include_dir::{Dir, include_dir};
 use opendal::Operator;
 use tower::Service;
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -30,12 +31,11 @@ compile_error!("\"sqlite\" feature needs to be enabled");
 
 mod console_logger;
 
-fn load_theme(storage: &Operator) {
-    use include_dir::{Dir, include_dir};
+static THEME: Dir = include_dir!("../themes/default/");
+static APP_ASSETS: Dir = include_dir!("../app/dist/");
 
-    static THEME: Dir = include_dir!("../themes/default/");
-
-    let mut dirs = vec![&THEME];
+fn fill_storage(storage: &Operator, path: &str, dir: &'static Dir) {
+    let mut dirs = vec![dir];
 
     while let Some(dir) = dirs.pop() {
         for entry in dir.entries() {
@@ -43,7 +43,7 @@ fn load_theme(storage: &Operator) {
                 dirs.push(dir);
             } else if let Some(file) = entry.as_file() {
                 let path = format!(
-                    "themes/default/{}",
+                    "{path}/{}",
                     file.path().as_os_str().to_str().unwrap()
                 );
 
@@ -114,6 +114,10 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         .unwrap()
         .finish();
 
+    let app_assets_storage = Operator::new(opendal::services::Memory::default())
+        .unwrap()
+        .finish();
+
     let tmp_storage = Operator::new(opendal::services::Memory::default())
         .unwrap()
         .finish();
@@ -127,7 +131,9 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
 
         create_user(conn, &crypto, name, email, password);
 
-        load_theme(&storage);
+        fill_storage(&storage, "themes/default", &THEME);
+
+        fill_storage(&app_assets_storage, "", &APP_ASSETS);
     }
 
     let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
@@ -140,9 +146,16 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         reload_templates: true,
     };
 
-    let app = yelken::router(crypto, config, pool, storage, tmp_storage)
-        .await
-        .layer(axum::middleware::from_fn(logger));
+    let app = yelken::router(
+        crypto,
+        config,
+        pool,
+        storage,
+        app_assets_storage,
+        tmp_storage,
+    )
+    .await
+    .layer(axum::middleware::from_fn(logger));
 
     APP.set(Mutex::new(app)).unwrap();
 }

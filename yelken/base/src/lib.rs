@@ -13,6 +13,7 @@ pub mod permission;
 pub mod responses;
 pub mod runtime;
 pub mod schema;
+pub mod services;
 pub mod test;
 
 #[derive(Clone)]

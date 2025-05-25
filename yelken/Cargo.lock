@@ -161,12 +161,10 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "base",
- "include_dir",
  "log",
- "mime_guess",
+ "opendal",
  "serde",
  "serde_json",
- "tower",
 ]
 
 [[package]]
@@ -326,6 +324,7 @@ dependencies = [
  "futures-util",
  "jsonwebtoken",
  "log",
+ "mime_guess",
  "opendal",
  "ring",
  "send_wrapper",

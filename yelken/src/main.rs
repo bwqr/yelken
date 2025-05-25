@@ -144,15 +144,28 @@ async fn main() {
         opendal::Operator::new(builder).unwrap().finish()
     };
 
+    let app_assets_storage = {
+        let builder = opendal::services::Fs::default().root(&server_config.app_assets_dir);
+
+        opendal::Operator::new(builder).unwrap().finish()
+    };
+
     let tmp_storage = {
         let builder = opendal::services::Fs::default().root(&server_config.tmp_dir);
 
         opendal::Operator::new(builder).unwrap().finish()
     };
 
-    let app = yelken::router(crypto, config, pool, storage, tmp_storage)
-        .await
-        .layer(axum::middleware::from_fn(logger));
+    let app = yelken::router(
+        crypto,
+        config,
+        pool,
+        storage,
+        app_assets_storage,
+        tmp_storage,
+    )
+    .await
+    .layer(axum::middleware::from_fn(logger));
 
     let listener = tokio::net::TcpListener::bind(server_config.address)
         .await

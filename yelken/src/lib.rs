@@ -65,6 +65,7 @@ pub async fn router(
     config: Config,
     pool: Pool,
     storage: Operator,
+    app_assets_storage: Operator,
     tmp_storage: Operator,
 ) -> Router<()> {
     let options = load_options(pool.get().await.unwrap()).await;
@@ -104,7 +105,7 @@ pub async fn router(
     let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
-    let app = app.nest("/yk/app/", app::router(base_path));
+    let app = app.nest("/yk/app/", app::router(app_assets_storage, base_path));
 
     #[cfg(feature = "app")]
     let app = app.route(
