@@ -1,6 +1,6 @@
 {
-  "name": "multi-db",
-  "version": "0.1.0",
+  "name": "yelken-playground",
+  "version": "0.1.0-alpha2",
   "type": "module",
   "scripts": {
     "dev": "vite",

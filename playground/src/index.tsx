@@ -41,7 +41,7 @@ const App = ({ frame, prefix }: { frame: HTMLIFrameElement, prefix: string }) =>
         <div class="container" id="controller">
             <form id="navbar" onSubmit={onSubmit}>
                 <input id="playground-path" type="text" placeholder="Path" value={path()} onInput={(ev) => setPath(ev.target.value)} />
-                <button type="submit" class="btn btn-outline-primary">Load</button>
+                <button type="submit" class="btn btn-primary">Load</button>
             </form>
             <div id="navs">
                 <button type="button" class="btn btn-link" onClick={() => setFrameSrc('/')}>Home</button>
