@@ -48,19 +48,19 @@ pub async fn update_role_permissions(
                     .execute(conn)
                     .await?;
 
+                let perms = perms
+                    .into_iter()
+                    .map(|perm| {
+                        (
+                            permissions::role_id.eq(role_id),
+                            permissions::name.eq(perm.as_str()),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
                 if perms.len() > 0 {
                     diesel::insert_into(permissions::table)
-                        .values(
-                            perms
-                                .into_iter()
-                                .map(move |perm| {
-                                    (
-                                        permissions::role_id.eq(role_id),
-                                        permissions::name.eq(perm.as_str()),
-                                    )
-                                })
-                                .collect::<Vec<_>>(),
-                        )
+                        .values(perms)
                         .batched()
                         .execute(conn)
                         .await?;
@@ -116,16 +116,22 @@ pub async fn update_user_permissions(
                     .execute(conn)
                     .await?;
 
+                let perms = perms
+                    .into_iter()
+                    .map(|perm| {
+                        (
+                            permissions::user_id.eq(user_id),
+                            permissions::name.eq(perm.as_str()),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
                 if perms.len() > 0 {
-                    for perm in perms {
-                        diesel::insert_into(permissions::table)
-                            .values((
-                                permissions::user_id.eq(user_id),
-                                permissions::name.eq(perm.as_str()),
-                            ))
-                            .execute(conn)
-                            .await?;
-                    }
+                    diesel::insert_into(permissions::table)
+                        .values(perms)
+                        .batched()
+                        .execute(conn)
+                        .await?;
                 }
 
                 Result::<(), HttpError>::Ok(())

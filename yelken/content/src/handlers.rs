@@ -293,17 +293,23 @@ pub async fn create_content(
                 .get_result::<base::models::Content>(conn)
                 .await?;
 
-            for cv in req.values {
-                diesel::insert_into(content_values::table)
-                    .values((
-                        content_values::content_id.eq(content.id),
-                        content_values::model_field_id.eq(cv.model_field_id),
-                        content_values::locale.eq(cv.locale),
-                        content_values::value.eq(cv.value),
-                    ))
-                    .execute(conn)
-                    .await?;
-            }
+            diesel::insert_into(content_values::table)
+                .values(
+                    req.values
+                        .into_iter()
+                        .map(|v| {
+                            (
+                                content_values::content_id.eq(content.id),
+                                content_values::model_field_id.eq(v.model_field_id),
+                                content_values::locale.eq(v.locale),
+                                content_values::value.eq(v.value),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .batched()
+                .execute(conn)
+                .await?;
 
             Result::<(), HttpError>::Ok(())
         }

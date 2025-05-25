@@ -7,17 +7,10 @@ use diesel_async::{
 compile_error!("Either \"sqlite\" or \"postgres\" feature needs to be enabled");
 
 #[cfg(feature = "sqlite")]
-pub type Connection = diesel_async::sync_connection_wrapper::SyncConnectionWrapper<
-    diesel::sqlite::SqliteConnection,
-    sqlite::NoopSpawnBlocking,
->;
-#[cfg(feature = "sqlite")]
-pub type SyncConnection = diesel::SqliteConnection;
+pub use sqlite::{Connection, SyncConnection};
 
 #[cfg(feature = "postgres")]
-pub type Connection = diesel_async::AsyncPgConnection;
-#[cfg(feature = "postgres")]
-pub type SyncConnection = diesel::PgConnection;
+pub use postgres::{Connection, SyncConnection};
 
 pub type Backend = <Connection as AsyncConnection>::Backend;
 pub type BackendValue<'a> = <Backend as diesel::backend::Backend>::RawValue<'a>;
@@ -38,6 +31,9 @@ mod postgres {
     };
 
     use super::BatchQuery;
+
+    pub type Connection = diesel_async::AsyncPgConnection;
+    pub type SyncConnection = diesel::PgConnection;
 
     impl<Tab, Val, Op, QId, const STATIC_QUERY_ID: bool> BatchQuery<diesel_async::AsyncPgConnection>
         for InsertStatement<Tab, BatchInsert<Val, Tab, QId, STATIC_QUERY_ID>, Op>
@@ -63,6 +59,12 @@ mod sqlite {
     use futures_util::StreamExt;
 
     use super::BatchQuery;
+
+    pub type Connection = diesel_async::sync_connection_wrapper::SyncConnectionWrapper<
+        diesel::sqlite::SqliteConnection,
+        NoopSpawnBlocking,
+    >;
+    pub type SyncConnection = diesel::SqliteConnection;
 
     pub struct NoopSpawnBlocking;
 
@@ -126,7 +128,7 @@ mod sqlite {
             conn: &mut super::Connection,
         ) -> <Self as diesel_async::methods::LoadQuery<'query, super::Connection, U>>::LoadFuture<'_>
         {
-            let fut = conn.spawn_blocking(move |conn| {
+            conn.spawn_blocking(move |conn| {
                 let val = <_ as diesel::query_dsl::methods::LoadQuery<
                     'query,
                     super::SyncConnection,
@@ -135,9 +137,7 @@ mod sqlite {
                 .collect::<Vec<_>>();
 
                 Ok(futures::stream::iter(val.into_iter()).boxed())
-            });
-
-            fut
+            })
         }
     }
 }

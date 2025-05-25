@@ -7,7 +7,7 @@ use axum::{
 };
 use base::{
     config::Options,
-    db::PooledConnection,
+    db::{BatchQuery, PooledConnection},
     middlewares::auth::AuthUser,
     models::{ContentStage, Field},
     responses::HttpError,
@@ -331,34 +331,46 @@ async fn create_theme(
             e.into()
         })?;
 
-    for page in manifest.pages {
-        diesel::insert_into(pages::table)
-            .values((
-                pages::namespace.eq(&manifest.id),
-                pages::name.eq(page.name),
-                pages::path.eq(page.path),
-                pages::template.eq(page.template),
-                pages::locale.eq(page.locale),
-            ))
-            .execute(conn)
-            .await?;
-    }
+    diesel::insert_into(pages::table)
+        .values(
+            manifest
+                .pages
+                .into_iter()
+                .map(|page| {
+                    (
+                        pages::namespace.eq(manifest.id.clone()),
+                        pages::name.eq(page.name),
+                        pages::path.eq(page.path),
+                        pages::template.eq(page.template),
+                        pages::locale.eq(page.locale),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
+        .batched()
+        .execute(conn)
+        .await?;
 
-    let mut ms = HashMap::<String, base::models::Model>::new();
-
-    for model in manifest.models.iter() {
-        let model = diesel::insert_into(models::table)
-            .values((
-                models::namespace.eq(&manifest.id),
-                models::name.eq(&model.name),
-            ))
-            .get_result::<base::models::Model>(conn)
-            .await?;
-
-        ms.insert(model.name.clone(), model);
-    }
-
-    let models = ms;
+    let models = HashMap::<String, base::models::Model>::from_iter(
+        diesel::insert_into(models::table)
+            .values(
+                manifest
+                    .models
+                    .iter()
+                    .map(|model| {
+                        (
+                            models::namespace.eq(manifest.id.clone()),
+                            models::name.eq(model.name.clone()),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            )
+            .batched()
+            .get_results::<base::models::Model>(conn)
+            .await?
+            .into_iter()
+            .map(|model| (model.name.clone(), model)),
+    );
 
     let fields = HashMap::<String, Field>::from_iter(
         fields::table
@@ -389,23 +401,29 @@ async fn create_theme(
             })
             .collect::<Result<Vec<(i32, &ModelField)>, HttpError>>()?;
 
-        let mut mfs = HashMap::<String, base::models::ModelField>::new();
-        for model_field in model_fields {
-            let mf = diesel::insert_into(model_fields::table)
-                .values((
-                    model_fields::model_id.eq(model_id),
-                    model_fields::field_id.eq(model_field.0),
-                    model_fields::localized.eq(model_field.1.localized.unwrap_or(false)),
-                    model_fields::multiple.eq(model_field.1.multiple.unwrap_or(false)),
-                    model_fields::name.eq(&model_field.1.name),
-                ))
-                .get_result::<base::models::ModelField>(conn)
-                .await?;
-
-            mfs.insert(mf.name.clone(), mf);
-        }
-
-        let model_fields = mfs;
+        let model_fields = HashMap::<String, base::models::ModelField>::from_iter(
+            diesel::insert_into(model_fields::table)
+                .values(
+                    model_fields
+                        .iter()
+                        .map(|model_field| {
+                            (
+                                model_fields::model_id.eq(model_id),
+                                model_fields::field_id.eq(model_field.0),
+                                model_fields::localized
+                                    .eq(model_field.1.localized.unwrap_or(false)),
+                                model_fields::multiple.eq(model_field.1.multiple.unwrap_or(false)),
+                                model_fields::name.eq(model_field.1.name.clone()),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .batched()
+                .get_results::<base::models::ModelField>(conn)
+                .await?
+                .into_iter()
+                .map(|mf| (mf.name.clone(), mf)),
+        );
 
         for content in manifest.contents.iter().filter(|c| c.model == model.name) {
             let values = content
@@ -437,17 +455,23 @@ async fn create_theme(
                 .await?
                 .id;
 
-            for v in values {
-                diesel::insert_into(content_values::table)
-                    .values((
-                        content_values::content_id.eq(content_id),
-                        content_values::model_field_id.eq(v.0),
-                        content_values::value.eq(&v.1.value),
-                        content_values::locale.eq(&v.1.locale),
-                    ))
-                    .execute(conn)
-                    .await?;
-            }
+            diesel::insert_into(content_values::table)
+                .values(
+                    values
+                        .into_iter()
+                        .map(|v| {
+                            (
+                                content_values::content_id.eq(content_id),
+                                content_values::model_field_id.eq(v.0),
+                                content_values::value.eq(v.1.value.clone()),
+                                content_values::locale.eq(v.1.locale.clone()),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                )
+                .batched()
+                .execute(conn)
+                .await?;
         }
     }
 
