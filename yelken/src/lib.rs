@@ -10,6 +10,7 @@ use base::{
     crypto::Crypto,
     db::{Pool, PooledConnection},
     schema::options,
+    services::ServeStorageDir,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -90,16 +91,15 @@ pub async fn router(
     let base_path = Url::parse(&state.config.backend_url).unwrap();
     let base_path = base_path.path();
 
-    let app = Router::new();
-    // let app = Router::new()
-    //     .nest_service(
-    //         "/assets/static",
-    //         ServeDir::new(format!("{}/assets", server_config.storage_dir)),
-    //     )
-    //     .nest_service(
-    //         "/assets/content",
-    //         ServeDir::new(format!("{}/content", server_config.storage_dir)),
-    //     );
+    let app = Router::new()
+        .nest_service(
+            "/assets/static",
+            ServeStorageDir::new(storage.clone(), "assets".into()),
+        )
+        .nest_service(
+            "/assets/content",
+            ServeStorageDir::new(storage.clone(), "content".into()),
+        );
 
     #[cfg(feature = "admin")]
     let app = app.nest("/api/admin", admin::router(state.clone()));
