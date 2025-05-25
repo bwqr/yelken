@@ -103,6 +103,12 @@ create table contents(
     check (stage in ('published', 'draft'))
 );
 
+create trigger contents_updated_at update of name, stage on contents
+  for each row
+  begin
+    update contents set updated_at = current_timestamp where id = old.id;
+  end;
+
 create table content_values(
     id             integer primary key autoincrement,
     content_id     int not null,
