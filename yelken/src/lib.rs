@@ -17,7 +17,6 @@ use diesel_async::RunQueryDsl;
 use opendal::Operator;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
-use url::Url;
 
 pub struct DatabaseConfig {
     pub url: String,
@@ -79,7 +78,14 @@ pub async fn router(
             http::Method::DELETE,
         ])
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
-        .allow_origin(config.frontend_url.parse::<HeaderValue>().unwrap());
+        .allow_origin(
+            config
+                .app_url
+                .origin()
+                .ascii_serialization()
+                .parse::<HeaderValue>()
+                .unwrap(),
+        );
 
     let state = AppState::new(config, pool, storage.clone(), tmp_storage);
 
@@ -88,8 +94,7 @@ pub async fn router(
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
 
-    let base_path = Url::parse(&state.config.backend_url).unwrap();
-    let base_path = base_path.path();
+    let base_path = state.config.site_url.path().to_string();
 
     let app = Router::new()
         .nest_service(
@@ -105,7 +110,7 @@ pub async fn router(
     let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
-    let app = app.nest("/yk/app/", app::router(app_assets_storage, base_path));
+    let app = app.nest("/yk/app/", app::router(app_assets_storage, &base_path));
 
     #[cfg(feature = "app")]
     let app = app.route(
@@ -186,7 +191,7 @@ pub async fn router(
 
     Router::new()
         .route(
-            base_path,
+            &base_path,
             axum::routing::get((
                 axum::http::StatusCode::PERMANENT_REDIRECT,
                 [(

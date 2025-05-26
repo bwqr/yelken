@@ -17,9 +17,14 @@ log.workspace = true
 opendal.workspace = true
 serde.workspace = true
 unic-langid.workspace = true
+url.workspace = true
 
 matchit = "0.8.4"
 minijinja = { version = "2.9.0", default-features = false, features = ["builtins", "debug", "loader", "loop_controls", "macros", "multi_template", "serde"] }
+
+[dev-dependencies]
+base = { path = "../base", features = ["postgres"] }
+tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
 plugin = ["dep:plugin"]

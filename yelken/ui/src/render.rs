@@ -7,7 +7,7 @@ use base::models::ContentStage;
 use base::responses::HttpError;
 use base::runtime::{block_on, IntoSendFuture};
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
-use context::{LocaleContext, PageContext};
+use context::{ConfigContext, LocaleContext, PageContext};
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};
 use opendal::{EntryMode, Operator};
@@ -19,6 +19,7 @@ pub mod context {
     use minijinja::value::{Object, Value};
     use std::{collections::BTreeMap, sync::Arc};
     use unic_langid::LanguageIdentifier;
+    use url::Url;
 
     #[derive(Debug)]
     pub struct Page {
@@ -57,7 +58,15 @@ pub mod context {
     }
 
     #[derive(Debug)]
+    pub struct ConfigContext {
+        pub site_url: Url,
+    }
+
+    impl Object for ConfigContext {}
+
+    #[derive(Debug)]
     pub struct RenderContext {
+        config: Arc<ConfigContext>,
         locale: Arc<LocaleContext>,
         pages: Arc<PageContext>,
         params: Arc<BTreeMap<String, String>>,
@@ -66,12 +75,14 @@ pub mod context {
 
     impl RenderContext {
         pub fn new(
+            config: Arc<ConfigContext>,
             locale: Arc<LocaleContext>,
             pages: Arc<PageContext>,
             params: Arc<BTreeMap<String, String>>,
             namespace: String,
         ) -> Self {
             Self {
+                config,
                 locale,
                 pages,
                 params,
@@ -83,6 +94,7 @@ pub mod context {
     impl Object for RenderContext {
         fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
             match key.as_str()? {
+                "config" => Some(Value::from_dyn_object(self.config.clone())),
                 "locale" => Some(Value::from_dyn_object(self.locale.clone())),
                 "pages" => Some(Value::from_dyn_object(Arc::clone(&self.pages))),
                 "params" => Some(Value::from_dyn_object(Arc::clone(&self.params))),
@@ -252,7 +264,15 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         }
     });
 
-    env.add_function("localize_url", |state: &State, args: Kwargs| {
+    env.add_function("get_url", |state: &State, args: Kwargs| {
+        let base_url: String = state.lookup("config")
+            .expect("could not find config in render context")
+            .downcast_object::<ConfigContext>()
+            .expect("config variable does not have expected type")
+            .site_url
+            .path()
+            .to_string();
+
         let locale: Arc<LocaleContext> = state
             .lookup("locale")
             .expect("could not find locale in render context")
@@ -282,15 +302,31 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     ));
                 };
 
-                return Ok(Value::from(append_locale_to_path(&locale.current, &locale.default, &path)));
+                let mut path = append_locale_to_path(&locale.current, &locale.default, &path);
+
+                if base_url != "/" {
+                    path = format!("{base_url}{path}");
+                }
+
+                return Ok(Value::from(path));
             }
 
             return Err(Error::new(
                 ErrorKind::InvalidOperation,
                 "page not found",
             ));
-        } else if let Some(path) = args.get::<'_, Option<String>>("path")? {
-            return Ok(Value::from(append_locale_to_path(&locale.current, &locale.default, &path)));
+        } else if let Some(mut path) = args.get::<'_, Option<String>>("path")? {
+            let localize = args.get::<'_, Option<bool>>("localize").unwrap_or(Some(true)).unwrap_or(true);
+
+            if localize {
+                path = append_locale_to_path(&locale.current, &locale.default, &path)
+            }
+
+            if base_url != "/" {
+                path = format!("{base_url}{path}");
+            }
+
+            return Ok(Value::from(path));
         }
 
         return Err(Error::new(

@@ -15,7 +15,7 @@ use minijinja::Value;
 use unic_langid::LanguageIdentifier;
 
 use crate::render::{
-    context::{LocaleContext, Page, PageContext, RenderContext},
+    context::{ConfigContext, LocaleContext, Page, PageContext, RenderContext},
     Render,
 };
 
@@ -168,15 +168,12 @@ pub async fn serve_page(
     else {
         if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
             if redirect.is_empty() || redirect.starts_with('/') {
-                let redirect = if redirect.starts_with('/') {
-                    redirect
-                } else {
-                    "/"
-                };
+                let mut url = state.config.site_url.clone();
+                url.path_segments_mut().unwrap().push(redirect);
 
                 return Ok(Response::builder()
                     .status(StatusCode::TEMPORARY_REDIRECT)
-                    .header(http::header::LOCATION, redirect)
+                    .header(http::header::LOCATION, url.as_str())
                     .body(Body::empty())
                     .unwrap());
             }
@@ -185,6 +182,9 @@ pub async fn serve_page(
         return match render.render(
             "__404__.html",
             Value::from_object(RenderContext::new(
+                Arc::new(ConfigContext {
+                    site_url: state.config.site_url.clone(),
+                }),
                 Arc::new(LocaleContext {
                     all: supported_locales.clone(),
                     current: current_locale.clone(),
@@ -209,15 +209,18 @@ pub async fn serve_page(
     if let Some(page_locale) = &page_locale {
         let path = req.uri().path();
 
-        let localized_path = if path == "/" {
-            format!("/{current_locale}")
-        } else {
-            format!("/{current_locale}{}", path)
-        };
+        let mut url = state.config.site_url.clone();
+
+        url.path_segments_mut()
+            .unwrap()
+            .push(&format!("{current_locale}"))
+            .push(path);
+
+        let localized_path = url.as_str();
 
         if !page_locale.matches(&current_locale, true, true)
             && router
-                .at(&localized_path)
+                .at(localized_path)
                 .map(|localized_route| localized_route.value.0 == *name)
                 .unwrap_or(false)
         {
@@ -231,6 +234,9 @@ pub async fn serve_page(
 
     let template = template.clone();
     let ctx = RenderContext::new(
+        Arc::new(ConfigContext {
+            site_url: state.config.site_url.clone(),
+        }),
         Arc::new(LocaleContext {
             all: supported_locales.clone(),
             current: current_locale.clone(),
@@ -275,8 +281,6 @@ pub async fn serve_page(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use axum::{
         body::Body,
         extract::State,
@@ -285,7 +289,7 @@ mod tests {
         Extension,
     };
     use base::{
-        config::Config,
+        config::{Config, Options},
         db::Connection,
         schema::{locales, pages},
         test::{create_pool, DB_CONFIG},
@@ -302,13 +306,25 @@ mod tests {
     async fn init_params(
         locales: &[&str],
         templates: Vec<(String, String)>,
-    ) -> (AppState, L10n, Render) {
+    ) -> (AppState, Options, L10n, Render) {
         let service = opendal::services::Memory::default();
         let storage = opendal::Operator::new(service).unwrap().finish();
 
-        let config = Config::default();
+        for template in templates {
+            storage
+                .write(&format!("templates/{}", template.0), template.1)
+                .await
+                .unwrap();
+        }
+
+        let config = Config {
+            env: "dev".to_string(),
+            site_url: "http://127.0.0.1:3000".parse().unwrap(),
+            app_url: "http://127.0.0.1:3000".parse().unwrap(),
+            reload_templates: false,
+        };
         let pool = create_pool(DB_CONFIG).await;
-        let state = AppState::new(config, pool, storage);
+        let state = AppState::new(config, pool, storage.clone(), storage.clone());
 
         diesel::insert_into(locales::table)
             .values(
@@ -321,18 +337,31 @@ mod tests {
             .await
             .unwrap();
 
-        let l10n = L10n::new(
+        let options = Options::new(
+            "default".into(),
             locales.into_iter().map(|l| l.parse().unwrap()).collect(),
             "en".parse().unwrap(),
-            HashMap::new(),
         );
 
-        let renderer = Render::new(templates, None).unwrap();
+        let l10n = L10n::new(
+            &storage,
+            &["locales".to_string()],
+            &locales
+                .into_iter()
+                .map(|l| l.parse().unwrap())
+                .collect::<Vec<_>>(),
+            "en".parse().unwrap(),
+        )
+        .await;
 
-        (state, l10n, renderer)
+        let renderer = Render::new(&storage, &["templates".to_string()], None)
+            .await
+            .unwrap();
+
+        (state, options, l10n, renderer)
     }
 
-    async fn create_pages(mut conn: Connection<'_>, pages: &[(&str, &str, &str, Option<&str>)]) {
+    async fn create_pages(conn: &mut Connection, pages: &[(&str, &str, &str, Option<&str>)]) {
         diesel::insert_into(pages::table)
             .values(
                 pages
@@ -347,20 +376,20 @@ mod tests {
                     })
                     .collect::<Vec<_>>(),
             )
-            .execute(&mut conn)
+            .execute(conn)
             .await
             .unwrap();
     }
     #[tokio::test]
     async fn it_returns_page_with_correct_locale() {
-        let (state, l10n, renderer) = init_params(
+        let (state, options, l10n, renderer) = init_params(
             &["en", "tr"],
             vec![("contact.html".to_string(), "Contact Page".to_string())],
         )
         .await;
 
         create_pages(
-            state.pool.get().await.unwrap(),
+            &mut state.pool.get().await.unwrap(),
             &[
                 ("contact", "/contact", "contact.html", Some("en")),
                 ("contact", "/iletisim", "contact.html", Some("tr")),
@@ -375,8 +404,9 @@ mod tests {
 
         let resp = super::serve_page(
             State(state.clone()),
-            Extension(l10n.clone()),
+            Extension(options.clone()),
             Extension(renderer.clone()),
+            Extension(l10n.clone()),
             req,
         )
         .await
@@ -389,11 +419,11 @@ mod tests {
     #[tokio::test]
     async fn it_returns_307_when_two_pages_with_same_path_is_requested_and_user_has_non_default_locale(
     ) {
-        let (state, l10n, renderer) =
+        let (state, options, l10n, renderer) =
             init_params(&["en", "tr"], vec![("".to_string(), "".to_string())]).await;
 
         create_pages(
-            state.pool.get().await.unwrap(),
+            &mut state.pool.get().await.unwrap(),
             &[
                 ("home", "/", "", Some("en")),
                 ("home", "/", "", Some("tr")),
@@ -424,8 +454,9 @@ mod tests {
 
             let resp = super::serve_page(
                 State(state.clone()),
-                Extension(l10n.clone()),
+                Extension(options.clone()),
                 Extension(renderer.clone()),
+                Extension(l10n.clone()),
                 req,
             )
             .await

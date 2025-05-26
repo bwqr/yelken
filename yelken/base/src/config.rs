@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use arc_swap::ArcSwap;
 use unic_langid::LanguageIdentifier;
+use url::Url;
 
 use crate::{db::Connection, schema::locales};
 
-#[derive(Default)]
 pub struct Config {
     pub env: String,
-    pub backend_url: String,
-    pub frontend_url: String,
+    pub site_url: Url,
+    pub app_url: Url,
     pub reload_templates: bool,
 }
 

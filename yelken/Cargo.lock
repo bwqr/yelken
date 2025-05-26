@@ -332,6 +332,7 @@ dependencies = [
  "tokio",
  "tower",
  "unic-langid",
+ "url",
 ]
 
 [[package]]
@@ -3432,7 +3433,9 @@ dependencies = [
  "opendal",
  "plugin",
  "serde",
+ "tokio",
  "unic-langid",
+ "url",
 ]
 
 [[package]]
@@ -4462,7 +4465,6 @@ dependencies = [
  "tower",
  "tower-http",
  "ui",
- "url",
  "user",
 ]
 

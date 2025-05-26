@@ -42,10 +42,7 @@ fn fill_storage(storage: &Operator, path: &str, dir: &'static Dir) {
             if let Some(dir) = entry.as_dir() {
                 dirs.push(dir);
             } else if let Some(file) = entry.as_file() {
-                let path = format!(
-                    "{path}/{}",
-                    file.path().as_os_str().to_str().unwrap()
-                );
+                let path = format!("{path}/{}", file.path().as_os_str().to_str().unwrap());
 
                 storage.blocking().write(&path, file.contents()).unwrap();
             }
@@ -139,10 +136,13 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
     let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
     let pool = deadpool::Pool::builder(db_config).build().unwrap();
 
+    let site_url = base_url.parse().expect("Given base_url is not a valid url");
+    let app_url = base_url.parse().expect("Given base_url is not a valid url");
+
     let config = base::config::Config {
         env: "dev".to_string(),
-        backend_url: base_url.clone(),
-        frontend_url: base_url,
+        site_url,
+        app_url,
         reload_templates: true,
     };
 

@@ -71,11 +71,15 @@ fn db_config_from_env() -> Result<DatabaseConfig> {
 fn config_from_env() -> Result<Config> {
     let env = std::env::var("YELKEN_ENV").context("YELKEN_ENV is not defined")?;
 
-    let backend_url =
-        std::env::var("YELKEN_BACKEND_URL").context("YELKEN_BACKEND_URL is not defined")?;
+    let site_url = std::env::var("YELKEN_SITE_URL")
+        .context("YELKEN_SITE_URL is not defined")?
+        .parse()
+        .context("YELKEN_SITE_URL is not a valid url")?;
 
-    let frontend_url =
-        std::env::var("YELKEN_FRONTEND_URL").context("YELKEN_FRONTEND_URL is not defined")?;
+    let app_url = std::env::var("YELKEN_APP_URL")
+        .context("YELKEN_APP_URL is not defined")?
+        .parse()
+        .context("YELKEN_APP_URL is not a valid url")?;
 
     let reload_templates = std::env::var("YELKEN_RELOAD_TEMPLATES")
         .map(|var| var.as_str() == "on" || var.as_str() == "true" || var.as_str() == "yes")
@@ -83,8 +87,8 @@ fn config_from_env() -> Result<Config> {
 
     Ok(Config {
         env,
-        backend_url,
-        frontend_url,
+        site_url,
+        app_url,
         reload_templates,
     })
 }

@@ -62,7 +62,6 @@ opendal.workspace = true
 tokio = { workspace = true, optional = true, features = ["full"] }
 tower.workspace = true
 tower-http = { workspace = true, features = ["cors"] }
-url.workspace = true
 
 [profile.dev]
 debug = false
