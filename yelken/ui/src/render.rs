@@ -252,17 +252,39 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         },
     );
 
-    env.add_function("asset_url", |path: String, kwargs: Kwargs| {
-        let kind = kwargs.get::<&str>("kind").unwrap_or("static");
+    env.add_function(
+        "asset_url",
+        |state: &State, path: String, kwargs: Kwargs| {
+            let base_url = state
+                .lookup("config")
+                .expect("could not find config in render context")
+                .downcast_object::<ConfigContext>()
+                .expect("config variable does not have expected type")
+                .site_url
+                .clone();
 
-        match kind {
-            "static" | "content" => Ok(format!("/assets/{kind}/{path}")),
-            unknown => Err(Error::new(
-                ErrorKind::InvalidOperation,
-                format!("unknown asset kind {unknown}"),
-            )),
-        }
-    });
+            let kind = kwargs.get::<&str>("kind").unwrap_or("theme");
+
+            match kind {
+                "theme" | "content" => {
+                    let mut base_url = base_url;
+
+                    base_url
+                        .path_segments_mut()
+                        .unwrap()
+                        .push("assets")
+                        .push(kind)
+                        .push(&path);
+
+                    Ok(base_url.as_str().to_string())
+                }
+                unknown => Err(Error::new(
+                    ErrorKind::InvalidOperation,
+                    format!("unknown asset kind {unknown}"),
+                )),
+            }
+        },
+    );
 
     env.add_function("get_url", |state: &State, args: Kwargs| {
         let base_url: String = state.lookup("config")

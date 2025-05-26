@@ -50,7 +50,7 @@ pub fn router(assets_storage: Operator, base_url: &str) -> Router<AppState> {
     let index = index.replace("/{YELKEN_BASE_URL}/", &format!("{base_url}/yk/app/"));
 
     Router::new()
-        .nest_service("/assets", ServeStorageDir::new(assets_storage, "assets".into()))
+        .nest_service("/assets", ServeStorageDir::new(assets_storage, || "assets".to_string()))
         .fallback(handle_req)
         .layer(Extension(Index(index)))
 }

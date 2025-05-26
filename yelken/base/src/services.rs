@@ -1,4 +1,4 @@
-use std::{convert::Infallible, sync::Arc, task::Poll};
+use std::{convert::Infallible, task::Poll};
 
 use axum::{
     body::Body,
@@ -14,18 +14,24 @@ use tower::Service;
 use crate::runtime::IntoSendFuture;
 
 #[derive(Clone)]
-pub struct ServeStorageDir {
+pub struct ServeStorageDir<F> {
     storage: Operator,
-    path: Arc<str>,
+    path: F,
 }
 
-impl ServeStorageDir {
-    pub fn new(storage: Operator, path: Arc<str>) -> Self {
+impl<F> ServeStorageDir<F>
+where
+    F: Fn() -> String + 'static,
+{
+    pub fn new(storage: Operator, path: F) -> Self {
         Self { storage, path }
     }
 }
 
-impl<ReqBody> Service<Request<ReqBody>> for ServeStorageDir {
+impl<F, ReqBody> Service<Request<ReqBody>> for ServeStorageDir<F>
+where
+    F: Fn() -> String + 'static,
+{
     type Response = Response<Body>;
     type Error = Infallible;
     type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
@@ -48,7 +54,7 @@ impl<ReqBody> Service<Request<ReqBody>> for ServeStorageDir {
             .boxed();
         }
 
-        let path = format!("{}{}", self.path, req.uri().path());
+        let path = format!("{}{}", (self.path)(), req.uri().path());
 
         let storage = self.storage.clone();
 

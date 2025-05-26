@@ -99,12 +99,23 @@ pub async fn router(
     let app = Router::new()
         .nest_service(
             "/assets/static",
-            ServeStorageDir::new(storage.clone(), "assets".into()),
+            ServeStorageDir::new(storage.clone(), || "assets".to_string()),
         )
         .nest_service(
             "/assets/content",
-            ServeStorageDir::new(storage.clone(), "content".into()),
+            ServeStorageDir::new(storage.clone(), || "content".to_string()),
         );
+
+    let app = {
+        let options = options.clone();
+
+        app.nest_service(
+            "/assets/theme",
+            ServeStorageDir::new(storage.clone(), move || {
+                format!("themes/{}/assets", options.theme())
+            }),
+        )
+    };
 
     #[cfg(feature = "admin")]
     let app = app.nest("/api/admin", admin::router(state.clone()));
