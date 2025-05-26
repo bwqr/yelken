@@ -94,8 +94,6 @@ pub async fn router(
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
 
-    let base_path = state.config.site_url.path().to_string();
-
     let app = Router::new()
         .nest_service(
             "/assets/static",
@@ -121,19 +119,34 @@ pub async fn router(
     let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
-    let app = app.nest("/yk/app/", app::router(app_assets_storage, &base_path));
+    let app = app.nest(
+        "/yk/app/",
+        app::router(app_assets_storage, state.config.site_url.clone()),
+    );
 
     #[cfg(feature = "app")]
-    let app = app.route(
-        "/yk/app",
-        axum::routing::get((
-            axum::http::StatusCode::PERMANENT_REDIRECT,
-            [(
-                axum::http::header::LOCATION,
-                axum::http::HeaderValue::from_str(&format!("{base_path}/yk/app/")).unwrap(),
-            )],
-        )),
-    );
+    let app = {
+        let mut redirect_url = state.config.site_url.clone();
+
+        redirect_url
+            .path_segments_mut()
+            .unwrap()
+            .pop_if_empty()
+            .push("yk")
+            .push("app")
+            .push("");
+
+        app.route(
+            "/yk/app",
+            axum::routing::get((
+                axum::http::StatusCode::PERMANENT_REDIRECT,
+                [(
+                    axum::http::header::LOCATION,
+                    axum::http::HeaderValue::from_str(redirect_url.as_str()).unwrap(),
+                )],
+            )),
+        )
+    };
 
     #[cfg(feature = "auth")]
     let app = app.nest("/api/auth", auth::router());
@@ -193,6 +206,8 @@ pub async fn router(
 
     #[cfg(feature = "user")]
     let app = app.nest("/api/user", user::router(state.clone()));
+
+    let base_path = state.config.site_url.path().to_string();
 
     let app = app.with_state(state).layer(layers);
 

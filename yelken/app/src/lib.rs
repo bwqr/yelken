@@ -8,6 +8,7 @@ use axum::{
 use base::{AppState, services::ServeStorageDir};
 use opendal::Operator;
 use serde::Serialize;
+use url::Url;
 
 #[derive(Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -34,23 +35,42 @@ async fn handle_req(Extension(index): Extension<Index>, req: Request) -> Respons
     resp
 }
 
-pub fn router(assets_storage: Operator, base_url: &str) -> Router<AppState> {
+pub fn router(assets_storage: Operator, site_url: Url) -> Router<AppState> {
     let index =
         std::io::read_to_string(assets_storage.blocking().read("index.html").unwrap()).unwrap();
+
+    let mut api_url = site_url.clone();
+    api_url
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .push("api");
+
+    let mut base_url = site_url.clone();
+    base_url
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .push("yk")
+        .push("app")
+        .push("");
 
     let index = index.replace(
         "{YELKEN_CONFIG_STRING}",
         &serde_json::to_string(&YelkenConfig {
-            api_url: format!("{base_url}/api"),
-            base_url: format!("{base_url}/yk/app/"),
+            api_url: api_url.to_string(),
+            base_url: base_url.path().to_string(),
         })
         .unwrap(),
     );
 
-    let index = index.replace("/{YELKEN_BASE_URL}/", &format!("{base_url}/yk/app/"));
+    let index = index.replace("/{YELKEN_BASE_URL}/", base_url.as_str());
 
     Router::new()
-        .nest_service("/assets", ServeStorageDir::new(assets_storage, || "assets".to_string()))
+        .nest_service(
+            "/assets",
+            ServeStorageDir::new(assets_storage, || "assets".to_string()),
+        )
         .fallback(handle_req)
         .layer(Extension(Index(index)))
 }
