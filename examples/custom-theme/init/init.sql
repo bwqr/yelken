@@ -88,9 +88,11 @@ create table model_fields(
     id        serial primary key not null,
     field_id  int not null,
     model_id  int not null,
+    name      varchar(128) not null,
     localized bool not null default false,
     multiple  bool not null default false,
-    name      varchar(128) not null,
+    required  bool not null default false,
+    unique (field_id, model_id, name),
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );
@@ -99,9 +101,19 @@ create table contents(
     id         serial primary key not null,
     model_id   int          not null,
     name       text         not null,
+    stage      varchar(16)  not null default 'draft' check (stage in ('published', 'draft')),
+    created_by int          default null,
     created_at timestamp    not null default current_timestamp,
-    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action
+    updated_at  timestamp   not null default current_timestamp,
+    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action,
+    constraint fk_contents_created_by foreign key (created_by) references users (id) on delete no action on update no action
 );
+
+create trigger contents_updated_at
+    before update
+    on contents
+    for each row
+execute procedure update_timestamp();
 
 create table content_values(
     id             serial primary key not null,
@@ -135,11 +147,11 @@ create table form_submissions(
 -- insert some data
 insert into locales (key, name) values ('en', 'English'), ('tr', 'Türkçe');
 
-insert into fields (name, kind) values ('text', 'string'), ('integer', 'int');
-
 insert into themes (id, version, name) values ('yelken.default', '0.1.0', 'Yelken Default Theme');
 
 insert into options (name, value) values ('theme', 'yelken.default'), ('default_locale', 'en');
+
+insert into fields (name, kind) values ('text', 'string'), ('integer', 'int');
 
 insert into users (username, name, email, password) values ('yelken_admin', 'Yelken Admin', 'admin@yelken.com', 'BUYSnFRDI0t0Ky4ScgWmkPFtEivIdjm9gZrG2nnZpvyLa7MCa6aUe1udxVFaH8jLjwkrpHKf5uhj2F2OpL0FLVY/cjbengb8XTdVuSL0d3NRc1vB+gKEFw==');
 

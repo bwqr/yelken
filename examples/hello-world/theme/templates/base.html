@@ -2,17 +2,17 @@
 <html>
   <head>
       <title>{% block title %}{{ localize("site-title") }}{% endblock title%}</title>
-      <link href="{{ asset_url('theme/main.css') }}" rel="stylesheet">
+      <link href="{{ asset_url('main.css') }}" rel="stylesheet">
   </head>
   <body>
     <div class="container">
         <header>
             <h1 class="site-header">
-                <a href="{{ localize_url(page='home') }}">{{ localize("site-title") }}</a>
+                <a href="{{ get_url(page='home') }}">{{ localize("site-title") }}</a>
             </h1>
             <nav>
                 {% for key, name in locale.all %}
-                    <a href="{{ "/" ~ key }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a>
+                    <a href="{{ get_url(path = "/" ~ key, localize = false) }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a>
                 {% endfor %}
             </nav>
         </header>

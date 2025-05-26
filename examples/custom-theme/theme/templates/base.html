@@ -7,17 +7,17 @@
   <body>
       <header>
           <h1>
-              <a href="{{ localize_url(page='home') }}">{{ localize("site-title") }}</a>
+              <a href="{{ get_url(page='home') }}">{{ localize("site-title") }}</a>
           </h1>
           <nav>
               {% for menu in get_contents('menu', ['name', 'path']) %}
-                  <a href="{{ localize_url(path=menu.path) }}">{{ menu.name }}</a>
+                  <a href="{{ get_url(path=menu.path) }}">{{ menu.name }}</a>
               {% endfor %}
           </nav>
 
           <nav>
               {% for key, name in locale.all %}
-                  <a href="{{ "/" ~ key }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a>
+                  <a href="{{ get_url(path = "/" ~ key, localize = false) }}" onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path=/'">{{ key }}</a>
               {% endfor %}
           </nav>
       </header>

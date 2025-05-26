@@ -88,9 +88,11 @@ create table model_fields(
     id        serial primary key not null,
     field_id  int not null,
     model_id  int not null,
+    name      varchar(128) not null,
     localized bool not null default false,
     multiple  bool not null default false,
-    name      varchar(128) not null,
+    required  bool not null default false,
+    unique (field_id, model_id, name),
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
 );
@@ -99,9 +101,19 @@ create table contents(
     id         serial primary key not null,
     model_id   int          not null,
     name       text         not null,
+    stage      varchar(16)  not null default 'draft' check (stage in ('published', 'draft')),
+    created_by int          default null,
     created_at timestamp    not null default current_timestamp,
-    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action
+    updated_at  timestamp   not null default current_timestamp,
+    constraint fk_contents_model_id foreign key (model_id) references models (id) on delete no action on update no action,
+    constraint fk_contents_created_by foreign key (created_by) references users (id) on delete no action on update no action
 );
+
+create trigger contents_updated_at
+    before update
+    on contents
+    for each row
+execute procedure update_timestamp();
 
 create table content_values(
     id             serial primary key not null,
@@ -135,15 +147,18 @@ create table form_submissions(
 -- insert some data
 insert into locales (key, name) values ('en', 'English'), ('tr', 'Türkçe');
 
-insert into fields (name, kind) values ('text', 'string');
+insert into themes (id, version, name) values ('default', '0.1.0', 'Yelken Default Theme');
 
-insert into models (name) values ('article');
+insert into options (name, value) values ('theme', 'default'), ('default_locale', 'en');
 
-insert into model_fields (field_id, model_id, name, localized) values (1, 1, 'title', true), (1, 1, 'content', true), (1, 1, 'slug', true);
+insert into fields (name, kind) values ('text', 'string'), ('integer', 'int');
 
-insert into contents (model_id, name) values (1, 'Hello World');
+insert into models (namespace, name) values ('default', 'article');
 
-insert into contents (model_id, name) values (1, 'Nice Day');
+insert into model_fields (field_id, model_id, name, localized, required) values (1, 1, 'title', true, true), (1, 1, 'content', true, true), (1, 1, 'slug', true, true);
+
+insert into contents (model_id, name, stage) values (1, 'Hello World', 'published');
+insert into contents (model_id, name, stage) values (1, 'Nice Day', 'published');
 
 insert into content_values (content_id, model_field_id, value, locale) values (1, 1, 'Hello World', 'en'), (1, 2, 'Content of the article', 'en'), (1, 3, 'hello-world', 'en');
 insert into content_values (content_id, model_field_id, value, locale) values (1, 1, 'Merhaba Dünya', 'tr'), (1, 2, 'Makalenin içeriği', 'tr'), (1, 3, 'merhaba-dunya', 'tr');
@@ -151,5 +166,5 @@ insert into content_values (content_id, model_field_id, value, locale) values (1
 insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Nice Day', 'en'), (2, 2, 'Content of nice day article', 'en'), (2, 3, 'nice-day', 'en');
 insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Hoş Gün', 'tr'), (2, 2, 'Hoş gün makalesinin içeriği', 'tr'), (2, 3, 'hos-gun', 'tr');
 
-insert into pages (name, path, template, locale) values ('home', '/', 'index.html', 'en'), ('article', '/article/{slug}', 'article.html', 'en');
-insert into pages (name, path, template, locale) values ('home', '/', 'index.html', 'tr'), ('article', '/makale/{slug}', 'article.html', 'tr');
+insert into pages (namespace, name, path, template, locale) values ('default', 'home', '/', 'index.html', 'en'), ('default', 'article', '/article/{slug}', 'article.html', 'en');
+insert into pages (namespace, name, path, template, locale) values ('default', 'home', '/', 'index.html', 'tr'), ('default', 'article', '/makale/{slug}', 'article.html', 'tr');
