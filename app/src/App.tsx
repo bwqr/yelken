@@ -141,7 +141,12 @@ const App: Component = () => {
 
     return (
         <AlertContext.Provider value={alertService}>
-            <Router base={baseUrl} root={(props) => (<>{props.children}</>)}>
+            <Router base={baseUrl} root={(props) => (
+                <>
+                    {props.children}
+                    <p style="position: fixed; bottom: 0.5rem; right: 0.75rem; padding: 0; margin: 0; font-size: 0.9rem;">Yelken v{config.APP_VERSION}</p>
+                </>
+            )}>
                 <Route path="/auth" component={(props) => (<>{props.children}</>)}>
                     <Route path="/login" component={EmailLogin} />
                     <Route path="/oauth/cloud" component={OauthRedirect} />

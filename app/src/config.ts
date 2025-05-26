@@ -10,6 +10,7 @@ function getConfig(key: string, fallback: string): string {
     return YELKEN_CONFIG[key] !== undefined ? YELKEN_CONFIG[key] : fallback;
 }
 
+export const APP_VERSION = __APP_VERSION__;
 export const API_URL = getConfig('API_URL', import.meta.env.VITE_API_URL);
 export const BASE_URL = getConfig('BASE_URL', import.meta.env.BASE_URL);
 
