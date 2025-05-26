@@ -5,6 +5,13 @@ import { app_init, serve_request, initSync } from 'wasm';
 const origin = new URL(import.meta.url).origin;
 const baseUrl = `${origin}${config.PREFIX}`;
 
+const loadingWasmPromise = fetch(wasmUrl)
+  .then((resp) => WebAssembly.compileStreaming(resp))
+  .then((wasm) => {
+    initSync({ module: wasm });
+    return app_init(baseUrl, config.USER.name, config.USER.email, config.USER.password);
+  })
+
 function sendRequest(request) {
   const header_keys = [];
   const header_values = []
@@ -21,14 +28,7 @@ function sendRequest(request) {
 self.addEventListener('install', (event) => {
   console.log('installed');
 
-  event.waitUntil(
-    fetch(wasmUrl)
-      .then((resp) => WebAssembly.compileStreaming(resp))
-      .then((wasm) => {
-        initSync({ module: wasm });
-        return app_init(baseUrl, config.USER.name, config.USER.email, config.USER.password);
-      })
-  );
+  event.waitUntil(loadingWasmPromise);
 });
 
 self.addEventListener('fetch', (event) => {
@@ -39,7 +39,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    sendRequest(event.request)
+    loadingWasmPromise
+      .then(() => sendRequest(event.request))
       .catch((e) => console.error(e))
   );
 });
