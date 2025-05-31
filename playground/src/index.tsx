@@ -34,19 +34,28 @@ const App = ({ frame, prefix }: { frame: HTMLIFrameElement, prefix: string }) =>
         }
     };
 
+    const hashChanged = () => {
+        setPath(window.location.hash.replace('#', '') || '/');
+        setFrameSrc(path());
+    }
+
     frame.removeEventListener('load', onLoad);
     frame.addEventListener('load', onLoad);
+
+    window.removeEventListener('hashchange', hashChanged);
+    window.addEventListener('hashchange', hashChanged);
 
     return (
         <div class="container" id="controller">
             <form id="navbar" onSubmit={onSubmit}>
                 <input id="playground-path" type="text" placeholder="Path" value={path()} onInput={(ev) => setPath(ev.target.value)} />
-                <button type="submit" class="btn btn-primary">Load</button>
+                <span style="font-size: 0.75rem;">Email: <code>{config.USER.email}</code> Password: <code>{config.USER.password}</code></span>
             </form>
             <div id="navs">
-                <button type="button" class="btn btn-link" onClick={() => setFrameSrc('/')}>Home</button>
-                <button type="button" class="btn btn-link" onClick={() => setFrameSrc('/yk/app/')}>Dashboard</button>
-                <span>Email: <code>{config.USER.email}</code> Password: <code>{config.USER.password}</code></span>
+                <div>
+                    <button type="button" class="btn btn-link" onClick={() => setFrameSrc('/')}>Home</button>
+                    <button type="button" class="btn btn-link" onClick={() => setFrameSrc('/yk/app/')}>Dashboard</button>
+                </div>
             </div>
         </div>
     );
