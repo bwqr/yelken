@@ -1,6 +1,6 @@
 import { createSignal, Show } from "solid-js";
-import { Api, HttpError } from "../../api";
-import * as config from "../../config";
+import { Api, HttpError } from "../../lib/api";
+import * as config from "../../lib/config";
 
 export default function() {
     enum ValidationError {

@@ -1,9 +1,9 @@
 import { createMemo, createSignal, For, Show, useContext } from "solid-js";
-import { ContentContext } from "../context";
+import { ContentContext } from "../lib/content/context";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
-import type { CreateModelField } from "../models";
-import { HttpError } from "../api";
+import type { CreateModelField } from "../lib/content/requests";
+import { HttpError } from "../lib/api";
 import XLg from 'bootstrap-icons/icons/x-lg.svg';
 import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
 import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';

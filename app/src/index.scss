@@ -8,6 +8,10 @@ $spinner-width: 1.5rem;
 $spinner-height: 1.5rem;
 $spinner-border-width: 0.15em;
 
+:root {
+  --custom-body-bg: #eff3f9;
+}
+
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
 @import "bootstrap/scss/variables";
 @import "bootstrap/scss/variables-dark";
@@ -42,17 +46,18 @@ $spinner-border-width: 0.15em;
 
 // 8. Add additional custom code here
 
-#sidenav, #second-nav {
-  .navbar-nav a[aria-current="page"] {
-    background: rgba(0, 62, 129, 0.24);
-    border-left: 3px solid rgb(60, 60, 180);
-  }
-}
-
 .dropdown-menu {
   a.dropdown-item:active, a[aria-current="page"] {
     background: none;
     color: var(--bs-dropdown-link-color);
     border-left: 3px solid rgb(60, 60, 180);
   }
+}
+
+@include color-mode(dark) {
+  --custom-body-bg: #2a2b33;
+}
+
+body {
+  background: var(--custom-body-bg);
 }

@@ -1,32 +1,7 @@
-import type { Accessor, Context, Setter } from 'solid-js';
-import { createContext, createSignal } from "solid-js";
-import type { Content, ContentStage, ContentDetails, CreateContent, CreateModel, Field, Locale, Model, User } from "./models";
-import { Api } from "./api";
-
-export interface AlertStore {
-    success(title: string): void;
-    fail(title: string): void;
-}
-
-export const AlertContext: Context<AlertStore | undefined> = createContext();
-
-export interface UserStore {
-    user: Accessor<User>,
-}
-
-export const UserContext: Context<UserStore | undefined> = createContext();
-
-export class UserService implements UserStore {
-    public user: Accessor<User>;
-
-    constructor(user: User) {
-        [this.user] = createSignal(user);
-    }
-
-    public static async fetchUser(): Promise<User> {
-        return Api.get('/user/profile');
-    }
-}
+import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
+import type { Content, ContentDetails, ContentStage, Field, Locale, Model } from "./models";
+import type { CreateContent, CreateModel } from "./requests";
+import { Api } from "../api";
 
 export interface ContentStore {
     fields: Accessor<Field[]>;

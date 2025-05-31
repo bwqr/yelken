@@ -1,15 +1,17 @@
 import { createResource, For, Match, Show, Suspense, Switch, type Component, type JSX } from 'solid-js';
 import { Router, Route } from "@solidjs/router";
-import { SideNav, TopBar } from './nav';
-import { AlertContext, type AlertStore, ContentContext, ContentService, UserContext, UserService } from './context';
-import { CreateModel, Model, Models } from './content/model';
-import Dashboard from './dashboard';
-import { Content, ContentRoot, Contents, CreateContent } from './content/content';
-import EmailLogin from './auth/login/email';
-import { OauthLogin, OauthRedirect } from './auth/login/oauth';
-import * as config from './config';
+import { SideNav, TopBar } from './Nav';
+import Dashboard from './Dashboard';
+import { Content, ContentRoot, Contents, CreateContent } from './content/Content';
+import EmailLogin from './auth/login/Email';
+import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
+import * as config from './lib/config';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import XCircle from 'bootstrap-icons/icons/x-circle.svg';
+import { ContentContext, ContentService } from './lib/content/context';
+import { UserContext, UserService } from './lib/user/context';
+import { AlertContext, type AlertStore } from './lib/context';
+import { CreateModel, Model, Models } from './content/Model';
 
 enum AlertState {
     Success,
@@ -167,7 +169,7 @@ const App: Component = () => {
                     </div>
                 )}>
                     <Route path="/" component={Dashboard} />
-                    <Route path="/profile" component={(props) => <p>Profile</p>} />
+                    <Route path="/profile" component={(_) => <p>Profile</p>} />
 
                     <Route path="/model" component={(props) => (<>{props.children}</>)}>
                         <Route path="/" component={Models} />

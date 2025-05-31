@@ -1,15 +1,17 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { AlertContext, ContentContext } from "../context";
+import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, Show, Switch, useContext } from "solid-js";
-import { HttpError } from "../api";
+import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage, type CreateContentValue } from "../models";
+import { ContentStage } from "../lib/content/models";
 import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
 import XLg from 'bootstrap-icons/icons/x-lg.svg';
 import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
 import BookmarkCheck from 'bootstrap-icons/icons/bookmark-check.svg';
 import BookmarkCheckFill from 'bootstrap-icons/icons/bookmark-check-fill.svg';
 import { Dynamic } from "solid-js/web";
+import type { CreateContentValue } from "../lib/content/requests";
+import { AlertContext } from "../lib/context";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();

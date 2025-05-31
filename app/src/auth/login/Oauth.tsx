@@ -1,6 +1,6 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import * as config from "../../config";
+import * as config from "../../lib/config";
 
 const STATE_LENGTH = 32;
 const STATE_KEY = 'oauth_state';
