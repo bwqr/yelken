@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use serde::{Deserialize, Serialize};
 use unic_langid::LanguageIdentifier;
 use url::Url;
 
@@ -11,6 +12,20 @@ pub struct Config {
     pub site_url: Url,
     pub app_url: Url,
     pub reload_templates: bool,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum LocationKind {
+    Global,
+    Theme,
+    User,
+}
+
+#[derive(Debug)]
+pub struct Location {
+    pub path: String,
+    pub kind: LocationKind,
 }
 
 #[derive(Clone)]
@@ -29,29 +44,41 @@ impl Options {
         }))))
     }
 
-    pub fn locale_locations(&self) -> [String; 3] {
+    pub fn locale_locations(&self) -> [Location; 3] {
         let theme = self.theme();
 
         [
-            // Theme provided localizations
-            format!("themes/{}/locales", theme),
-            // Global scoped, user provided localizations
-            "locales/global".to_string(),
-            // Theme scoped, user provided localizations
-            format!("locales/themes/{}", theme),
+            Location {
+                path: format!("themes/{}/locales", theme),
+                kind: LocationKind::Theme,
+            },
+            Location {
+                path: "locales/global".to_string(),
+                kind: LocationKind::Global,
+            },
+            Location {
+                path: format!("locales/themes/{}", theme),
+                kind: LocationKind::User,
+            },
         ]
     }
 
-    pub fn template_locations(&self) -> [String; 3] {
+    pub fn template_locations(&self) -> [Location; 3] {
         let theme = self.theme();
 
         [
-            // Theme provided templates
-            format!("themes/{}/templates/", theme),
-            // Global scoped, user provided templates
-            "templates/global/".to_string(),
-            // Theme scoped, user provided templates
-            format!("templates/themes/{}/", theme),
+            Location {
+                path: format!("themes/{}/templates", theme),
+                kind: LocationKind::Theme,
+            },
+            Location {
+                path: "templates/global".to_string(),
+                kind: LocationKind::Global,
+            },
+            Location {
+                path: format!("templates/themes/{}", theme),
+                kind: LocationKind::User,
+            },
         ]
     }
 

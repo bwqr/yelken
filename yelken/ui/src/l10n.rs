@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use arc_swap::ArcSwap;
-use base::runtime::IntoSendFuture;
+use base::{config::Location, runtime::IntoSendFuture};
 use fluent::{concurrent::FluentBundle, FluentArgs, FluentResource, FluentValue};
 use opendal::Operator;
 use unic_langid::LanguageIdentifier;
@@ -19,14 +19,14 @@ async fn load_resource(storage: &Operator, path: &str) -> Result<FluentResource>
 
 async fn load_locale(
     storage: &Operator,
-    locations: &[String],
+    locations: &[Location],
     locale: LanguageIdentifier,
     default: LanguageIdentifier,
 ) -> FluentBundle<FluentResource> {
     let mut bundle = FluentBundle::new_concurrent(vec![locale.clone(), default]);
 
     for location in locations {
-        let path = format!("{}/{}.ftl", location, locale);
+        let path = format!("{}/{}.ftl", location.path, locale);
 
         log::debug!("Loading fluent resource file {path}");
 
@@ -48,7 +48,7 @@ impl L10n {
     pub async fn reload(
         &self,
         storage: &Operator,
-        locations: &[String],
+        locations: &[Location],
         locales: &[LanguageIdentifier],
         default: LanguageIdentifier,
     ) {
@@ -59,7 +59,7 @@ impl L10n {
 
     pub async fn new(
         storage: &Operator,
-        locations: &[String],
+        locations: &[Location],
         locales: &[LanguageIdentifier],
         default: LanguageIdentifier,
     ) -> L10n {
@@ -102,7 +102,7 @@ struct Inner {
 impl Inner {
     async fn new(
         storage: &Operator,
-        locations: &[String],
+        locations: &[Location],
         locales: &[LanguageIdentifier],
         default: LanguageIdentifier,
     ) -> Self {

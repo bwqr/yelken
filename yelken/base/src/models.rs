@@ -188,3 +188,15 @@ pub struct Permission {
     pub name: String,
     pub created_at: NaiveDateTime,
 }
+
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct Page {
+    pub id: i32,
+    pub namespace: Option<String>,
+    pub name: String,
+    pub path: String,
+    pub template: String,
+    pub locale: Option<String>,
+    pub created_at: NaiveDateTime,
+}

@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
+use base::config::Location;
 use base::db::Pool;
 use base::models::ContentStage;
 use base::responses::HttpError;
@@ -110,14 +111,14 @@ pub type FnResources = (L10n, Pool, plugin::PluginHost);
 #[cfg(not(feature = "plugin"))]
 pub type FnResources = (L10n, Pool);
 
-async fn load_templates(storage: &Operator, locations: &[String]) -> Vec<(String, String)> {
+async fn load_templates(storage: &Operator, locations: &[Location]) -> Vec<(String, String)> {
     let mut templates = HashMap::<String, String>::new();
 
     // It is expected that the template that exists in later `location` should override
     // previously loaded ones. So, iteration is reversed.
     for location in locations.into_iter().rev() {
         let Ok(entries) = storage
-            .list_with(location)
+            .list_with(&location.path)
             .recursive(true)
             .into_send_future()
             .await
@@ -126,12 +127,18 @@ async fn load_templates(storage: &Operator, locations: &[String]) -> Vec<(String
             continue;
         };
 
+        let prefix = format!("{}/", location.path);
+
         for entry in entries {
             if entry.metadata().mode() != EntryMode::FILE || !entry.path().ends_with(".html") {
                 continue;
             }
 
-            let key = entry.path().strip_prefix(location).unwrap();
+            let Some(key) = entry.path().strip_prefix(&prefix) else {
+                log::debug!("Encoutered invalid prefix while loading template {}", entry.path());
+
+                continue;
+            };
 
             if !templates.contains_key(key) {
                 log::debug!("loading template file {}", entry.path());
@@ -184,7 +191,7 @@ impl Render {
 
     pub async fn new(
         storage: &Operator,
-        locations: &[String],
+        locations: &[Location],
         resources: Option<FnResources>,
     ) -> Result<Self, Error> {
         let templates = load_templates(storage, locations).await;
@@ -205,7 +212,7 @@ impl Render {
         })
     }
 
-    pub async fn reload(&self, storage: &Operator, locations: &[String]) -> Result<(), Error> {
+    pub async fn reload(&self, storage: &Operator, locations: &[Location]) -> Result<(), Error> {
         let templates = load_templates(storage, locations).await;
 
         let mut env = Environment::new();

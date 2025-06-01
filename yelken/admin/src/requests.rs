@@ -1,6 +1,5 @@
+use base::{config::LocationKind, services::SafePath};
 use serde::Deserialize;
-
-use crate::SafePath;
 
 #[derive(Deserialize)]
 pub struct CreateUser {
@@ -37,10 +36,17 @@ pub struct DeleteLocaleResource {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateTemplate {
     pub theme_scoped: bool,
     pub path: SafePath<3>,
     pub template: String,
+}
+
+#[derive(Deserialize)]
+pub struct FilterTemplate {
+    pub kind: LocationKind,
+    pub path: SafePath<3>,
 }
 
 #[derive(Deserialize)]

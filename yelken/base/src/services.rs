@@ -1,4 +1,9 @@
-use std::{convert::Infallible, task::Poll};
+use std::{
+    convert::Infallible,
+    path::{Component, PathBuf},
+    str::FromStr,
+    task::Poll,
+};
 
 use axum::{
     body::Body,
@@ -9,9 +14,63 @@ use axum::{
 use futures::{future::BoxFuture, FutureExt};
 use mime_guess::mime;
 use opendal::{ErrorKind, Operator};
+use serde::Deserialize;
 use tower::Service;
 
 use crate::runtime::IntoSendFuture;
+
+pub struct SafePath<const DEPTH: usize>(pub String);
+
+impl<const DEPTH: usize> FromStr for SafePath<DEPTH> {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let path = PathBuf::from(s);
+
+        if path.components().count() > DEPTH {
+            return Err("too_deep_path");
+        }
+
+        if path.components().any(|c| {
+            if let Component::Normal(_) = c {
+                false
+            } else {
+                true
+            }
+        }) {
+            return Err("invalid_path");
+        }
+
+        Ok(SafePath(s.to_string()))
+    }
+}
+
+impl<'de, const DEPTH: usize> Deserialize<'de> for SafePath<DEPTH> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+
+        let path = PathBuf::from(&string);
+
+        if path.components().count() > DEPTH {
+            return Err(serde::de::Error::custom("too_deep_path"));
+        }
+
+        if path.components().any(|c| {
+            if let Component::Normal(_) = c {
+                false
+            } else {
+                true
+            }
+        }) {
+            return Err(serde::de::Error::custom("invalid_path"));
+        }
+
+        Ok(SafePath(string))
+    }
+}
 
 #[derive(Clone)]
 pub struct ServeStorageDir<F> {
@@ -54,7 +113,17 @@ where
             .boxed();
         }
 
-        let path = format!("{}{}", (self.path)(), req.uri().path());
+        let Ok(path) = SafePath::<5>::from_str(req.uri().path()) else {
+            return async move {
+                Ok(Response::builder()
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::empty())
+                    .unwrap())
+            }
+            .boxed();
+        };
+
+        let path = format!("{}{}", (self.path)(), path.0);
 
         let storage = self.storage.clone();
 

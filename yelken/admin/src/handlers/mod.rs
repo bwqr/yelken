@@ -1,6 +1,7 @@
 pub mod install;
 pub mod locale;
 pub mod options;
+pub mod page;
 pub mod permission;
 pub mod role;
 pub mod template;

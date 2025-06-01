@@ -1,11 +1,6 @@
-use std::{
-    path::{Component, PathBuf},
-    str::FromStr,
-};
-
 use axum::{
     middleware,
-    routing::{delete, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use base::{
@@ -15,65 +10,11 @@ use base::{
     },
     AppState,
 };
-use handlers::{install, locale, options, permission, role, template, user};
-use serde::Deserialize;
+use handlers::{install, locale, options, page, permission, role, template, user};
 
 mod handlers;
 mod requests;
 mod responses;
-
-pub(crate) struct SafePath<const DEPTH: usize>(pub PathBuf);
-
-impl<const DEPTH: usize> FromStr for SafePath<DEPTH> {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let path = PathBuf::from(s);
-
-        if path.components().count() > DEPTH {
-            return Err("too_deep_path");
-        }
-
-        if path.components().any(|c| {
-            if let Component::Normal(_) = c {
-                false
-            } else {
-                true
-            }
-        }) {
-            return Err("invalid_path");
-        }
-
-        Ok(SafePath(path))
-    }
-}
-
-impl<'de, const DEPTH: usize> Deserialize<'de> for SafePath<DEPTH> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let string = String::deserialize(deserializer)?;
-
-        let path = PathBuf::from(string);
-
-        if path.components().count() > DEPTH {
-            return Err(serde::de::Error::custom("too_deep_path"));
-        }
-
-        if path.components().any(|c| {
-            if let Component::Normal(_) = c {
-                false
-            } else {
-                true
-            }
-        }) {
-            return Err(serde::de::Error::custom("invalid_path"));
-        }
-
-        Ok(SafePath(path))
-    }
-}
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
@@ -85,6 +26,7 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/permission/user/{user_id}",
             post(permission::update_user_permissions),
         )
+        .route("/page/pages", get(page::fetch_pages))
         .route("/user", post(user::create_user))
         .route("/user/{user_id}/state", put(user::update_user_state))
         .route("/user/{user_id}/role", put(user::update_user_role))
@@ -104,6 +46,8 @@ pub fn router(state: AppState) -> Router<AppState> {
             delete(locale::delete_locale_resource),
         )
         .route("/locale/{locale_key}", delete(locale::delete_locale))
+        .route("/template/templates", get(template::fetch_templates))
+        .route("/template/template", get(template::fetch_template))
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
         .route("/install/theme", post(install::install_theme))
