@@ -61,3 +61,9 @@ $spinner-border-width: 0.15em;
 body {
   background: var(--custom-body-bg);
 }
+
+@include media-breakpoint-up(sm) {
+  #sidenav {
+    width: 13rem;
+  }
+}

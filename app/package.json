@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@solidjs/router": "^0.15.3",
+    "ace-code": "^1.41.0",
     "solid-js": "^1.9.5"
   }
 }

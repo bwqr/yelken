@@ -4,14 +4,10 @@ import { createEffect, createMemo, createResource, createSignal, For, type JSX, 
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
 import { ContentStage } from "../lib/content/models";
-import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
-import XLg from 'bootstrap-icons/icons/x-lg.svg';
-import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
-import BookmarkCheck from 'bootstrap-icons/icons/bookmark-check.svg';
-import BookmarkCheckFill from 'bootstrap-icons/icons/bookmark-check-fill.svg';
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
+import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, XLg } from "../Icons";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -71,7 +67,7 @@ export const Contents = () => {
                 </Show>
             </div>
 
-            <div class="border border-1 border-secondary-subtle rounded p-2 shadow-sm">
+            <div class="card p-2">
                 <Switch>
                     <Match when={contents.loading}>Loading ...</Match>
                     <Match when={contents.error}>Error: {contents.error}</Match>

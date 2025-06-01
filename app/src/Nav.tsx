@@ -2,16 +2,9 @@ import { A } from "@solidjs/router";
 import { type Component, createSignal, For, type JSX, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
-import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
-import Person from 'bootstrap-icons/icons/person.svg';
-import BoxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg';
-import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
-import Stack from 'bootstrap-icons/icons/stack.svg';
-import Journals from 'bootstrap-icons/icons/journals.svg';
-import CardText from 'bootstrap-icons/icons/card-text.svg';
-import Kanban from 'bootstrap-icons/icons/kanban.svg';
 import './Nav.scss';
 import { UserContext } from "./lib/user/context";
+import { BoxArrowRight, CardText, Dashboard, Journals, KanbanFill, Person, PersonCircle, Stack } from "./Icons";
 
 export function TopBar(): JSX.Element {
     const userCtx = useContext(UserContext)!;
@@ -113,7 +106,7 @@ export function SideNav(): JSX.Element {
             title: 'Site Look',
             links: [
                 { title: 'Pages', href: '/page', icon: Journals },
-                { title: 'Templates', href: '/template', icon: Kanban },
+                { title: 'Templates', href: '/template', icon: KanbanFill },
             ]
         }
     ];
@@ -121,23 +114,32 @@ export function SideNav(): JSX.Element {
     return (
         <div class="p-2 vh-100">
 
-            <nav id="sidenav" class="h-100 bg-body text-secondary p-2 rounded shadow-sm" style="width: 14rem;">
-                <div class="px-4 py-2">
+            <nav id="sidenav" class="bg-body h-100 text-secondary p-2 rounded shadow-sm">
+                <div class="px-4 py-2 d-none d-lg-block">
                     <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
                 </div>
 
-                <hr />
+                <hr class="mt-0" />
 
                 <For each={categories}>
                     {(category) => (
                         <>
                             <Show when={category.title}>
-                                <p class="pe-5 text-secondary ps-3 m-0 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>{category.title}</b></p>
+                                <p class="w-100 px-2 text-secondary m-0 text-uppercase d-none d-lg-block" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)">
+                                    <b>{category.title}</b>
+                                </p>
                             </Show>
 
                             <ul class="navbar-nav mb-4">
                                 <For each={category.links}>
-                                    {(link) => (<li class="nav-item"><A href={link.href} class="icon-link nav-link ps-3 pe-5 py-2 w-100 rounded my-1"><Dynamic component={link.icon} />{link.title}</A></li>)}
+                                    {(link) => (
+                                        <li class="nav-item">
+                                            <A href={link.href} class="icon-link nav-link px-2 py-2 w-100 rounded my-1">
+                                                <Dynamic component={link.icon} />
+                                                <span class="d-none d-lg-block">{link.title}</span>
+                                            </A>
+                                        </li>
+                                    )}
                                 </For>
                             </ul>
                         </>

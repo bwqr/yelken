@@ -4,9 +4,7 @@ import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
 import type { CreateModelField } from "../lib/content/requests";
 import { HttpError } from "../lib/api";
-import XLg from 'bootstrap-icons/icons/x-lg.svg';
-import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
-import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
+import { PlusLg, PlusSquareDotted, XLg } from "../Icons";
 
 const CreateModelFieldModal = (props: { close: () => void; create: (field: CreateModelField) => void; }) => {
     enum ValidationError {
@@ -326,7 +324,7 @@ export const Models = () => {
                 </A>
             </div>
 
-            <div class="border border-1 border-secondary-subtle rounded p-2 shadow-sm">
+            <div class="card p-3">
                 <table class="table table-hover m-0">
                     <thead>
                         <tr>
@@ -336,7 +334,7 @@ export const Models = () => {
                             <th scope="col"># Fields</th>
                         </tr>
                     </thead>
-                    <tbody class="table-group-divider">
+                    <tbody>
                         <For each={contentCtx.models()}>
                             {(model) => (
                                 <tr>

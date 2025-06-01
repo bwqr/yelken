@@ -7,11 +7,14 @@ import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
 import * as config from './lib/config';
 import { createStore, produce, reconcile } from 'solid-js/store';
-import XCircle from 'bootstrap-icons/icons/x-circle.svg';
 import { ContentContext, ContentService } from './lib/content/context';
 import { UserContext, UserService } from './lib/user/context';
 import { AlertContext, type AlertStore } from './lib/context';
 import { CreateModel, Model, Models } from './content/Model';
+import { Pages } from './admin/Page';
+import { Template, Templates } from './admin/Template';
+import { AdminContext, AdminService } from './lib/admin/context';
+import { XCircle } from './Icons';
 
 enum AlertState {
     Success,
@@ -185,6 +188,23 @@ const App: Component = () => {
                         <Route path="/:namespace/:name/contents" component={Contents} />
                         <Route path="/:name/contents" component={Contents} />
                         <Route path="/content/:id" component={Content} />
+                    </Route>
+
+                    <Route path="/page" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Pages} />
+                    </Route>
+
+                    <Route path="/template" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Templates} />
+                        <Route path="/:kind" component={Template} />
                     </Route>
                 </Route>
             </Router>
