@@ -3,45 +3,22 @@ import { ContentContext } from "../lib/content/context";
 import { ThreeDotsVertical } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
 import { AlertContext } from "../lib/context";
-
-enum Actions {
-    UpdateState,
-    SetDefault,
-}
+import { dropdownClickListener } from "../lib/utils";
 
 export const Locales = () => {
+    enum Actions {
+        UpdateState,
+        SetDefault,
+    }
+
     const contentCtx = useContext(ContentContext)!;
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
-    const [inProgress, setInProgress] = createSignal(undefined as undefined | Actions);
+    const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
 
-    const dropdownRemove = (ev: Event) => {
-        if (inProgress() !== undefined) {
-            return;
-        }
-
-        let close = true;
-        let target = ev.target;
-
-        while (target) {
-            if (!(target instanceof HTMLElement)) {
-                break;
-            }
-
-            if (target.id === 'locale-quick-action') {
-                close = false;
-                break;
-            }
-
-            target = target.parentElement;
-        }
-
-        if (close) {
-            setItem(undefined);
-        }
-    };
+    const dropdownRemove = dropdownClickListener('locale-quick-action', () => setItem(undefined), () => inProgress() !== undefined);
 
     window.document.addEventListener('click', dropdownRemove);
     onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
@@ -124,7 +101,7 @@ export const Locales = () => {
                                                             </Show>
                                                         </td>
                                                         <td class="dropdown text-end">
-                                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(locale.key) }}>
+                                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
                                                                 <ThreeDotsVertical />
                                                             </button>
                                                             <Show when={item() === locale.key}>
@@ -132,7 +109,7 @@ export const Locales = () => {
                                                                     <li>
                                                                         <button
                                                                             class="dropdown-item icon-link"
-                                                                            disabled={inProgress() === Actions.UpdateState}
+                                                                            disabled={inProgress() === Actions.UpdateState || locale.key === contentCtx.options().defaultLocale}
                                                                             on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale.key, !locale.disabled); }}
                                                                         >
                                                                             <Show when={inProgress() === Actions.UpdateState}>

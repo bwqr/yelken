@@ -1,37 +1,21 @@
 import { A } from "@solidjs/router";
-import { type Component, createSignal, For, type JSX, Show, useContext } from "solid-js";
+import { type Component, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import './Nav.scss';
 import { UserContext } from "./lib/user/context";
 import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Journals, Person, PersonCircle, Stack, Translate } from "./Icons";
+import { dropdownClickListener } from "./lib/utils";
 
 export function TopBar(): JSX.Element {
     const userCtx = useContext(UserContext)!;
 
     const [dropdown, setDropdown] = createSignal(false);
 
-    window.document.addEventListener('click', (ev) => {
-        let close = true;
-        let target = ev.target;
+    const dropdownRemove = dropdownClickListener('topbar-dropdown', () => setDropdown(false));
 
-        while (target) {
-            if (!(target instanceof HTMLElement)) {
-                break;
-            }
-
-            if (target.id === 'topbar-dropdown') {
-                close = false;
-                break;
-            }
-
-            target = target.parentElement;
-        }
-
-        if (close) {
-            setDropdown(false);
-        }
-    });
+    window.document.addEventListener('click', dropdownRemove);
+    onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
 
     return (
         <nav class="navbar px-4 py-2">
@@ -49,7 +33,7 @@ export function TopBar(): JSX.Element {
                 </button>
 
                 <Show when={dropdown()}>
-                    <ul class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 15rem;">
+                    <ul id="topbar-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 15rem;">
                         <li>
                             <a class="dropdown-item disabled icon-link py-2" aria-disabled="true">
                                 <svg class="bi" viewBox="0 0 16 16"></svg>

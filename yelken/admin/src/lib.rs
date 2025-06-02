@@ -53,7 +53,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/theme/themes", get(theme::fetch_themes))
         .route("/theme/theme", post(install::install_theme))
         .route("/theme/theme/{theme}", delete(install::uninstall_theme))
-        .route("/options/theme", post(options::update_theme))
+        .route("/options/theme", put(options::update_theme))
         .route(
             "/options/default-locale",
             put(options::update_default_locale),

@@ -3,7 +3,7 @@ use std::{collections::HashMap, ffi::OsStr, io::Read};
 use axum::{
     extract::{Multipart, Path, State},
     http::StatusCode,
-    Extension,
+    Extension, Json,
 };
 use base::{
     config::Options,
@@ -83,7 +83,7 @@ pub async fn uninstall_theme(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Path(theme): Path<String>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     if theme == &*options.theme() {
         return Err(HttpError::conflict("cannot_delete_active_theme"));
     }
@@ -124,14 +124,14 @@ pub async fn uninstall_theme(
         .execute(&mut state.pool.get().await?)
         .await?;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn install_theme(
     State(state): State<AppState>,
     user: AuthUser,
     mut multipart: Multipart,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let field = multipart
         .next_field()
         .await
@@ -177,7 +177,7 @@ pub async fn install_theme(
         );
     }
 
-    result
+    result.map(|t| Json(t))
 }
 
 async fn install(

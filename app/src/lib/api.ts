@@ -6,32 +6,38 @@ export class HttpError extends Error {
     }
 }
 
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
 export class Api {
     static async get<Resp>(path: string): Promise<Resp> {
         return Api.request(path);
     }
 
-    static async post<Req, Resp>(path: string, body: Req): Promise<Resp> {
-        return Api.request(path, 'POST', body);
+    static async post<Req, Resp>(path: string, data: Req): Promise<Resp> {
+        return Api.request(path, 'POST', { data });
     }
 
-    static async put<Req, Resp>(path: string, body: Req): Promise<Resp> {
-        return Api.request(path, 'PUT', body);
+    static async put<Req, Resp>(path: string, data: Req): Promise<Resp> {
+        return Api.request(path, 'PUT', { data });
     }
 
-    static async request<Req, Resp>(path: string, method: 'GET' | 'POST' | 'PUT' = 'GET', body?: Req): Promise<Resp> {
+    static async delete<Resp>(path: string): Promise<Resp> {
+        return Api.request(path, 'DELETE');
+    }
+
+    static async request<Req, Resp>(path: string, method: Method = 'GET', body?: { data: Req } | { formdata: FormData }): Promise<Resp> {
         const token = localStorage.getItem('token');
 
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${token}`,
         };
 
-        if (method === 'POST' || method === 'PUT') {
+        if (body && 'data' in body) {
             headers['Content-Type'] = 'application/json';
         }
 
         const resp = await fetch(config.resolveURL(config.API_URL, path), {
-            body: body ? JSON.stringify(body) : null,
+            body: body ? 'data' in body ? JSON.stringify(body.data) : body.formdata : null,
             headers,
             method,
         });

@@ -14,9 +14,10 @@ import { CreateModel, Model, Models } from './content/Model';
 import { Pages } from './admin/Page';
 import { Template, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
-import { XCircle } from './Icons';
+import { CheckLg, ExclamationLg, XCircle } from './Icons';
 import { InstallTheme, Themes } from './admin/Theme';
 import { Locales } from './admin/Locale';
+import { Dynamic } from 'solid-js/web';
 
 enum AlertState {
     Success,
@@ -34,15 +35,16 @@ interface DisposableAlert extends Alert {
 
 function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: DisposableAlert) => void }) {
     return <Show when={props.alerts.length > 0}>
-        <div style="position: fixed; top: 3vh; right: 2rem; z-index: 99">
+        <div style="position: fixed; top: 10vh; right: 2rem; z-index: 99">
             <For each={props.alerts}>
                 {(alert) =>
                     <div
-                        class="border rounded border-2 px-3 py-3 d-flex"
+                        class="border rounded border-2 px-3 py-3 d-flex mb-2 icon-link"
                         classList={{ 'border-success': alert.state === AlertState.Success, 'border-danger': alert.state === AlertState.Failure }}
                         role="alert"
                         style="background-color: var(--bs-body-bg); min-width: 18rem;"
                     >
+                        <Dynamic component={alert.state === AlertState.Failure ? ExclamationLg : CheckLg} />
                         <span class="flex-grow-1 me-2">{alert.title}</span>
                         <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
                             <XCircle viewBox="0 0 16 16" />

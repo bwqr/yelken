@@ -18,7 +18,7 @@ pub async fn update_theme(
     Extension(render): Extension<Render>,
     Extension(l10n): Extension<L10n>,
     Json(req): Json<UpdateTheme>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let theme = themes::table
@@ -56,7 +56,7 @@ pub async fn update_theme(
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn update_default_locale(
