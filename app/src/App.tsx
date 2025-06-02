@@ -15,6 +15,8 @@ import { Pages } from './admin/Page';
 import { Template, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
 import { XCircle } from './Icons';
+import { InstallTheme, Themes } from './admin/Theme';
+import { Locales } from './admin/Locale';
 
 enum AlertState {
     Success,
@@ -41,7 +43,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                         role="alert"
                         style="background-color: var(--bs-body-bg); min-width: 18rem;"
                     >
-                        <span class="flex-grow-1">{alert.title}</span>
+                        <span class="flex-grow-1 me-2">{alert.title}</span>
                         <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
                             <XCircle viewBox="0 0 16 16" />
                         </button>
@@ -53,12 +55,12 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
 }
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
-    const contentService = new ContentService();
     const [promises] = createResource(() => Promise.all([
         UserService.fetchUser(),
-        contentService.loadFields(),
-        contentService.loadLocales(),
-        contentService.loadModels()
+        ContentService.fetchModels(),
+        ContentService.fetchFields(),
+        ContentService.fetchOptions(),
+        ContentService.fetchLocales(),
     ]));
 
     return (
@@ -69,9 +71,10 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                 </Match>
                 <Match when={promises()}>
                     {(promises) => {
-                        const [user] = promises();
+                        const [user, models, fields, options, locales] = promises();
 
                         const userService = new UserService(user);
+                        const contentService = new ContentService(models, fields, options, locales);
 
                         return (
                             <ContentContext.Provider value={contentService}>
@@ -174,11 +177,17 @@ const App: Component = () => {
                     <Route path="/" component={Dashboard} />
                     <Route path="/profile" component={(_) => <p>Profile</p>} />
 
-                    <Route path="/model" component={(props) => (<>{props.children}</>)}>
+                    <Route path="/models" component={(props) => (<>{props.children}</>)}>
                         <Route path="/" component={Models} />
-                        <Route path="/model/:namespace/:name" component={Model} />
-                        <Route path="/model/:name" component={Model} />
-                        <Route path="/create-model" component={CreateModel} />
+                        <Route path="/view/:namespace/:name" component={Model} />
+                        <Route path="/view/:name" component={Model} />
+                        <Route path="/create" component={CreateModel} />
+                    </Route>
+
+                    <Route path="/contents" component={ContentRoot}>
+                        <Route path="/" component={Contents} />
+                        <Route path="/view/:id" component={Content} />
+                        <Route path="/create" component={CreateContent} />
                     </Route>
 
                     <Route path="/content" component={ContentRoot}>
@@ -190,7 +199,24 @@ const App: Component = () => {
                         <Route path="/content/:id" component={Content} />
                     </Route>
 
-                    <Route path="/page" component={(props) => (
+                    <Route path="/themes" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Themes} />
+                        <Route path="/install" component={InstallTheme} />
+                    </Route>
+
+                    <Route path="/locales" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Locales} />
+                    </Route>
+
+                    <Route path="/pages" component={(props) => (
                         <AdminContext.Provider value={new AdminService()}>
                             {props.children}
                         </AdminContext.Provider>
@@ -198,7 +224,7 @@ const App: Component = () => {
                         <Route path="/" component={Pages} />
                     </Route>
 
-                    <Route path="/template" component={(props) => (
+                    <Route path="/templates" component={(props) => (
                         <AdminContext.Provider value={new AdminService()}>
                             {props.children}
                         </AdminContext.Provider>

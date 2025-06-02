@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import './Nav.scss';
 import { UserContext } from "./lib/user/context";
-import { BoxArrowRight, CardText, Dashboard, Journals, KanbanFill, Person, PersonCircle, Stack } from "./Icons";
+import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Journals, Person, PersonCircle, Stack, Translate } from "./Icons";
 
 export function TopBar(): JSX.Element {
     const userCtx = useContext(UserContext)!;
@@ -34,7 +34,7 @@ export function TopBar(): JSX.Element {
     });
 
     return (
-        <nav class="navbar px-4 py-2" style="border-bottom: 1px solid #d8d8d8;">
+        <nav class="navbar px-4 py-2">
             <div class="flex-grow-1">
             </div>
 
@@ -89,6 +89,8 @@ interface Link {
 }
 
 export function SideNav(): JSX.Element {
+    const [show, setShow] = createSignal(true);
+
     const categories: { title?: string, links: Link[] }[] = [
         {
             links: [
@@ -98,53 +100,61 @@ export function SideNav(): JSX.Element {
         {
             title: 'CMS',
             links: [
-                { title: 'Models', href: '/model', icon: Stack },
-                { title: 'Contents', href: '/content', icon: CardText },
+                { title: 'Models', href: '/models', icon: Stack },
+                { title: 'Contents', href: '/contents', icon: CardText },
             ]
         },
         {
             title: 'Site Look',
             links: [
-                { title: 'Pages', href: '/page', icon: Journals },
-                { title: 'Templates', href: '/template', icon: KanbanFill },
+                { title: 'Themes', href: '/themes', icon: Columns },
+                { title: 'Locales', href: '/locales', icon: Translate },
+                { title: 'Templates', href: '/templates', icon: Braces },
+                { title: 'Pages', href: '/pages', icon: Journals },
             ]
         }
     ];
 
     return (
         <div class="p-2 vh-100">
+            <nav id="sidenav" class="bg-body text-secondary p-2 rounded shadow-sm" classList={{ 'h-100': show() }}>
+                <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
+                    <Show when={show()}><ArrowBarUp /></Show>
+                    <Show when={!show()}><ArrowBarDown /></Show>
+                </button>
 
-            <nav id="sidenav" class="bg-body h-100 text-secondary p-2 rounded shadow-sm">
                 <div class="px-4 py-2 d-none d-lg-block">
                     <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
                 </div>
 
-                <hr class="mt-0" />
+                <div classList={{ 'd-none': !show() }}>
+                    <hr class="mt-0" />
 
-                <For each={categories}>
-                    {(category) => (
-                        <>
-                            <Show when={category.title}>
-                                <p class="w-100 px-2 text-secondary m-0 text-uppercase d-none d-lg-block" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)">
-                                    <b>{category.title}</b>
-                                </p>
-                            </Show>
+                    <For each={categories}>
+                        {(category) => (
+                            <>
+                                <Show when={category.title}>
+                                    <p class="w-100 px-2 text-secondary m-0 text-uppercase d-none d-lg-block" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)">
+                                        <b>{category.title}</b>
+                                    </p>
+                                </Show>
 
-                            <ul class="navbar-nav mb-4">
-                                <For each={category.links}>
-                                    {(link) => (
-                                        <li class="nav-item">
-                                            <A href={link.href} class="icon-link nav-link px-2 py-2 w-100 rounded my-1">
-                                                <Dynamic component={link.icon} />
-                                                <span class="d-none d-lg-block">{link.title}</span>
-                                            </A>
-                                        </li>
-                                    )}
-                                </For>
-                            </ul>
-                        </>
-                    )}
-                </For>
+                                <ul class="navbar-nav mb-4">
+                                    <For each={category.links}>
+                                        {(link) => (
+                                            <li class="nav-item">
+                                                <A href={link.href} class="icon-link nav-link p-2 w-100 rounded my-1">
+                                                    <Dynamic component={link.icon} />
+                                                    <span class="d-none d-lg-block">{link.title}</span>
+                                                </A>
+                                            </li>
+                                        )}
+                                    </For>
+                                </ul>
+                            </>
+                        )}
+                    </For>
+                </div>
             </nav>
         </div>
     );

@@ -62,7 +62,7 @@ pub async fn update_locale_state(
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
     Json(req): Json<UpdateLocaleState>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     if req.disabled && format!("{}", options.default_locale()) == locale_key {
         return Err(HttpError::conflict("cannot_disable_default_locale"));
     }
@@ -89,7 +89,7 @@ pub async fn update_locale_state(
     )
     .await;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn delete_locale(

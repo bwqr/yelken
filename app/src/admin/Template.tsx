@@ -11,20 +11,51 @@ export const Templates = () => {
     const [templates] = createResource(() => adminCtx.fetchTemplates());
 
     return (
-        <Suspense fallback={<p>Loading...</p>}>
-            <Switch>
-                <Match when={templates.error}>
-                    <span>Error: {templates.error.message}</span>
-                </Match>
-                <Match when={templates()}>
-                    {(templates) => (
-                        <For each={templates()}>
-                            {(template) => (<A href={`/template/${template.kind}?path=${encodeURIComponent(template.path)}`}>{template.path} - {template.kind}</A>)}
-                        </For>
-                    )}
-                </Match>
-            </Switch>
-        </Suspense>
+        <div class="container mt-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="flex-grow-1">
+                    <h1>Templates</h1>
+                </div>
+                {/*
+                <A class="btn btn-outline-primary icon-link" href="/themes/install">
+                    <Upload viewBox="0 0 16 16" />
+                    Install Theme
+                </A>
+                */}
+            </div>
+
+            <Suspense>
+                <Switch>
+                    <Match when={templates.error}>
+                        <span>Error: {templates.error.message}</span>
+                    </Match>
+                    <Match when={templates()}>
+                        {(templates) => (
+                            <div class="card p-3">
+                                <table class="table table-hover m-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Kind</th>
+                                            <th scope="col">Path</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <For each={templates()}>
+                                            {(template) => (
+                                                <tr>
+                                                    <td>{template.kind}</td>
+                                                    <td><A href={`/templates/${template.kind}?path=${encodeURIComponent(template.path)}`}>{template.path}</A></td>
+                                                </tr>
+                                            )}
+                                        </For>
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Match>
+                </Switch>
+            </Suspense>
+        </div>
     );
 };
 

@@ -31,6 +31,7 @@ $spinner-border-width: 0.15em;
 @import "bootstrap/scss/buttons";
 @import "bootstrap/scss/button-group";
 @import "bootstrap/scss/dropdown";
+@import "bootstrap/scss/badge";
 @import "bootstrap/scss/card";
 @import "bootstrap/scss/containers";
 @import "bootstrap/scss/grid";
@@ -47,10 +48,9 @@ $spinner-border-width: 0.15em;
 // 8. Add additional custom code here
 
 .dropdown-menu {
-  a.dropdown-item:active, a[aria-current="page"] {
-    background: none;
-    color: var(--bs-dropdown-link-color);
-    border-left: 3px solid rgb(60, 60, 180);
+  .dropdown-item:active, a[aria-current="page"] {
+    color: var(--bs-text-black);
+    background: var(--custom-body-bg);
   }
 }
 
@@ -65,5 +65,12 @@ body {
 @include media-breakpoint-up(sm) {
   #sidenav {
     width: 13rem;
+  }
+}
+
+@include media-breakpoint-down(sm) {
+  #sidenav {
+    position: absolute;
+    z-index: 3;
   }
 }

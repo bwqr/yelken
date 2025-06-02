@@ -10,7 +10,7 @@ use base::{
     },
     AppState,
 };
-use handlers::{install, locale, options, page, permission, role, template, user};
+use handlers::{install, locale, options, page, permission, role, template, theme, user};
 
 mod handlers;
 mod requests;
@@ -50,12 +50,13 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/template/template", get(template::fetch_template))
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
-        .route("/install/theme", post(install::install_theme))
-        .route("/uninstall/theme/{theme}", delete(install::uninstall_theme))
+        .route("/theme/themes", get(theme::fetch_themes))
+        .route("/theme/theme", post(install::install_theme))
+        .route("/theme/theme/{theme}", delete(install::uninstall_theme))
         .route("/options/theme", post(options::update_theme))
         .route(
             "/options/default-locale",
-            post(options::update_default_locale),
+            put(options::update_default_locale),
         )
         .layer(PermissionLayer {
             pool: state.pool.clone(),

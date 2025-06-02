@@ -9,6 +9,7 @@ pub mod crypto;
 pub mod db;
 pub mod middlewares;
 pub mod models;
+pub mod paginate;
 pub mod permission;
 pub mod responses;
 pub mod runtime;

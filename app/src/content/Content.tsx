@@ -1,4 +1,4 @@
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
@@ -21,7 +21,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
                         {(model) => (
                             <li class="nav-item">
                                 <A
-                                    href={model.namespace ? `/content/${model.namespace}/${model.name}/contents` : `/content/${model.name}/contents`}
+                                    href={model.namespace ? `/contents?namespace=${encodeURIComponent(model.namespace)}&name=${encodeURIComponent(model.name)}` : `/contents?name=${encodeURIComponent(model.name)}`}
                                     class="nav-link d-block ps-3 pe-4 py-2"
                                 >
                                     {model.name}
@@ -40,11 +40,11 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 
 export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
-    const params = useParams();
+    const [searchParams] = useSearchParams();
 
     const model = createMemo(() => {
-        const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace);
-        const name = decodeURIComponent(params.name);
+        const namespace = searchParams.namespace === undefined ? null : decodeURIComponent(searchParams.namespace as string);
+        const name = decodeURIComponent(searchParams.name as string);
 
         return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
@@ -67,36 +67,41 @@ export const Contents = () => {
                 </Show>
             </div>
 
-            <div class="card p-2">
-                <Switch>
-                    <Match when={contents.loading}>Loading ...</Match>
-                    <Match when={contents.error}>Error: {contents.error}</Match>
-                    <Match when={contents()}>
-                        <table class="table table-hover m-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">#</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Stage</th>
-                                    <th scope="col">Created At</th>
-                                </tr>
-                            </thead>
-                            <tbody class="table-group-divider">
-                                <For each={contents()}>
-                                    {(content) => (
-                                        <tr>
-                                            <td>{content.id}</td>
-                                            <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
-                                            <td>{content.stage}</td>
-                                            <td>{content.createdAt}</td>
-                                        </tr>
-                                    )}
-                                </For>
-                            </tbody>
-                        </table>
-                    </Match>
-                </Switch>
-            </div>
+            <Switch>
+                <Match when={!model()}>
+                    Choose a model from left
+                </Match>
+                <Match when={contents.loading}>Loading ...</Match>
+                <Match when={contents.error}>Error: {contents.error}</Match>
+                <Match when={contents()}>
+                    {(contents) => (
+                        <div class="card p-2">
+                            <table class="table table-hover m-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">#</th>
+                                        <th scope="col">Name</th>
+                                        <th scope="col">Stage</th>
+                                        <th scope="col">Created At</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="table-group-divider">
+                                    <For each={contents().items}>
+                                        {(content) => (
+                                            <tr>
+                                                <td>{content.id}</td>
+                                                <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
+                                                <td>{content.stage}</td>
+                                                <td>{content.createdAt}</td>
+                                            </tr>
+                                        )}
+                                    </For>
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 };

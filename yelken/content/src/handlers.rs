@@ -16,6 +16,7 @@ use base::{
     db::BatchQuery,
     middlewares::auth::AuthUser,
     models::{Content, ContentStage, Field, Locale},
+    paginate::{CountStarOver, Paginate, Pagination, PaginationRequest},
     responses::HttpError,
     schema::{content_values, contents, fields, locales, model_fields, models, users},
     AppState,
@@ -26,10 +27,14 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 pub async fn fetch_contents(
     State(state): State<AppState>,
     Query(req): Query<FilterByModel>,
-) -> Result<Json<Vec<Content>>, HttpError> {
+    Query(page): Query<PaginationRequest>,
+) -> Result<Json<Pagination<Content>>, HttpError> {
     contents::table
         .filter(contents::model_id.eq(req.model_id))
-        .load::<Content>(&mut state.pool.get().await?)
+        .select((contents::all_columns, CountStarOver))
+        .paginate(page.page)
+        .per_page(page.per_page)
+        .load_and_count_pages::<Content>(&mut state.pool.get().await?)
         .await
         .map(Json)
         .map_err(Into::into)
@@ -45,6 +50,7 @@ pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Fiel
 
 pub async fn fetch_locales(State(state): State<AppState>) -> Result<Json<Vec<Locale>>, HttpError> {
     locales::table
+        .order_by(locales::key.asc())
         .load::<Locale>(&mut state.pool.get().await?)
         .await
         .map(Json)
@@ -447,4 +453,13 @@ pub async fn update_content_value(
     }
 
     Ok(Json(()))
+}
+
+pub async fn fetch_options(
+    Extension(options): Extension<Options>,
+) -> Result<Json<crate::responses::Options>, HttpError> {
+    Ok(Json(crate::responses::Options {
+        theme: options.theme().to_string(),
+        default_locale: format!("{}", options.default_locale()),
+    }))
 }

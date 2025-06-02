@@ -830,7 +830,7 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.2.4"
-source = "git+https://github.com/bwqr/diesel?branch=impl-load-query-for-sqlite-batch-insert#2aabce07dea3984e38fb493b1cd66465c8eb2087"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -860,7 +860,7 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.2.0"
-source = "git+https://github.com/bwqr/diesel?branch=impl-load-query-for-sqlite-batch-insert#2aabce07dea3984e38fb493b1cd66465c8eb2087"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
 dependencies = [
  "diesel_table_macro_syntax",
  "dsl_auto_type",
@@ -883,7 +883,7 @@ dependencies = [
 [[package]]
 name = "diesel_table_macro_syntax"
 version = "0.2.0"
-source = "git+https://github.com/bwqr/diesel?branch=impl-load-query-for-sqlite-batch-insert#2aabce07dea3984e38fb493b1cd66465c8eb2087"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
 dependencies = [
  "syn",
 ]
@@ -946,7 +946,7 @@ checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
 [[package]]
 name = "dsl_auto_type"
 version = "0.1.0"
-source = "git+https://github.com/bwqr/diesel?branch=impl-load-query-for-sqlite-batch-insert#2aabce07dea3984e38fb493b1cd66465c8eb2087"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
 dependencies = [
  "darling",
  "either",

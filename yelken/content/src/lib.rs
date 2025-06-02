@@ -20,6 +20,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/fields", get(handlers::fetch_fields))
         .route("/locales", get(handlers::fetch_locales))
         .route("/models", get(handlers::fetch_models))
+        .route("/options", get(handlers::fetch_options))
         .route("/content/{id}", get(handlers::fetch_content))
         .layer(PermissionLayer {
             pool: state.pool.clone(),

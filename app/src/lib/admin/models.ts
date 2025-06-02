@@ -22,3 +22,10 @@ export interface Template {
 export interface TemplateDetails extends Template {
     template: string,
 }
+
+export interface Theme {
+    id: string,
+    version: string,
+    name: string,
+    createdAt: string,
+}

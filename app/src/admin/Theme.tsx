@@ -1,48 +1,53 @@
 import { createResource, For, Match, Suspense, Switch, useContext } from "solid-js";
 import { AdminContext } from "../lib/admin/context";
+import { A } from "@solidjs/router";
+import { Upload } from "../Icons";
 
-export const Pages = () => {
+export const InstallTheme = () => {
+    return (<p>Install Theme</p>);
+};
+
+export const Themes = () => {
     const adminCtx = useContext(AdminContext)!;
 
-    const [pages] = createResource(() => adminCtx.fetchPages());
-
+    const [themes] = createResource(() => adminCtx.fetchThemes());
     return (
         <div class="container mt-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
-                    <h1>Pages</h1>
+                    <h1>Themes</h1>
                 </div>
-                {/*
                 <A class="btn btn-outline-primary icon-link" href="/themes/install">
                     <Upload viewBox="0 0 16 16" />
                     Install Theme
                 </A>
-                */}
             </div>
 
             <Suspense>
                 <Switch>
-                    <Match when={pages.error}>
-                        <span>Error: {pages.error.message}</span>
+                    <Match when={themes.error}>
+                        <span>Error: {themes.error.message}</span>
                     </Match>
-                    <Match when={pages()}>
-                        {(pages) => (
+                    <Match when={themes()}>
+                        {(themes) => (
                             <div class="card p-3">
                                 <table class="table table-hover m-0">
                                     <thead>
                                         <tr>
-                                            <th scope="col">Namespace</th>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Version</th>
                                             <th scope="col">Name</th>
-                                            <th scope="col">Locale</th>
+                                            <th scope="col">Installed At</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <For each={pages()}>
-                                            {(page) => (
+                                        <For each={themes()}>
+                                            {(theme) => (
                                                 <tr>
-                                                    <td>{page.namespace}</td>
-                                                    <td>{page.name}</td>
-                                                    <td>{page.locale}</td>
+                                                    <td>{theme.id}</td>
+                                                    <td>{theme.version}</td>
+                                                    <td>{theme.name}</td>
+                                                    <td>{theme.createdAt}</td>
                                                 </tr>
                                             )}
                                         </For>

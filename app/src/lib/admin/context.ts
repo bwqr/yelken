@@ -1,12 +1,16 @@
 import { createContext, type Context } from "solid-js";
 import { Api } from "../api";
-import { LocationKind, type Page, type Template, type TemplateDetails } from "./models";
+import { LocationKind, type Page, type Template, type TemplateDetails, type Theme } from "./models";
 
 export interface AdminStore {
     fetchPages(): Promise<Page[]>
     fetchTemplates(): Promise<Template[]>
     fetchTemplate(path: string, kind: LocationKind): Promise<TemplateDetails>
     updateTemplate(path: string, kind: LocationKind, template: string): Promise<void>;
+    fetchThemes(): Promise<Theme[]>,
+
+    updateLocaleState(key: string, disabled: boolean): Promise<void>;
+    setLocaleDefault(key: string): Promise<void>;
 }
 
 export const AdminContext: Context<AdminStore | undefined> = createContext();
@@ -26,5 +30,17 @@ export class AdminService implements AdminStore {
 
     async updateTemplate(path: string, kind: LocationKind, template: string): Promise<void> {
         return Api.put(`/admin/template`, { path, themeScoped: kind === LocationKind.User, template });
+    }
+
+    async fetchThemes(): Promise<Theme[]> {
+        return Api.get('/admin/theme/themes');
+    }
+
+    async updateLocaleState(key: string, disabled: boolean): Promise<void> {
+        return Api.put(`/admin/locale/${key}/state`, { disabled });
+    }
+
+    async setLocaleDefault(key: string): Promise<void> {
+        return Api.put(`/admin/options/default-locale`, { locale: key });
     }
 }

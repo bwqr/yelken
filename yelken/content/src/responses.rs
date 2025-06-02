@@ -13,3 +13,10 @@ pub struct ContentDetails {
     pub values: Vec<ContentValue>,
     pub user: Option<User>,
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Options {
+    pub theme: String,
+    pub default_locale: String,
+}

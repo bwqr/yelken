@@ -318,7 +318,7 @@ export const Models = () => {
                 <div class="flex-grow-1">
                     <h1>Models</h1>
                 </div>
-                <A class="btn btn-outline-primary icon-link" href="/model/create-model">
+                <A class="btn btn-outline-primary icon-link" href="/models/create">
                     <PlusLg viewBox="0 0 16 16" />
                     Create model
                 </A>
@@ -341,7 +341,7 @@ export const Models = () => {
                                     <td>{model.id}</td>
                                     <td>{model.namespace ? model.namespace : '-'}</td>
                                     <td>
-                                        <A href={model.namespace ? `/model/model/${model.namespace}/${model.name}` : `/model/model/${model.name}`}>
+                                        <A href={model.namespace ? `/models/view/${model.namespace}/${model.name}` : `/models/view/${model.name}`}>
                                             {model.name}
                                         </A>
                                     </td>

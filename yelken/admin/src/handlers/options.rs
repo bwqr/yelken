@@ -64,7 +64,7 @@ pub async fn update_default_locale(
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Json(req): Json<UpdateDefaultLocale>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let locale_key: LanguageIdentifier = req
@@ -112,5 +112,5 @@ pub async fn update_default_locale(
     )
     .await;
 
-    Ok(())
+    Ok(Json(()))
 }

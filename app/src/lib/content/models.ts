@@ -56,3 +56,8 @@ export interface ContentDetails {
     values: ContentValue[],
     user: User | null,
 }
+
+export interface Options {
+    theme: string,
+    defaultLocale: string,
+}
