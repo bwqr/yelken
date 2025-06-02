@@ -211,12 +211,16 @@ pub async fn serve_page(
 
         let mut url = state.config.site_url.clone();
 
-        url.path_segments_mut()
-            .unwrap()
-            .push(&format!("{current_locale}"))
-            .push(path);
+        {
+            let mut path_segments = url.path_segments_mut().unwrap();
+            path_segments.push(&format!("{current_locale}"));
 
-        let localized_path = url.as_str();
+            if !(path.is_empty() || path == "/") {
+                path_segments.push(path);
+            }
+        }
+
+        let localized_path = url.path();
 
         if !page_locale.matches(&current_locale, true, true)
             && router
