@@ -127,7 +127,7 @@ pub async fn delete_template(
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
     Query(req): Query<DeleteTemplate>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let mut path = if req.theme_scoped {
         ["templates", "themes", &options.theme()].join("/")
     } else {
@@ -151,5 +151,5 @@ pub async fn delete_template(
         .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
         .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
 
-    Ok(())
+    Ok(Json(()))
 }

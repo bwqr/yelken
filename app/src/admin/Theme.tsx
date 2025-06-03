@@ -323,7 +323,7 @@ export const Themes = () => {
                                                                 <ThreeDotsVertical />
                                                             </button>
                                                             <Show when={item() === theme.id}>
-                                                                <ul class="dropdown-menu show" id="theme-quick-action">
+                                                                <ul class="dropdown-menu show" id="theme-quick-action" style="right: 0">
                                                                     <li>
                                                                         <button
                                                                             class="dropdown-item icon-link"

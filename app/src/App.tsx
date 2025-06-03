@@ -234,7 +234,7 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Templates} />
-                        <Route path="/:kind" component={Template} />
+                        <Route path="/view" component={Template} />
                     </Route>
                 </Route>
             </Router>

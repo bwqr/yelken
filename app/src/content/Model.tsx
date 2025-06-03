@@ -324,33 +324,35 @@ export const Models = () => {
                 </A>
             </div>
 
-            <div class="card p-3">
-                <table class="table table-hover m-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">#</th>
-                            <th scope="col">Namespace</th>
-                            <th scope="col">Name</th>
-                            <th scope="col"># Fields</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <For each={contentCtx.models()}>
-                            {(model) => (
-                                <tr>
-                                    <td>{model.id}</td>
-                                    <td>{model.namespace ? model.namespace : '-'}</td>
-                                    <td>
-                                        <A href={model.namespace ? `/models/view/${model.namespace}/${model.name}` : `/models/view/${model.name}`}>
-                                            {model.name}
-                                        </A>
-                                    </td>
-                                    <td> {model.fields.length} </td>
-                                </tr>
-                            )}
-                        </For>
-                    </tbody>
-                </table>
+            <div class="row m-0">
+                <div class="offset-md-2 col-md-8 card p-3">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">#</th>
+                                <th scope="col">Namespace</th>
+                                <th scope="col">Name</th>
+                                <th scope="col"># Fields</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <For each={contentCtx.models()}>
+                                {(model) => (
+                                    <tr>
+                                        <td>{model.id}</td>
+                                        <td>{model.namespace ? model.namespace : '-'}</td>
+                                        <td>
+                                            <A href={model.namespace ? `/models/view/${model.namespace}/${model.name}` : `/models/view/${model.name}`}>
+                                                {model.name}
+                                            </A>
+                                        </td>
+                                        <td> {model.fields.length} </td>
+                                    </tr>
+                                )}
+                            </For>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

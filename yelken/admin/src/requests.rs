@@ -56,6 +56,7 @@ pub struct FilterTemplate {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DeleteTemplate {
     pub theme_scoped: bool,
     pub path: SafePath<3>,

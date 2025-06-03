@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, useContext } from "solid-js";
 import { ContentContext } from "../lib/content/context";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
@@ -156,12 +156,12 @@ export const Locale = () => {
 
             return undefined;
         },
-        ({ locale, kind }) => adminCtx.fetchLocaleResource(locale.key, kind).catch((e) => {
-            if ((e instanceof HttpError) && e.message === 'resource_not_found') {
-                return Promise.resolve({ resource: '', kind })
+        ({ locale, kind }) => adminCtx.fetchLocaleResource(locale.key, kind).then((resource) => {
+            if (resource === undefined) {
+                return { resource: '', kind }
             }
 
-            throw e;
+            return resource;
         })
     );
 
@@ -327,112 +327,104 @@ export const Locales = () => {
                 </A>
             </div>
 
-            <Suspense>
-                <Switch>
-                    <Match when={contentCtx.locales()}>
-                        {(locales) => (
-                            <div class="row m-0">
-                                <div class="offset-md-3 col-md-6 card p-3">
-                                    <table class="table table-hover m-0">
-                                        <thead>
-                                            <tr>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Key</th>
-                                                <th scope="col">State</th>
-                                                <th scope="col"></th>
-                                                <th scope="col"></th>
-                                                <th scope="col"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <For each={locales()}>
-                                                {(locale) => (
-                                                    <tr>
-                                                        <td>{locale.name}</td>
-                                                        <td>{locale.key}</td>
-                                                        <td>
-                                                            <span
-                                                                class="badge border rounded-pill"
-                                                                classList={{ 'border-success text-success': !locale.disabled, 'border-danger text-danger': locale.disabled }}
+            <div class="row m-0">
+                <div class="offset-md-2 col-md-8 card p-3">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Key</th>
+                                <th scope="col">State</th>
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                                <th scope="col"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <For each={contentCtx.locales()}>
+                                {(locale) => (
+                                    <tr>
+                                        <td>{locale.name}</td>
+                                        <td>{locale.key}</td>
+                                        <td>
+                                            <span
+                                                class="badge border rounded-pill"
+                                                classList={{ 'border-success text-success': !locale.disabled, 'border-danger text-danger': locale.disabled }}
+                                            >
+                                                {locale.disabled ? 'Disabled' : 'Enabled'}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <Show when={locale.key === contentCtx.options().defaultLocale}>
+                                                <span class="badge border rounded-pill border-link text-light-emphasis">Default</span>
+                                            </Show>
+                                        </td>
+                                        <td class="text-center">
+                                            <A href={`/locales/view/${locale.key}`} class="icon-link text-link">
+                                                <PencilSquare />
+                                                Translations
+                                            </A>
+                                        </td>
+                                        <td class="dropdown text-end">
+                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
+                                                <ThreeDotsVertical />
+                                            </button>
+                                            <Show when={item() === locale.key}>
+                                                <ul class="dropdown-menu show" id="locale-quick-action" style="right: 0">
+                                                    <li>
+                                                        <button
+                                                            class="dropdown-item icon-link"
+                                                            disabled={inProgress() === Actions.SetDefault || locale.key === contentCtx.options().defaultLocale || locale.disabled}
+                                                            on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale.key); }}
+                                                        >
+                                                            <Show when={inProgress() === Actions.SetDefault}>
+                                                                <div class="spinner-border" role="status">
+                                                                    <span class="visually-hidden">Loading...</span>
+                                                                </div>
+                                                            </Show>
+                                                            Set as Default
+                                                        </button>
+                                                    </li>
+                                                    <Show when={locale.key !== contentCtx.options().defaultLocale}>
+                                                        <li>
+                                                            <button
+                                                                class="dropdown-item icon-link"
+                                                                disabled={inProgress() === Actions.UpdateState}
+                                                                on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale.key, !locale.disabled); }}
                                                             >
-                                                                {locale.disabled ? 'Disabled' : 'Enabled'}
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <Show when={locale.key === contentCtx.options().defaultLocale}>
-                                                                <span class="badge border rounded-pill border-link text-light-emphasis">Default</span>
-                                                            </Show>
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <A href={`/locales/view/${locale.key}`} class="icon-link text-link">
-                                                                <PencilSquare />
-                                                                Translations
-                                                            </A>
-                                                        </td>
-                                                        <td class="dropdown text-end">
-                                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
-                                                                <ThreeDotsVertical />
+                                                                <Show when={inProgress() === Actions.UpdateState}>
+                                                                    <div class="spinner-border" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                </Show>
+                                                                {locale.disabled ? 'Enable' : 'Disable'}
                                                             </button>
-                                                            <Show when={item() === locale.key}>
-                                                                <ul class="dropdown-menu show" id="locale-quick-action">
-                                                                    <li>
-                                                                        <button
-                                                                            class="dropdown-item icon-link"
-                                                                            disabled={inProgress() === Actions.SetDefault || locale.key === contentCtx.options().defaultLocale || locale.disabled}
-                                                                            on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale.key); }}
-                                                                        >
-                                                                            <Show when={inProgress() === Actions.SetDefault}>
-                                                                                <div class="spinner-border" role="status">
-                                                                                    <span class="visually-hidden">Loading...</span>
-                                                                                </div>
-                                                                            </Show>
-                                                                            Set as Default
-                                                                        </button>
-                                                                    </li>
-                                                                    <Show when={locale.key !== contentCtx.options().defaultLocale}>
-                                                                        <li>
-                                                                            <button
-                                                                                class="dropdown-item icon-link"
-                                                                                disabled={inProgress() === Actions.UpdateState}
-                                                                                on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale.key, !locale.disabled); }}
-                                                                            >
-                                                                                <Show when={inProgress() === Actions.UpdateState}>
-                                                                                    <div class="spinner-border" role="status">
-                                                                                        <span class="visually-hidden">Loading...</span>
-                                                                                    </div>
-                                                                                </Show>
-                                                                                {locale.disabled ? 'Enable' : 'Disable'}
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <button
-                                                                                class="dropdown-item icon-link text-danger"
-                                                                                disabled={inProgress() === Actions.Delete}
-                                                                                on:click={(ev) => { ev.stopPropagation(); deleteLocale(locale.key); }}
-                                                                            >
-                                                                                <Show when={inProgress() === Actions.Delete}>
-                                                                                    <div class="spinner-border" role="status">
-                                                                                        <span class="visually-hidden">Loading...</span>
-                                                                                    </div>
-                                                                                </Show>
-                                                                                Delete
-                                                                            </button>
-                                                                        </li>
-                                                                    </Show>
-                                                                </ul>
-                                                            </Show>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </For>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-                    </Match>
-                </Switch>
-            </Suspense>
+                                                        </li>
+                                                        <li>
+                                                            <button
+                                                                class="dropdown-item icon-link text-danger"
+                                                                disabled={inProgress() === Actions.Delete}
+                                                                on:click={(ev) => { ev.stopPropagation(); deleteLocale(locale.key); }}
+                                                            >
+                                                                <Show when={inProgress() === Actions.Delete}>
+                                                                    <div class="spinner-border" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                </Show>
+                                                                Delete
+                                                            </button>
+                                                        </li>
+                                                    </Show>
+                                                </ul>
+                                            </Show>
+                                        </td>
+                                    </tr>
+                                )}
+                            </For>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     );
 };
