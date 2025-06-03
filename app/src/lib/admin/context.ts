@@ -12,6 +12,8 @@ export interface AdminStore {
     setThemeActive(themeId: string): Promise<void>;
     uninstallTheme(themeId: string): Promise<void>;
 
+    createLocale(name: string, key: string): Promise<void>;
+    deleteLocale(key: string): Promise<void>;
     updateLocaleState(key: string, disabled: boolean): Promise<void>;
     setLocaleDefault(key: string): Promise<void>;
 }
@@ -47,11 +49,19 @@ export class AdminService implements AdminStore {
         return Api.delete(`/admin/theme/theme/${themeId}`);
     }
 
-    async updateLocaleState(localeKey: string, disabled: boolean): Promise<void> {
-        return Api.put(`/admin/locale/${localeKey}/state`, { disabled });
+    async createLocale(name: string, key: string): Promise<void> {
+        return Api.post('/admin/locale', { name, key });
     }
 
-    async setLocaleDefault(localeKey: string): Promise<void> {
-        return Api.put(`/admin/options/default-locale`, { locale: localeKey });
+    async deleteLocale(key: string): Promise<void> {
+        return Api.delete(`/admin/locale/${key}`);
+    }
+
+    async updateLocaleState(key: string, disabled: boolean): Promise<void> {
+        return Api.put(`/admin/locale/${key}/state`, { disabled });
+    }
+
+    async setLocaleDefault(key: string): Promise<void> {
+        return Api.put(`/admin/options/default-locale`, { locale: key });
     }
 }

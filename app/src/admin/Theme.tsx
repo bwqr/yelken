@@ -12,28 +12,28 @@ interface Manifest {
     version: string,
     name: string,
     models: {
-        name: String,
+        name: string,
         fields: {
-            name: String,
-            field: String,
+            name: string,
+            field: string,
             localized?: boolean,
             multiple?: boolean,
         }[]
     }[],
     contents: {
-        name: String,
-        model: String,
+        name: string,
+        model: string,
         values: {
-            field: String,
-            value: String,
+            field: string,
+            value: string,
             locale?: string,
         }[],
     }[],
     pages: {
-        name: String,
-        path: String,
-        template: String,
-        locale?: String,
+        name: string,
+        path: string,
+        template: string,
+        locale?: string,
     }[],
 }
 
@@ -103,7 +103,7 @@ export const InstallTheme = () => {
     const onSubmit = (ev: SubmitEvent) => {
         ev.preventDefault();
 
-        if (inProgress()) {
+        if (inProgress() !== undefined) {
             return;
         }
 
@@ -142,7 +142,7 @@ export const InstallTheme = () => {
     }
 
     return (
-        <div class="container mt-4">
+        <div class="container mt-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Install Theme</h2>
             </div>
@@ -276,7 +276,7 @@ export const Themes = () => {
     }
 
     return (
-        <div class="container mt-4">
+        <div class="container mt-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Themes</h1>

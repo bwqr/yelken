@@ -11,7 +11,7 @@ export const Templates = () => {
     const [templates] = createResource(() => adminCtx.fetchTemplates());
 
     return (
-        <div class="container mt-4">
+        <div class="container mt-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Templates</h1>

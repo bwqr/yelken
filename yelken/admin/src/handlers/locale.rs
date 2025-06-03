@@ -97,7 +97,7 @@ pub async fn delete_locale(
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     if format!("{}", options.default_locale()) == locale_key {
         return Err(HttpError::conflict("cannot_delete_default_locale"));
     }
@@ -132,7 +132,7 @@ pub async fn delete_locale(
     )
     .await;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn update_locale_resource(

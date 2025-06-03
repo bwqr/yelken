@@ -16,7 +16,7 @@ import { Template, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
 import { CheckLg, ExclamationLg, XCircle } from './Icons';
 import { InstallTheme, Themes } from './admin/Theme';
-import { Locales } from './admin/Locale';
+import { CreateLocale, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 
 enum AlertState {
@@ -216,6 +216,7 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Locales} />
+                        <Route path="/create" component={CreateLocale} />
                     </Route>
 
                     <Route path="/pages" component={(props) => (

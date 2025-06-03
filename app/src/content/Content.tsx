@@ -52,7 +52,7 @@ export const Contents = () => {
     const [contents] = createResource(model, (m) => contentCtx.fetchContents(m.id));
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Contents</h1>
@@ -191,7 +191,7 @@ export const CreateContent = () => {
     };
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <h2 class="mb-4">Create Content</h2>
 
             <div class="row">
@@ -362,7 +362,7 @@ export const Content = () => {
     const contentUpdateIcon = () => content()?.content.stage === ContentStage.Published ? BookmarkCheck : BookmarkCheckFill;
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <Switch>
                 <Match when={content.loading}>Loading ...</Match>
                 <Match when={content.error}>Error: {content.error}</Match>

@@ -195,7 +195,7 @@ export const CreateModel = () => {
     };
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <h2 class="mb-4">Create Model</h2>
 
             <div class="row">
@@ -313,7 +313,7 @@ export const Models = () => {
     const contentCtx = useContext(ContentContext)!;
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Models</h1>
@@ -370,7 +370,7 @@ export const Model = () => {
     return (
         <Show when={model()}>
             {(m) => (
-                <div class="container mt-4">
+                <div class="container py-4 px-md-4">
                     <div>
                         <h2 class="m-0">{m().name}</h2>
                         <small>Model</small>

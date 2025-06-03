@@ -7,7 +7,7 @@ export const Pages = () => {
     const [pages] = createResource(() => adminCtx.fetchPages());
 
     return (
-        <div class="container mt-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Pages</h1>
