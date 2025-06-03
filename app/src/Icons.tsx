@@ -5,12 +5,13 @@ import BookmarkCheck from 'bootstrap-icons/icons/bookmark-check.svg';
 import BookmarkCheckFill from 'bootstrap-icons/icons/bookmark-check-fill.svg';
 import BoxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg';
 import CardText from 'bootstrap-icons/icons/card-text.svg';
-import CheckLg from 'bootstrap-icons/icons/check-lg.svg';
+import Check from 'bootstrap-icons/icons/check-square.svg';
 import Columns from 'bootstrap-icons/icons/columns.svg';
 import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
-import ExclamationLg from 'bootstrap-icons/icons/exclamation-lg.svg';
+import Exclamation from 'bootstrap-icons/icons/exclamation-diamond.svg';
 import FloppyFill from 'bootstrap-icons/icons/floppy-fill.svg';
 import Journals from 'bootstrap-icons/icons/journals.svg';
+import PencilSquare from 'bootstrap-icons/icons/pencil-square.svg';
 import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
 import Person from 'bootstrap-icons/icons/person.svg';
 import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
@@ -30,12 +31,13 @@ export {
     BookmarkCheckFill,
     BoxArrowRight,
     CardText,
-    CheckLg,
+    Check,
     Columns,
     Dashboard,
-    ExclamationLg,
+    Exclamation,
     FloppyFill,
     Journals,
+    PencilSquare,
     PersonCircle,
     Person,
     PlusSquareDotted,

@@ -2,29 +2,14 @@ use axum::{
     extract::{Query, State},
     Extension, Json,
 };
-use base::{
-    config::{LocationKind, Options},
-    responses::HttpError,
-    runtime::IntoSendFuture,
-    AppState,
-};
+use base::{config::Options, responses::HttpError, runtime::IntoSendFuture, AppState};
 use opendal::ErrorKind;
 use ui::Render;
 
-use crate::requests::{DeleteTemplate, FilterTemplate, UpdateTemplate};
-
-#[derive(serde::Serialize)]
-pub struct Template {
-    path: String,
-    kind: LocationKind,
-}
-
-#[derive(serde::Serialize)]
-pub struct TemplateDetail {
-    path: String,
-    kind: LocationKind,
-    template: String,
-}
+use crate::{
+    requests::{DeleteTemplate, FilterTemplate, UpdateTemplate},
+    responses::{Template, TemplateDetail},
+};
 
 pub async fn fetch_templates(
     State(state): State<AppState>,

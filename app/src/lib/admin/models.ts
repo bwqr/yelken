@@ -1,7 +1,7 @@
 export enum LocationKind {
+    User = 'user',
     Global = 'global',
     Theme = 'theme',
-    User = 'user',
 }
 
 export interface Page {
@@ -19,7 +19,7 @@ export interface Template {
     kind: LocationKind,
 }
 
-export interface TemplateDetails extends Template {
+export interface TemplateDetail extends Template {
     template: string,
 }
 
@@ -28,4 +28,9 @@ export interface Theme {
     version: string,
     name: string,
     createdAt: string,
+}
+
+export interface LocaleResource {
+    resource: string,
+    kind: LocationKind,
 }

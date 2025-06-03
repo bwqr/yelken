@@ -12,11 +12,16 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 use fluent::FluentResource;
+use opendal::ErrorKind;
 use ui::L10n;
 use unic_langid::LanguageIdentifier;
 
-use crate::requests::{
-    CreateLocale, DeleteLocaleResource, UpdateLocaleResource, UpdateLocaleState,
+use crate::{
+    requests::{
+        CreateLocale, DeleteLocaleResource, FilterLocaleResource, UpdateLocaleResource,
+        UpdateLocaleState,
+    },
+    responses::LocaleResource,
 };
 
 pub async fn create_locale(
@@ -135,13 +140,66 @@ pub async fn delete_locale(
     Ok(Json(()))
 }
 
+pub async fn fetch_locale_resource(
+    State(state): State<AppState>,
+    Extension(options): Extension<Options>,
+    Path(locale_key): Path<String>,
+    Query(req): Query<FilterLocaleResource>,
+) -> Result<Json<LocaleResource>, HttpError> {
+    let Some(locale_key) = locales::table
+        .filter(locales::key.eq(locale_key))
+        .select(locales::key)
+        .first::<String>(&mut state.pool.get().await?)
+        .await
+        .optional()?
+    else {
+        return Err(HttpError::not_found("locale_not_found"));
+    };
+
+    let Some(location) = options
+        .locale_locations()
+        .into_iter()
+        .find(|l| l.kind == req.kind)
+    else {
+        return Err(HttpError::not_found("unknown_kind"));
+    };
+
+    let buf = match state
+        .storage
+        .read(&format!("{}/{locale_key}.ftl", location.path))
+        .into_send_future()
+        .await
+    {
+        Ok(buf) => buf,
+        Err(e) if e.kind() == ErrorKind::NotFound => {
+            return Err(HttpError::not_found("resource_not_found"))
+        }
+        Err(e) => {
+            log::warn!("Failed to read resource at path {}, {e:?}", location.path);
+
+            return Err(HttpError::internal_server_error("failed_to_read_resource"));
+        }
+    };
+
+    let Ok(resource) = String::from_utf8(buf.to_bytes().to_vec())
+        .inspect_err(|e| log::warn!("Failed to read resource as string {e:?}"))
+    else {
+        return Err(HttpError::internal_server_error("invalid_locale_file"));
+    };
+
+    Ok(Json(LocaleResource {
+        kind: req.kind,
+        resource,
+    }))
+}
+
 pub async fn update_locale_resource(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
     Json(req): Json<UpdateLocaleResource>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     if let Err(e) = FluentResource::try_new(req.resource.clone()) {
         log::debug!("Failed to parse fluent resource successfully, {e:?}");
 
@@ -186,7 +244,7 @@ pub async fn update_locale_resource(
     )
     .await;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn delete_locale_resource(

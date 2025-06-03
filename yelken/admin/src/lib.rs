@@ -39,6 +39,10 @@ pub fn router(state: AppState) -> Router<AppState> {
         )
         .route(
             "/locale/{locale_key}/resource",
+            get(locale::fetch_locale_resource),
+        )
+        .route(
+            "/locale/{locale_key}/resource",
             put(locale::update_locale_resource),
         )
         .route(

@@ -25,6 +25,12 @@ pub struct UpdateLocaleState {
 }
 
 #[derive(Deserialize)]
+pub struct FilterLocaleResource {
+    pub kind: LocationKind,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateLocaleResource {
     pub theme_scoped: bool,
     pub resource: String,

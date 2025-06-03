@@ -14,9 +14,9 @@ import { CreateModel, Model, Models } from './content/Model';
 import { Pages } from './admin/Page';
 import { Template, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
-import { CheckLg, ExclamationLg, XCircle } from './Icons';
+import { Check, Exclamation, XCircle } from './Icons';
 import { InstallTheme, Themes } from './admin/Theme';
-import { CreateLocale, Locales } from './admin/Locale';
+import { CreateLocale, Locale, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 
 enum AlertState {
@@ -44,7 +44,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                         role="alert"
                         style="background-color: var(--bs-body-bg); min-width: 18rem;"
                     >
-                        <Dynamic component={alert.state === AlertState.Failure ? ExclamationLg : CheckLg} />
+                        <Dynamic component={alert.state === AlertState.Failure ? Exclamation : Check} />
                         <span class="flex-grow-1 me-2">{alert.title}</span>
                         <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
                             <XCircle viewBox="0 0 16 16" />
@@ -216,6 +216,7 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Locales} />
+                        <Route path="/view/:key" component={Locale} />
                         <Route path="/create" component={CreateLocale} />
                     </Route>
 

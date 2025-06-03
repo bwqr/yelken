@@ -315,7 +315,7 @@ export const Themes = () => {
                                                         <td>{theme.name}</td>
                                                         <td class="text-center">
                                                             <Show when={theme.id === contentCtx.options().theme}>
-                                                                <span class="badge ms-2 border border-link text-light-emphasis p-2">Active</span>
+                                                                <span class="badge rounded-pill border border-link text-light-emphasis">Active</span>
                                                             </Show>
                                                         </td>
                                                         <td class="dropdown text-end">

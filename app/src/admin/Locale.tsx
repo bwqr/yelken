@@ -1,11 +1,12 @@
-import { createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { ContentContext } from "../lib/content/context";
-import { PlusLg, ThreeDotsVertical } from "../Icons";
+import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
 import { AlertContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
-import { A, useNavigate } from "@solidjs/router";
+import { A, useNavigate, useParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
+import { LocationKind } from "../lib/admin/models";
 
 export const CreateLocale = () => {
     enum ValidationError {
@@ -131,6 +132,119 @@ export const CreateLocale = () => {
     );
 };
 
+export const Locale = () => {
+    let editorRef: HTMLElement | undefined = undefined;
+
+    const alertCtx = useContext(AlertContext)!;
+    const adminCtx = useContext(AdminContext)!;
+    const contentCtx = useContext(ContentContext)!;
+    const params = useParams();
+
+    const [kind, setKind] = createSignal(LocationKind.Theme);
+    const locale = createMemo(() => contentCtx.locales().find((l) => l.key === params.key));
+
+    const [inProgress, setInProgress] = createSignal(false);
+
+    const [resource] = createResource(
+        () => {
+            const l = locale();
+            const k = kind();
+
+            if (l && k) {
+                return { locale: l, kind: k };
+            }
+
+            return undefined;
+        },
+        ({ locale, kind }) => adminCtx.fetchLocaleResource(locale.key, kind).catch((e) => {
+            if ((e instanceof HttpError) && e.message === 'resource_not_found') {
+                return Promise.resolve({ resource: '', kind })
+            }
+
+            throw e;
+        })
+    );
+
+    const [editor] = createResource(async () => {
+        const ace = await import('ace-code');
+
+        return ace.edit(editorRef);
+    });
+
+    createEffect(() => {
+        const r = resource();
+        const e = editor();
+
+        if (r && e) {
+            e.setValue(r.resource);
+        }
+    })
+
+    const save = () => {
+        const l = locale();
+        const r = resource();
+        const e = editor();
+
+        if (inProgress() || !l || !e || !r) {
+            return;
+        }
+
+        if (r.kind === LocationKind.Theme) {
+            alertCtx.fail('Cannot modify theme\'s own resource');
+
+            return;
+        }
+
+        setInProgress(true);
+
+        adminCtx.updateLocaleResource(l.key, r.kind, e.getValue())
+            .then(() => alertCtx.success('Resource is updated successfully'))
+            .catch((e) => alertCtx.fail(e.message))
+            .finally(() => setInProgress(false));
+    }
+
+    return (
+        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
+            <Show when={!locale()}>
+                <p>Could not find the locale {params.key}.</p>
+            </Show>
+
+            <Show when={locale()}>
+                {(locale) => (
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="flex-grow-1">
+                            <h2 class="m-0">{locale().name}</h2>
+                            <small>Translations</small>
+                        </div>
+
+                        <select class="form-select" style="width: unset" value={kind()} onChange={(ev) => setKind(ev.target.value as LocationKind)}>
+                            <For each={Object.entries(LocationKind)}>
+                                {(kind) => (<option value={kind[1]}>{kind[0]}</option>)}
+                            </For>
+                        </select>
+
+                        <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress()}>
+                            <Show when={inProgress()}>
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </Show>
+                            <FloppyFill />
+                            Save
+                        </button>
+                    </div>
+                )}
+            </Show >
+
+            <Show when={editor.loading || resource.loading}>
+                <span>Loading editor ...</span>
+            </Show>
+
+            <div class="flex-grow-1 w-100" ref={editorRef} classList={{ 'd-none': !locale() }}></div>
+        </div>
+    );
+};
+
 export const Locales = () => {
     enum Actions {
         UpdateState,
@@ -227,6 +341,7 @@ export const Locales = () => {
                                                 <th scope="col">State</th>
                                                 <th scope="col"></th>
                                                 <th scope="col"></th>
+                                                <th scope="col"></th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -237,7 +352,7 @@ export const Locales = () => {
                                                         <td>{locale.key}</td>
                                                         <td>
                                                             <span
-                                                                class="badge p-2 border"
+                                                                class="badge border rounded-pill"
                                                                 classList={{ 'border-success text-success': !locale.disabled, 'border-danger text-danger': locale.disabled }}
                                                             >
                                                                 {locale.disabled ? 'Disabled' : 'Enabled'}
@@ -245,8 +360,14 @@ export const Locales = () => {
                                                         </td>
                                                         <td class="text-center">
                                                             <Show when={locale.key === contentCtx.options().defaultLocale}>
-                                                                <span class="badge ms-2 border border-link text-light-emphasis p-2">Default</span>
+                                                                <span class="badge border rounded-pill border-link text-light-emphasis">Default</span>
                                                             </Show>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <A href={`/locales/view/${locale.key}`} class="icon-link text-link">
+                                                                <PencilSquare />
+                                                                Translations
+                                                            </A>
                                                         </td>
                                                         <td class="dropdown text-end">
                                                             <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
@@ -272,7 +393,7 @@ export const Locales = () => {
                                                                         <li>
                                                                             <button
                                                                                 class="dropdown-item icon-link"
-                                                                                disabled={inProgress() === Actions.UpdateState || locale.key === contentCtx.options().defaultLocale}
+                                                                                disabled={inProgress() === Actions.UpdateState}
                                                                                 on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale.key, !locale.disabled); }}
                                                                             >
                                                                                 <Show when={inProgress() === Actions.UpdateState}>
@@ -283,8 +404,6 @@ export const Locales = () => {
                                                                                 {locale.disabled ? 'Enable' : 'Disable'}
                                                                             </button>
                                                                         </li>
-                                                                    </Show>
-                                                                    <Show when={locale.key !== contentCtx.options().defaultLocale}>
                                                                         <li>
                                                                             <button
                                                                                 class="dropdown-item icon-link text-danger"
