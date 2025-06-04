@@ -281,7 +281,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         .unwrap()
                         .push("assets")
                         .push(kind)
-                        .push(&path);
+                        .extend(path.split('/'));
 
                     Ok(base_url.as_str().to_string())
                 }

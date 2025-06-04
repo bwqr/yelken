@@ -113,7 +113,13 @@ where
             .boxed();
         }
 
-        let Ok(path) = SafePath::<5>::from_str(req.uri().path()) else {
+        let mut path = req.uri().path();
+
+        if let Some(p) = path.strip_prefix("/") {
+            path = p;
+        }
+
+        let Ok(path) = SafePath::<7>::from_str(path).inspect_err(|e| log::warn!("Something has gone wrong {e:?}")) else {
             return async move {
                 Ok(Response::builder()
                     .status(StatusCode::BAD_REQUEST)
@@ -123,7 +129,7 @@ where
             .boxed();
         };
 
-        let path = format!("{}{}", (self.path)(), path.0);
+        let path = format!("{}/{}", (self.path)(), path.0);
 
         let storage = self.storage.clone();
 
