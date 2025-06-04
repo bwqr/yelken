@@ -4,6 +4,8 @@ import { LocationKind, type LocaleResource, type Page, type Template, type Templ
 
 export interface AdminStore {
     fetchPages(): Promise<Page[]>
+    createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page>;
+
     fetchTemplates(): Promise<Template[]>
     fetchTemplate(path: string, kind: LocationKind): Promise<TemplateDetail | undefined>
     updateTemplate(path: string, kind: LocationKind, template: string): Promise<void>;
@@ -26,6 +28,10 @@ export const AdminContext: Context<AdminStore | undefined> = createContext();
 export class AdminService implements AdminStore {
     async fetchPages(): Promise<Page[]> {
         return Api.get('/admin/page/pages');
+    }
+
+    async createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page> {
+        return Api.post('/admin/page', { name, path, template, themeScoped, locale });
     }
 
     async fetchTemplates(): Promise<Template[]> {

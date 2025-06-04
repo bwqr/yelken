@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense, useContext } from "solid-js";
 import { ContentContext } from "../lib/content/context";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
@@ -206,7 +206,7 @@ export const Locale = () => {
     return (
         <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
             <Show when={!locale()}>
-                <p>Could not find the locale {params.key}.</p>
+                <span>Could not find the locale {params.key}.</span>
             </Show>
 
             <Show when={locale()}>
@@ -223,7 +223,7 @@ export const Locale = () => {
                             </For>
                         </select>
 
-                        <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress()}>
+                        <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress() || kind() === LocationKind.Theme}>
                             <Show when={inProgress()}>
                                 <div class="spinner-border" role="status">
                                     <span class="visually-hidden">Loading...</span>

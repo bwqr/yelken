@@ -20,6 +20,16 @@ pub struct CreateLocale {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePage {
+    pub name: String,
+    pub path: String,
+    pub template: String,
+    pub locale: Option<String>,
+    pub theme_scoped: bool,
+}
+
+#[derive(Deserialize)]
 pub struct UpdateLocaleState {
     pub disabled: bool,
 }

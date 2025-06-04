@@ -14,8 +14,9 @@ import Journals from 'bootstrap-icons/icons/journals.svg';
 import PencilSquare from 'bootstrap-icons/icons/pencil-square.svg';
 import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
 import Person from 'bootstrap-icons/icons/person.svg';
-import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
+import Plus from 'bootstrap-icons/icons/plus.svg';
 import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
+import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
 import Stack from 'bootstrap-icons/icons/stack.svg';
 import ThreeDotsVertical from 'bootstrap-icons/icons/three-dots-vertical.svg';
 import Translate from 'bootstrap-icons/icons/translate.svg';
@@ -40,8 +41,9 @@ export {
     PencilSquare,
     PersonCircle,
     Person,
-    PlusSquareDotted,
+    Plus,
     PlusLg,
+    PlusSquareDotted,
     Stack,
     ThreeDotsVertical,
     Translate,

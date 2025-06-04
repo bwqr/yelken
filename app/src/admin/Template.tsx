@@ -9,6 +9,10 @@ import { dropdownClickListener } from "../lib/utils";
 
 const locationKindOrder = [LocationKind.User, LocationKind.Global, LocationKind.Theme];
 
+export const CreateTemplate = () => {
+    return (<p>Create a Template</p>);
+};
+
 export const Templates = () => {
     enum Actions {
         Delete,
@@ -203,7 +207,7 @@ export const Template = () => {
                             <div class="d-flex align-items-center mb-4">
                                 <div class="flex-grow-1">
                                     <h2 class="m-0">{template().path}</h2>
-                                    <small>Template {searchParams.kind}</small>
+                                    <small>Template</small>
                                 </div>
 
                                 <select class="form-select" style="width: unset" value={template().kind} onChange={(ev) => setSearchParams({ kind: ev.target.value })}>

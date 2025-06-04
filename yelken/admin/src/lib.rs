@@ -18,6 +18,8 @@ mod responses;
 
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
+        .route("/page/pages", get(page::fetch_pages))
+        .route("/page", post(page::create_page))
         .route(
             "/permission/role/{role_id}",
             post(permission::update_role_permissions),
@@ -26,7 +28,6 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/permission/user/{user_id}",
             post(permission::update_user_permissions),
         )
-        .route("/page/pages", get(page::fetch_pages))
         .route("/user", post(user::create_user))
         .route("/user/{user_id}/state", put(user::update_user_state))
         .route("/user/{user_id}/role", put(user::update_user_role))
