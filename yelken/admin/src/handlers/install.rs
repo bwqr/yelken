@@ -177,7 +177,7 @@ pub async fn install_theme(
         );
     }
 
-    result.map(|t| Json(t))
+    result.map(Json)
 }
 
 async fn install(

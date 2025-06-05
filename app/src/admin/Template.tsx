@@ -39,10 +39,7 @@ export const Templates = () => {
     const [item, setItem] = createSignal(undefined as Temp | undefined);
     const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
 
-    const dropdownRemove = dropdownClickListener('template-quick-action', () => setItem(undefined), () => inProgress() !== undefined);
-
-    window.document.addEventListener('click', dropdownRemove);
-    onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
+    onCleanup(dropdownClickListener('template-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
     const deleteTemplate = (path: string, kind: LocationKind) => {
         if (inProgress() !== undefined) {

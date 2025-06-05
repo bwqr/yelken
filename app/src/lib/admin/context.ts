@@ -1,10 +1,16 @@
 import { createContext, type Context } from "solid-js";
 import { Api, HttpError } from "../api";
-import { LocationKind, type LocaleResource, type Page, type Template, type TemplateDetail, type Theme } from "./models";
+import { LocationKind, Permission, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme } from "./models";
 
 export interface AdminStore {
     fetchPages(): Promise<Page[]>
     createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page>;
+
+    fetchRoles(): Promise<Role[]>;
+    fetchRole(id: number): Promise<RoleDetail | undefined>;
+    createRole(name: string): Promise<Role>;
+    updateRolePermission(id: number, permissions: Permission[]): Promise<void>;
+    deleteRole(id: number): Promise<void>;
 
     fetchTemplates(): Promise<Template[]>
     fetchTemplate(path: string, kind: LocationKind): Promise<TemplateDetail | undefined>
@@ -32,6 +38,33 @@ export class AdminService implements AdminStore {
 
     async createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page> {
         return Api.post('/admin/page', { name, path, template, themeScoped, locale });
+    }
+
+    async fetchRoles(): Promise<Role[]> {
+        return Api.get('/admin/role/roles');
+    }
+
+    async fetchRole(id: number): Promise<RoleDetail | undefined> {
+        return Api.get<RoleDetail>(`/admin/role/role/${id}`)
+            .catch((e) => {
+                if ((e instanceof HttpError) && e.error === 'item_not_found') {
+                    return undefined;
+                }
+
+                throw e;
+            });
+    }
+
+    async createRole(name: string): Promise<Role> {
+        return Api.post('/admin/role', { name });
+    }
+
+    async updateRolePermission(id: number, permissions: Permission[]): Promise<void> {
+        return Api.post(`/admin/permission/role/${id}`, permissions);
+    }
+
+    async deleteRole(id: number): Promise<void> {
+        return Api.delete(`/admin/role/role/${id}`);
     }
 
     async fetchTemplates(): Promise<Template[]> {

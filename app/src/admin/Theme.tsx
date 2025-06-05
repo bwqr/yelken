@@ -234,10 +234,7 @@ export const Themes = () => {
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
 
-    const dropdownRemove = dropdownClickListener('theme-quick-action', () => setItem(undefined), () => inProgress() !== undefined);
-
-    window.document.addEventListener('click', dropdownRemove);
-    onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
+    onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
     const [themes, { refetch }] = createResource(() => adminCtx.fetchThemes());
 

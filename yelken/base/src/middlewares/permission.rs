@@ -11,6 +11,7 @@ use axum::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use serde::Serialize;
 use tower::{Layer, Service};
 
 use crate::{
@@ -56,12 +57,21 @@ impl FromStr for Permission {
             "admin" => Permission::Admin,
             "content.read" => Permission::Content(Mode::Read),
             "content.write" => Permission::Content(Mode::Write),
-            "user.read" => Permission::User(Mode::Write),
+            "user.read" => Permission::User(Mode::Read),
             "user.write" => Permission::User(Mode::Write),
             _ => return Err("unknown permission"),
         };
 
         Ok(perm)
+    }
+}
+
+impl Serialize for Permission {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_str())
     }
 }
 

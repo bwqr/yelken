@@ -32,7 +32,9 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/user/{user_id}/state", put(user::update_user_state))
         .route("/user/{user_id}/role", put(user::update_user_role))
         .route("/role", post(role::create_role))
-        .route("/role/{role_id}", delete(role::delete_role))
+        .route("/role/roles", get(role::fetch_roles))
+        .route("/role/role/{role_id}", get(role::fetch_role))
+        .route("/role/role/{role_id}", delete(role::delete_role))
         .route("/locale", post(locale::create_locale))
         .route(
             "/locale/{locale_key}/state",

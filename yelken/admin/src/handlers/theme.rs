@@ -6,6 +6,6 @@ pub async fn fetch_themes(State(state): State<AppState>) -> Result<Json<Vec<Them
     themes::table
         .load::<Theme>(&mut state.pool.get().await?)
         .await
-        .map(|themes| Json(themes))
+        .map(Json)
         .map_err(Into::into)
 }

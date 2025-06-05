@@ -259,10 +259,7 @@ export const Locales = () => {
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
 
-    const dropdownRemove = dropdownClickListener('locale-quick-action', () => setItem(undefined), () => inProgress() !== undefined);
-
-    window.document.addEventListener('click', dropdownRemove);
-    onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
+    onCleanup(dropdownClickListener('locale-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
     const updateLocaleState = (key: string, disabled: boolean) => {
         if (inProgress() !== undefined) {

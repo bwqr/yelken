@@ -18,6 +18,8 @@ import { Check, Exclamation, XCircle } from './Icons';
 import { InstallTheme, Themes } from './admin/Theme';
 import { CreateLocale, Locale, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
+import { CreateRole, Role, Roles } from './admin/Role';
+import { CreateUser, User, Users } from './admin/User';
 
 enum AlertState {
     Success,
@@ -237,6 +239,26 @@ const App: Component = () => {
                         <Route path="/" component={Templates} />
                         <Route path="/view" component={Template} />
                         <Route path="/create" component={CreateTemplate} />
+                    </Route>
+
+                    <Route path="/roles" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Roles} />
+                        <Route path="/view/:id" component={Role} />
+                        <Route path="/create" component={CreateRole} />
+                    </Route>
+
+                    <Route path="/users" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Users} />
+                        <Route path="/view/:username" component={User} />
+                        <Route path="/create" component={CreateUser} />
                     </Route>
                 </Route>
             </Router>

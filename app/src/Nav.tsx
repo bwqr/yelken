@@ -1,10 +1,10 @@
-import { A } from "@solidjs/router";
+import { A, useLocation } from "@solidjs/router";
 import { type Component, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import './Nav.scss';
 import { UserContext } from "./lib/user/context";
-import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Journals, Person, PersonCircle, Stack, Translate } from "./Icons";
+import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Journals, Person, PersonCircle, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
 
 export function TopBar(): JSX.Element {
@@ -12,10 +12,7 @@ export function TopBar(): JSX.Element {
 
     const [dropdown, setDropdown] = createSignal(false);
 
-    const dropdownRemove = dropdownClickListener('topbar-dropdown', () => setDropdown(false));
-
-    window.document.addEventListener('click', dropdownRemove);
-    onCleanup(() => window.document.removeEventListener('click', dropdownRemove));
+    onCleanup(dropdownClickListener('topbar-dropdown', () => setDropdown(false)));
 
     return (
         <nav class="navbar px-4 py-2">
@@ -73,6 +70,8 @@ interface Link {
 }
 
 export function SideNav(): JSX.Element {
+    const location = useLocation();
+
     const [show, setShow] = createSignal(true);
 
     const categories: { title?: string, links: Link[] }[] = [
@@ -96,12 +95,19 @@ export function SideNav(): JSX.Element {
                 { title: 'Templates', href: '/templates', icon: Braces },
                 { title: 'Pages', href: '/pages', icon: Journals },
             ]
+        },
+        {
+            title: 'Administration',
+            links: [
+                { title: 'Roles', href: '/roles', icon: ShieldLock },
+                { title: 'Users & Perms', href: '/users', icon: PeopleFill },
+            ]
         }
     ];
 
     return (
         <div class="p-2 vh-100">
-            <nav id="sidenav" class="bg-body text-secondary p-2 rounded shadow-sm" classList={{ 'h-100': show() }}>
+            <nav id="sidenav" class="bg-body text-secondary p-2 rounded shadow-sm overflow-auto" classList={{ 'h-100': show() }}>
                 <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
                     <Show when={show()}><ArrowBarUp /></Show>
                     <Show when={!show()}><ArrowBarDown /></Show>
@@ -127,7 +133,7 @@ export function SideNav(): JSX.Element {
                                     <For each={category.links}>
                                         {(link) => (
                                             <li class="nav-item">
-                                                <A href={link.href} class="icon-link nav-link p-2 w-100 rounded my-1">
+                                                <A href={link.href} class="icon-link nav-link p-2 w-100 rounded my-1" aria-current={location.pathname.startsWith(link.href) ? 'page' : false} classList={{ 'active': location.pathname.startsWith(link.href) }}>
                                                     <Dynamic component={link.icon} />
                                                     <span class="d-none d-lg-block">{link.title}</span>
                                                 </A>

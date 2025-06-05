@@ -1,4 +1,4 @@
-use base::config::LocationKind;
+use base::{config::LocationKind, middlewares::permission::Permission, models::Role};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -26,4 +26,11 @@ pub struct TemplateDetail {
 pub struct LocaleResource {
     pub resource: String,
     pub kind: LocationKind,
+}
+
+#[derive(Serialize)]
+pub struct RoleDetail {
+    #[serde(flatten)]
+    pub role: Role,
+    pub permissions: Vec<Permission>,
 }

@@ -9,7 +9,7 @@ pub async fn fetch_pages(State(state): State<AppState>) -> Result<Json<Vec<Page>
     pages::table
         .load::<Page>(&mut state.pool.get().await?)
         .await
-        .map(|pages| Json(pages))
+        .map(Json)
         .map_err(Into::into)
 }
 
@@ -65,6 +65,6 @@ pub async fn create_page(
         ))
         .get_result::<Page>(&mut conn)
         .await
-        .map(|page| Json(page))
+        .map(Json)
         .map_err(Into::into)
 }

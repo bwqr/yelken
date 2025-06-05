@@ -18,7 +18,7 @@ pub async fn update_role_permissions(
     State(state): State<AppState>,
     Path(role_id): Path<i32>,
     perms: Json<Vec<String>>,
-) -> Result<(), HttpError> {
+) -> Result<Json<()>, HttpError> {
     let perms: Result<Vec<Permission>, &'static str> = perms
         .0
         .into_iter()
@@ -72,7 +72,7 @@ pub async fn update_role_permissions(
         })
         .await?;
 
-    Ok(())
+    Ok(Json(()))
 }
 
 pub async fn update_user_permissions(

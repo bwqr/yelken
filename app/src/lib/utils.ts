@@ -1,6 +1,6 @@
-export function dropdownClickListener(id: string, onClose: () => void, preCondition?: () => boolean): (event: Event) => void {
-    return function(event: Event) {
-        if (preCondition?.()) {
+export function dropdownClickListener(id: string, onClose: () => void, preCondition?: () => boolean): () => void {
+    const listener = function(event: Event) {
+        if (preCondition && !preCondition()) {
             return;
         }
 
@@ -23,5 +23,11 @@ export function dropdownClickListener(id: string, onClose: () => void, preCondit
         if (close) {
             onClose();
         }
+    };
+
+    window.document.addEventListener('click', listener);
+
+    return function() {
+        window.document.removeEventListener('click', listener);
     }
 }

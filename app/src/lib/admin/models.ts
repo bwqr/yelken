@@ -4,6 +4,14 @@ export enum LocationKind {
     Theme = 'theme',
 }
 
+export enum Permission {
+    Admin = 'admin',
+    ContentRead = 'content.read',
+    ContentWrite = 'content.write',
+    UserRead = 'user.read',
+    UserWrite = 'user.write',
+}
+
 export interface Page {
     id: number,
     namespace: string | null,
@@ -33,4 +41,13 @@ export interface Theme {
 export interface LocaleResource {
     resource: string,
     kind: LocationKind,
+}
+
+export interface Role {
+    id: number,
+    name: string,
+}
+
+export interface RoleDetail extends Role {
+    permissions: Permission[],
 }
