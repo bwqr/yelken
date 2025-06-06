@@ -67,7 +67,7 @@ pub async fn update_locale_state(
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
     Json(req): Json<UpdateLocaleState>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     if req.disabled && format!("{}", options.default_locale()) == locale_key {
         return Err(HttpError::conflict("cannot_disable_default_locale"));
     }
@@ -94,7 +94,7 @@ pub async fn update_locale_state(
     )
     .await;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn delete_locale(
@@ -102,7 +102,7 @@ pub async fn delete_locale(
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     if format!("{}", options.default_locale()) == locale_key {
         return Err(HttpError::conflict("cannot_delete_default_locale"));
     }
@@ -137,7 +137,7 @@ pub async fn delete_locale(
     )
     .await;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn fetch_locale_resource(
@@ -199,7 +199,7 @@ pub async fn update_locale_resource(
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
     Json(req): Json<UpdateLocaleResource>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     if let Err(e) = FluentResource::try_new(req.resource.clone()) {
         log::debug!("Failed to parse fluent resource successfully, {e:?}");
 
@@ -244,7 +244,7 @@ pub async fn update_locale_resource(
     )
     .await;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn delete_locale_resource(

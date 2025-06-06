@@ -78,7 +78,7 @@ pub async fn create_role(
 pub async fn delete_role(
     State(state): State<AppState>,
     Path(role_id): Path<i32>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     let effected_row = diesel::delete(roles::table)
         .filter(roles::id.eq(role_id))
         .execute(&mut state.pool.get().await?)
@@ -95,5 +95,5 @@ pub async fn delete_role(
         return Err(HttpError::not_found("role_not_found"));
     }
 
-    Ok(Json(()))
+    Ok(())
 }

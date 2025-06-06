@@ -89,11 +89,11 @@ impl Serialize for HttpError {
 impl IntoResponse for HttpError {
     fn into_response(self) -> axum::response::Response {
         if self.code.as_u16() > 499 {
-            log::error!("Internal server error {}", self.error);
-        }
-
-        if let Some(context) = &self.context {
-            log::warn!("HttpError: {}", context);
+            log::error!(
+                "Internal server error {}, context {:?}",
+                self.error,
+                self.context
+            );
         }
 
         (self.code, Json(self)).into_response()

@@ -214,7 +214,7 @@ pub async fn create_content(
     Extension(options): Extension<Options>,
     user: AuthUser,
     Json(req): Json<CreateContent>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     let mut conn = state.pool.get().await?;
 
     let locales = options
@@ -323,7 +323,7 @@ pub async fn create_content(
     })
     .await?;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn create_content_value(
@@ -331,7 +331,7 @@ pub async fn create_content_value(
     Extension(options): Extension<Options>,
     Path(content_id): Path<i32>,
     Json(req): Json<ContentValue>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     let mut conn = state.pool.get().await?;
 
     let Some(model_id) = models::table
@@ -416,14 +416,14 @@ pub async fn create_content_value(
         .execute(&mut conn)
         .await?;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn update_content_stage(
     State(state): State<AppState>,
     Path(content_id): Path<i32>,
     Json(req): Json<UpdateContentStage>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     let effected_row: usize = diesel::update(contents::table)
         .filter(contents::id.eq(content_id))
         .set(contents::stage.eq(req.stage))
@@ -434,14 +434,14 @@ pub async fn update_content_stage(
         return Err(HttpError::not_found("content_not_found"));
     }
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn update_content_value(
     State(state): State<AppState>,
     Path(value_id): Path<i32>,
     Json(req): Json<UpdateContentValue>,
-) -> Result<Json<()>, HttpError> {
+) -> Result<(), HttpError> {
     let effected_row: usize = diesel::update(content_values::table)
         .filter(content_values::id.eq(value_id))
         .set(content_values::value.eq(req.value))
@@ -452,7 +452,7 @@ pub async fn update_content_value(
         return Err(HttpError::not_found("content_value_not_found"));
     }
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub async fn fetch_options(

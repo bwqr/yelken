@@ -12,6 +12,11 @@ export enum Permission {
     UserWrite = 'user.write',
 }
 
+export enum UserState {
+    Enabled = 'enabled',
+    Disabled = 'disabled',
+}
+
 export interface Page {
     id: number,
     namespace: string | null,
@@ -50,4 +55,17 @@ export interface Role {
 
 export interface RoleDetail extends Role {
     permissions: Permission[],
+}
+
+export interface User {
+    id: number,
+    roleId: number | null,
+    username: string,
+    name: string,
+    state: UserState,
+}
+
+export interface UserDetail extends User {
+    email: string,
+    permissions: Permission[];
 }

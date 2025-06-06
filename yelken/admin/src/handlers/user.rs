@@ -1,13 +1,15 @@
+use std::str::FromStr;
+
 use axum::{
     extract::{Path, State},
     Extension, Json,
 };
 use base::{
     crypto::Crypto,
-    middlewares::auth::AuthUser,
+    middlewares::{auth::AuthUser, permission::Permission},
     models::{User, UserState},
     responses::HttpError,
-    schema::users,
+    schema::{permissions, users},
     AppState,
 };
 use diesel::{
@@ -17,7 +19,10 @@ use diesel::{
 use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
-use crate::{requests::CreateUser, responses::CreatedUser};
+use crate::{
+    requests::CreateUser,
+    responses::{self, CreatedUser, UserDetail},
+};
 
 fn generate_username(name: &str) -> String {
     name.chars()
@@ -28,6 +33,87 @@ fn generate_username(name: &str) -> String {
             .map(|_| rng().sample(Alphanumeric) as char)
             .collect::<String>()
             .as_str()
+}
+
+pub async fn fetch_users(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<responses::User>>, HttpError> {
+    users::table
+        .select((
+            users::id,
+            users::role_id,
+            users::username,
+            users::name,
+            users::state,
+        ))
+        .load::<(i32, Option<i32>, String, String, UserState)>(&mut state.pool.get().await?)
+        .await
+        .map(|users| {
+            Json(
+                users
+                    .into_iter()
+                    .map(|user| responses::User {
+                        id: user.0,
+                        role_id: user.1,
+                        username: user.2,
+                        name: user.3,
+                        state: user.4,
+                    })
+                    .collect(),
+            )
+        })
+        .map_err(Into::into)
+}
+
+pub async fn fetch_user(
+    State(state): State<AppState>,
+    Path(username): Path<String>,
+) -> Result<Json<UserDetail>, HttpError> {
+    let mut conn = state.pool.get().await?;
+
+    let (user, email) = users::table
+        .filter(users::username.eq(username))
+        .select((
+            users::id,
+            users::role_id,
+            users::username,
+            users::name,
+            users::state,
+            users::email,
+        ))
+        .first::<(i32, Option<i32>, String, String, UserState, String)>(&mut conn)
+        .await
+        .map(|user| {
+            (
+                responses::User {
+                    id: user.0,
+                    role_id: user.1,
+                    username: user.2,
+                    name: user.3,
+                    state: user.4,
+                },
+                user.5,
+            )
+        })?;
+
+    let perms = permissions::table
+        .filter(permissions::user_id.eq(user.id))
+        .select(permissions::name)
+        .load::<String>(&mut conn)
+        .await?;
+
+    Ok(Json(UserDetail {
+        user,
+        email,
+        permissions: perms
+            .into_iter()
+            .flat_map(|perm| {
+                Permission::from_str(&perm)
+                    .inspect_err(|e| log::error!("Invalid permission found {perm} {e}"))
+                    .ok()
+            })
+            .collect(),
+    }))
 }
 
 pub async fn create_user(
@@ -119,6 +205,34 @@ pub async fn update_user_state(
         .set(users::state.eq(user_state))
         .execute(&mut state.pool.get().await?)
         .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("user_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn delete_user(
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+    user: AuthUser,
+) -> Result<(), HttpError> {
+    if user_id == user.id {
+        return Err(HttpError::conflict("self_update_not_possible"));
+    }
+
+    let effected_row = diesel::delete(users::table)
+        .filter(users::id.eq(user_id))
+        .execute(&mut state.pool.get().await?)
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) = &e {
+                return HttpError::conflict("user_being_used");
+            }
+
+            e.into()
+        })?;
 
     if effected_row == 0 {
         return Err(HttpError::not_found("user_not_found"));

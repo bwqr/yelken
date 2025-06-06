@@ -68,6 +68,18 @@ export class Api {
             throw new Error(text);
         }
 
-        return await resp.json();
+        if (resp.headers.get('Content-Type') === 'application/json') {
+            return resp.json();
+        }
+
+        return resp.text() as Resp;
+    }
+
+    static handleNotFound(e: Error): undefined {
+        if ((e instanceof HttpError) && e.error === 'item_not_found') {
+            return undefined;
+        }
+
+        throw e;
     }
 }

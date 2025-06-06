@@ -54,8 +54,8 @@ create table permissions(
     role_id    int default null,
     name       varchar(32) not null,
     created_at timestamp   not null default current_timestamp,
-    constraint fk_permissions_user_id foreign key (user_id) references users (id) on delete no action on update no action,
-    constraint fk_permissions_role_id foreign key (role_id) references roles (id) on delete no action on update no action
+    constraint fk_permissions_user_id foreign key (user_id) references users (id) on delete cascade on update no action,
+    constraint fk_permissions_role_id foreign key (role_id) references roles (id) on delete cascade on update no action
 );
 
 create table locales(

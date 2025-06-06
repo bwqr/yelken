@@ -28,9 +28,12 @@ pub fn router(state: AppState) -> Router<AppState> {
             "/permission/user/{user_id}",
             post(permission::update_user_permissions),
         )
+        .route("/user/users", get(user::fetch_users))
+        .route("/user/user/{username}", get(user::fetch_user))
         .route("/user", post(user::create_user))
         .route("/user/{user_id}/state", put(user::update_user_state))
         .route("/user/{user_id}/role", put(user::update_user_role))
+        .route("/user/{user_id}", delete(user::delete_user))
         .route("/role", post(role::create_role))
         .route("/role/roles", get(role::fetch_roles))
         .route("/role/role/{role_id}", get(role::fetch_role))

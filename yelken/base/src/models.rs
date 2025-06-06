@@ -19,7 +19,7 @@ fn read_value_bytes<'a>(value: &'a BackendValue) -> &'a [u8] {
     value.as_bytes()
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, AsExpression, FromSqlRow)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, AsExpression, FromSqlRow)]
 #[diesel(sql_type = Text)]
 #[serde(rename_all = "snake_case")]
 pub enum UserState {
