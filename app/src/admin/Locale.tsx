@@ -229,7 +229,7 @@ export const Locale = () => {
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
                             </Show>
-                            <FloppyFill />
+                            <FloppyFill viewBox="0 0 16 16" />
                             Save
                         </button>
                     </div>
@@ -358,13 +358,13 @@ export const Locales = () => {
                                         </td>
                                         <td class="text-center">
                                             <A href={`/locales/view/${locale.key}`} class="icon-link text-link">
-                                                <PencilSquare />
+                                                <PencilSquare viewBox="0 0 16 16" />
                                                 Translations
                                             </A>
                                         </td>
                                         <td class="dropdown text-end">
                                             <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
-                                                <ThreeDotsVertical />
+                                                <ThreeDotsVertical viewBox="0 0 16 16" />
                                             </button>
                                             <Show when={item() === locale.key}>
                                                 <ul class="dropdown-menu show" id="locale-quick-action" style="right: 0">

@@ -11,6 +11,7 @@ import Columns from 'bootstrap-icons/icons/columns.svg';
 import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
 import Exclamation from 'bootstrap-icons/icons/exclamation-diamond.svg';
 import FloppyFill from 'bootstrap-icons/icons/floppy-fill.svg';
+import Images from 'bootstrap-icons/icons/images.svg';
 import Journals from 'bootstrap-icons/icons/journals.svg';
 import PencilSquare from 'bootstrap-icons/icons/pencil-square.svg';
 import PeopleFill from 'bootstrap-icons/icons/people-fill.svg';
@@ -42,6 +43,7 @@ export {
     Dashboard,
     Exclamation,
     FloppyFill,
+    Images,
     Journals,
     PencilSquare,
     PeopleFill,

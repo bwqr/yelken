@@ -96,7 +96,7 @@ export const CreateRole = () => {
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
                             </Show>
-                            <PlusLg />
+                            <PlusLg viewBox="0 0 16 16" />
                             Create
                         </button>
                     </div>
@@ -177,7 +177,7 @@ export const Role = () => {
                     </div>
                     <div class="dropdown">
                         <button class="btn icon-link ms-2" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                            <ThreeDotsVertical />
+                            <ThreeDotsVertical viewBox="0 0 16 16" />
                         </button>
                         <Show when={dropdown()}>
                             <ul id="role-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
@@ -188,7 +188,7 @@ export const Role = () => {
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <Trash />
+                                        <Trash viewBox="0 0 16 16" />
                                         Delete
                                     </button>
                                 </li>
@@ -201,7 +201,7 @@ export const Role = () => {
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </Show>
-                        <FloppyFill />
+                        <FloppyFill viewBox="0 0 16 16" />
                         Save
                     </button>
                 </div>
@@ -308,7 +308,7 @@ export const Roles = () => {
                                                             <td class="text-end">
                                                                 <A href={`/roles/view/${role.id}`} class="icon-link">
                                                                     Details
-                                                                    <ArrowRight />
+                                                                    <ArrowRight viewBox="0 0 16 16" />
                                                                 </A>
                                                             </td>
                                                         </tr>

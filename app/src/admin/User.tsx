@@ -165,7 +165,7 @@ export const CreateUser = () => {
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
                             </Show>
-                            <PlusLg />
+                            <PlusLg viewBox="0 0 16 16" />
                             Add
                         </button>
                     </div>
@@ -250,7 +250,7 @@ export const User = () => {
                     </div>
                     <div class="dropdown">
                         <button class="btn icon-link ms-2" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                            <ThreeDotsVertical />
+                            <ThreeDotsVertical viewBox="0 0 16 16" />
                         </button>
                         <Show when={dropdown()}>
                             <ul id="role-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
@@ -261,7 +261,7 @@ export const User = () => {
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <Trash />
+                                        <Trash viewBox="0 0 16 16" />
                                         Delete
                                     </button>
                                 </li>
@@ -274,7 +274,7 @@ export const User = () => {
                                 <span class="visually-hidden">Loading...</span>
                             </div>
                         </Show>
-                        <FloppyFill />
+                        <FloppyFill viewBox="0 0 16 16" />
                         Save
                     </button>
                 </div>
@@ -414,7 +414,7 @@ export const Users = () => {
                                                             <td class="text-end">
                                                                 <A href={`/users/view/${user.username}`} class="icon-link">
                                                                     Details
-                                                                    <ArrowRight />
+                                                                    <ArrowRight viewBox="0 0 16 16" />
                                                                 </A>
                                                             </td>
                                                         </tr>

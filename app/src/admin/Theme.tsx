@@ -317,7 +317,7 @@ export const Themes = () => {
                                                         </td>
                                                         <td class="dropdown text-end">
                                                             <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== theme.id ? theme.id : undefined) }}>
-                                                                <ThreeDotsVertical />
+                                                                <ThreeDotsVertical viewBox="0 0 16 16" />
                                                             </button>
                                                             <Show when={item() === theme.id}>
                                                                 <ul class="dropdown-menu show" id="theme-quick-action" style="right: 0">

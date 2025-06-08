@@ -381,7 +381,7 @@ export const Content = () => {
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <Dynamic component={contentUpdateIcon()} />
+                                        <Dynamic component={contentUpdateIcon()} viewBox="0 0 16 16" />
                                         <Switch>
                                             <Match when={c().content.stage === ContentStage.Draft}>Publish</Match>
                                             <Match when={c().content.stage === ContentStage.Published}>Mark as Draft</Match>

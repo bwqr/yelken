@@ -4,7 +4,7 @@ import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import './Nav.scss';
 import { UserContext } from "./lib/user/context";
-import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Journals, Person, PersonCircle, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
+import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, PersonCircle, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
 
 export function TopBar(): JSX.Element {
@@ -85,6 +85,7 @@ export function SideNav(): JSX.Element {
             links: [
                 { title: 'Models', href: '/models', icon: Stack },
                 { title: 'Contents', href: '/contents', icon: CardText },
+                { title: 'Assets', href: '/assets', icon: Images },
             ]
         },
         {
@@ -109,8 +110,8 @@ export function SideNav(): JSX.Element {
         <div class="p-2 vh-100">
             <nav id="sidenav" class="bg-body text-secondary p-2 rounded shadow-sm overflow-auto" classList={{ 'h-100': show() }}>
                 <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
-                    <Show when={show()}><ArrowBarUp /></Show>
-                    <Show when={!show()}><ArrowBarDown /></Show>
+                    <Show when={show()}><ArrowBarUp viewBox="0 0 16 16" /></Show>
+                    <Show when={!show()}><ArrowBarDown viewBox="0 0 16 16" /></Show>
                 </button>
 
                 <div class="px-4 py-2 d-none d-lg-block">
@@ -133,8 +134,12 @@ export function SideNav(): JSX.Element {
                                     <For each={category.links}>
                                         {(link) => (
                                             <li class="nav-item">
-                                                <A href={link.href} class="icon-link nav-link p-2 w-100 rounded my-1" aria-current={location.pathname.startsWith(link.href) ? 'page' : false} classList={{ 'active': location.pathname.startsWith(link.href) }}>
-                                                    <Dynamic component={link.icon} />
+                                                <A
+                                                    href={link.href} class="icon-link nav-link p-2 w-100 rounded my-1"
+                                                    aria-current={(link.href === '/' ? link.href === location.pathname : location.pathname.startsWith(link.href)) ? 'page' : false}
+                                                    classList={{ 'active': link.href === '/' ? link.href === location.pathname : location.pathname.startsWith(link.href) }}
+                                                >
+                                                    <Dynamic component={link.icon}  viewBox="0 0 16 16"/>
                                                     <span class="d-none d-lg-block">{link.title}</span>
                                                 </A>
                                             </li>

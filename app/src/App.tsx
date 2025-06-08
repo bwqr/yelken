@@ -20,6 +20,7 @@ import { CreateLocale, Locale, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
+import { Assets } from './content/Asset';
 
 enum AlertState {
     Success,
@@ -46,7 +47,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                         role="alert"
                         style="background-color: var(--bs-body-bg); min-width: 18rem;"
                     >
-                        <Dynamic component={alert.state === AlertState.Failure ? Exclamation : Check} />
+                        <Dynamic component={alert.state === AlertState.Failure ? Exclamation : Check} viewBox="0 0 16 16" />
                         <span class="flex-grow-1 me-2">{alert.title}</span>
                         <button class="btn p-0 icon-link" onClick={() => props.removeAlert(alert)}>
                             <XCircle viewBox="0 0 16 16" />
@@ -201,6 +202,10 @@ const App: Component = () => {
                         <Route path="/:namespace/:name/contents" component={Contents} />
                         <Route path="/:name/contents" component={Contents} />
                         <Route path="/content/:id" component={Content} />
+                    </Route>
+
+                    <Route path="/assets" component={(props) => <>{props.children}</>}>
+                        <Route path="/" component={Assets} />
                     </Route>
 
                     <Route path="/themes" component={(props) => (

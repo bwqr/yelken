@@ -95,7 +95,7 @@ export const Templates = () => {
                                                         <td>{template.kind === LocationKind.Global ? 'Global' : template.kind === LocationKind.Theme ? 'Theme' : 'Theme (modified)'}</td>
                                                         <td class="dropdown text-end">
                                                             <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem((item()?.path === template.path && item()?.kind === template.kind) ? undefined : template) }}>
-                                                                <ThreeDotsVertical />
+                                                                <ThreeDotsVertical viewBox="0 0 16 16" />
                                                             </button>
                                                             <Show when={(item()?.path === template.path && item()?.kind === template.kind)}>
                                                                 <ul class="dropdown-menu show" id="template-quick-action" style="right: 0">
@@ -219,7 +219,7 @@ export const Template = () => {
                                             <span class="visually-hidden">Loading...</span>
                                         </div>
                                     </Show>
-                                    <FloppyFill />
+                                    <FloppyFill viewBox="0 0 16 16" />
                                     Save
                                 </button>
                             </div>

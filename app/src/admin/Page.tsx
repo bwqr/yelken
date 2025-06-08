@@ -212,7 +212,7 @@ export const CreatePage = () => {
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
                             </Show>
-                            <PlusLg />
+                            <PlusLg viewBox="0 0 16 16" />
                             Create
                         </button>
                     </div>
@@ -284,7 +284,7 @@ export const Pages = () => {
                                                                         {locales().join(', ')}
                                                                         <Show when={locales().length < contentCtx.activeLocales().length}>
                                                                             <A class="icon-link border rounded-circle ms-2 align-middle" style="padding: 0.1rem" href="/pages/create">
-                                                                                <Plus />
+                                                                                <Plus viewBox="0 0 16 16" />
                                                                             </A>
                                                                         </Show>
                                                                     </>

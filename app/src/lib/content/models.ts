@@ -61,3 +61,10 @@ export interface Options {
     theme: string,
     defaultLocale: string,
 }
+
+export interface Asset {
+    id: number,
+    name: string,
+    createdAt: string,
+    updatedAt: string,
+}

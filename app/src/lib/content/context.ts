@@ -1,5 +1,5 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
-import type { Content, ContentDetails, ContentStage, Field, Locale, Model, Options } from "./models";
+import type { Asset, Content, ContentDetails, ContentStage, Field, Locale, Model, Options } from "./models";
 import type { CreateContent, CreateModel } from "./requests";
 import { Api } from "../api";
 import type { Pagination } from "../models";
@@ -16,6 +16,8 @@ export interface ContentStore {
     loadLocales(): Promise<void>;
     loadModels(): Promise<void>;
     loadOptions(): Promise<void>;
+
+    fetchAssets(): Promise<Pagination<Asset>>;
 
     fetchContents(modelId: number): Promise<Pagination<Content>>;
     fetchContent(contentId: number): Promise<ContentDetails>;
@@ -76,6 +78,10 @@ export class ContentService implements ContentStore {
 
     async loadOptions(): Promise<void> {
         this.setOptions(await ContentService.fetchOptions());
+    }
+
+    async fetchAssets(): Promise<Pagination<Asset>> {
+        return Api.get('/content/assets');
     }
 
     async fetchContents(modelId: number): Promise<Pagination<Content>> {
