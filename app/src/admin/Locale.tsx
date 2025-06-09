@@ -71,7 +71,7 @@ export const CreateLocale = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Create Locale</h2>
             </div>
@@ -246,7 +246,7 @@ export const Locale = () => {
 };
 
 export const Locales = () => {
-    enum Actions {
+    enum Action {
         UpdateState,
         SetDefault,
         Delete,
@@ -257,7 +257,7 @@ export const Locales = () => {
     const alertCtx = useContext(AlertContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
-    const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     onCleanup(dropdownClickListener('locale-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
@@ -266,7 +266,7 @@ export const Locales = () => {
             return;
         }
 
-        setInProgress(Actions.UpdateState);
+        setInProgress(Action.UpdateState);
 
         adminCtx.updateLocaleState(key, disabled)
             .then(() => contentCtx.loadLocales())
@@ -283,7 +283,7 @@ export const Locales = () => {
             return;
         }
 
-        setInProgress(Actions.SetDefault);
+        setInProgress(Action.SetDefault);
 
         adminCtx.setLocaleDefault(key)
             .then(() => contentCtx.loadOptions())
@@ -300,7 +300,7 @@ export const Locales = () => {
             return;
         }
 
-        setInProgress(Actions.Delete);
+        setInProgress(Action.Delete);
 
         adminCtx.deleteLocale(key)
             .then(() => contentCtx.loadLocales())
@@ -313,7 +313,7 @@ export const Locales = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Locales</h1>
@@ -371,10 +371,10 @@ export const Locales = () => {
                                                     <li>
                                                         <button
                                                             class="dropdown-item icon-link"
-                                                            disabled={inProgress() === Actions.SetDefault || locale.key === contentCtx.options().defaultLocale || locale.disabled}
+                                                            disabled={inProgress() === Action.SetDefault || locale.key === contentCtx.options().defaultLocale || locale.disabled}
                                                             on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale.key); }}
                                                         >
-                                                            <Show when={inProgress() === Actions.SetDefault}>
+                                                            <Show when={inProgress() === Action.SetDefault}>
                                                                 <div class="spinner-border" role="status">
                                                                     <span class="visually-hidden">Loading...</span>
                                                                 </div>
@@ -386,10 +386,10 @@ export const Locales = () => {
                                                         <li>
                                                             <button
                                                                 class="dropdown-item icon-link"
-                                                                disabled={inProgress() === Actions.UpdateState}
+                                                                disabled={inProgress() === Action.UpdateState}
                                                                 on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale.key, !locale.disabled); }}
                                                             >
-                                                                <Show when={inProgress() === Actions.UpdateState}>
+                                                                <Show when={inProgress() === Action.UpdateState}>
                                                                     <div class="spinner-border" role="status">
                                                                         <span class="visually-hidden">Loading...</span>
                                                                     </div>
@@ -400,10 +400,10 @@ export const Locales = () => {
                                                         <li>
                                                             <button
                                                                 class="dropdown-item icon-link text-danger"
-                                                                disabled={inProgress() === Actions.Delete}
+                                                                disabled={inProgress() === Action.Delete}
                                                                 on:click={(ev) => { ev.stopPropagation(); deleteLocale(locale.key); }}
                                                             >
-                                                                <Show when={inProgress() === Actions.Delete}>
+                                                                <Show when={inProgress() === Action.Delete}>
                                                                     <div class="spinner-border" role="status">
                                                                         <span class="visually-hidden">Loading...</span>
                                                                     </div>

@@ -1,6 +1,21 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    assets (id) {
+        id -> Int4,
+        #[max_length = 128]
+        name -> Varchar,
+        #[max_length = 128]
+        filename -> Varchar,
+        #[max_length = 128]
+        filetype -> Nullable<Varchar>,
+        created_by -> Nullable<Int4>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     content_values (id) {
         id -> Int4,
         content_id -> Int4,
@@ -183,6 +198,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(assets -> users (created_by));
 diesel::joinable!(content_values -> contents (content_id));
 diesel::joinable!(content_values -> locales (locale));
 diesel::joinable!(content_values -> model_fields (model_field_id));
@@ -197,6 +213,7 @@ diesel::joinable!(permissions -> users (user_id));
 diesel::joinable!(users -> roles (role_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    assets,
     content_values,
     contents,
     enum_options,

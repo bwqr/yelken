@@ -531,7 +531,10 @@ dependencies = [
  "base",
  "diesel",
  "diesel-async",
+ "futures",
  "log",
+ "opendal",
+ "rand 0.9.1",
  "serde",
  "tower",
 ]

@@ -62,7 +62,7 @@ export const CreateRole = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Create Role</h2>
             </div>
@@ -168,7 +168,7 @@ export const Role = () => {
     };
 
     return (
-        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <Suspense fallback={<p>Loading...</p>}>
                 <div class="d-flex align-items-center mb-4">
                     <div class="flex-grow-1">

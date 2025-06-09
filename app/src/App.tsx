@@ -20,7 +20,7 @@ import { CreateLocale, Locale, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
-import { Assets } from './content/Asset';
+import { Asset, Assets, UploadAsset } from './content/Asset';
 
 enum AlertState {
     Success,
@@ -206,6 +206,8 @@ const App: Component = () => {
 
                     <Route path="/assets" component={(props) => <>{props.children}</>}>
                         <Route path="/" component={Assets} />
+                        <Route path="/upload" component={UploadAsset} />
+                        <Route path="/view/:id" component={Asset} />
                     </Route>
 
                     <Route path="/themes" component={(props) => (

@@ -155,3 +155,13 @@ impl From<jsonwebtoken::errors::Error> for HttpError {
         }
     }
 }
+
+impl From<opendal::Error> for HttpError {
+    fn from(e: opendal::Error) -> Self {
+        HttpError {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            error: "io_error",
+            context: Some(format!("{e:?}")),
+        }
+    }
+}

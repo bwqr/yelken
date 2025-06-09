@@ -38,7 +38,7 @@ interface Manifest {
 }
 
 export const InstallTheme = () => {
-    enum Actions {
+    enum Action {
         Analyze,
         Upload,
     }
@@ -53,7 +53,7 @@ export const InstallTheme = () => {
     const [manifest, setManifest] = createSignal(undefined as Manifest | undefined)
     const [theme, setTheme] = createSignal(undefined as File | undefined);
 
-    const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
     const [analysisError, setAnalysisError] = createSignal(undefined as string | undefined);
@@ -92,7 +92,7 @@ export const InstallTheme = () => {
         }
 
         setTheme(file);
-        setInProgress(Actions.Analyze);
+        setInProgress(Action.Analyze);
 
         analyzeTheme(file)
             .then((manifest) => setManifest(manifest))
@@ -121,7 +121,7 @@ export const InstallTheme = () => {
             return;
         }
 
-        setInProgress(Actions.Upload);
+        setInProgress(Action.Upload);
 
         const formdata = new FormData();
         formdata.append('theme', theme()!);
@@ -142,7 +142,7 @@ export const InstallTheme = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Install Theme</h2>
             </div>
@@ -163,7 +163,7 @@ export const InstallTheme = () => {
                         </Show>
                     </div>
 
-                    <Show when={inProgress() === Actions.Analyze}>
+                    <Show when={inProgress() === Action.Analyze}>
                         <div class="d-flex justify-contents-center mb-4">
                             <div class="spinner-border me-2" role="status">
                                 <span class="visually-hidden">Loading...</span>
@@ -206,7 +206,7 @@ export const InstallTheme = () => {
 
                     <div class="d-flex justify-content-center">
                         <button type="submit" class="btn btn-primary icon-link justify-content-center mw-100" style="width: 250px;" disabled={inProgress() !== undefined}>
-                            <Show when={inProgress() === Actions.Upload}>
+                            <Show when={inProgress() === Action.Upload}>
                                 <div class="spinner-border" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -222,7 +222,7 @@ export const InstallTheme = () => {
 };
 
 export const Themes = () => {
-    enum Actions {
+    enum Action {
         Activate,
         Uninstall,
     }
@@ -232,7 +232,7 @@ export const Themes = () => {
     const adminCtx = useContext(AdminContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
-    const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
@@ -243,7 +243,7 @@ export const Themes = () => {
             return;
         }
 
-        setInProgress(Actions.Activate);
+        setInProgress(Action.Activate);
 
         adminCtx.setThemeActive(id)
             .then(() => contentCtx.loadOptions())
@@ -260,7 +260,7 @@ export const Themes = () => {
             return;
         }
 
-        setInProgress(Actions.Uninstall);
+        setInProgress(Action.Uninstall);
 
         adminCtx.uninstallTheme(id)
             .then(() => refetch())
@@ -273,7 +273,7 @@ export const Themes = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <div class="flex-grow-1">
                     <h1>Themes</h1>
@@ -327,7 +327,7 @@ export const Themes = () => {
                                                                             disabled={inProgress() !== undefined || theme.id === contentCtx.options().theme}
                                                                             on:click={(ev) => { ev.stopPropagation(); setThemeActive(theme.id); }}
                                                                         >
-                                                                            <Show when={inProgress() === Actions.Activate}>
+                                                                            <Show when={inProgress() === Action.Activate}>
                                                                                 <div class="spinner-border" role="status">
                                                                                     <span class="visually-hidden">Loading...</span>
                                                                                 </div>
@@ -342,7 +342,7 @@ export const Themes = () => {
                                                                                 disabled={inProgress() !== undefined || theme.id === contentCtx.options().theme}
                                                                                 on:click={(ev) => { ev.stopPropagation(); uninstallTheme(theme.id); }}
                                                                             >
-                                                                                <Show when={inProgress() === Actions.Uninstall}>
+                                                                                <Show when={inProgress() === Action.Uninstall}>
                                                                                     <div class="spinner-border" role="status">
                                                                                         <span class="visually-hidden">Loading...</span>
                                                                                     </div>

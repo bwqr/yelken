@@ -1,6 +1,6 @@
 use axum::{
     middleware,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use base::{
@@ -12,27 +12,31 @@ mod handlers;
 mod requests;
 mod responses;
 
-pub use handlers::{fetch_fields, fetch_models};
+pub use handlers::{asset, content, model};
 
 pub fn router(state: AppState) -> Router<AppState> {
     let content_read = Router::new()
-        .route("/contents", get(handlers::fetch_contents))
+        .route("/contents", get(content::fetch_contents))
         .route("/fields", get(handlers::fetch_fields))
         .route("/locales", get(handlers::fetch_locales))
-        .route("/models", get(handlers::fetch_models))
+        .route("/models", get(model::fetch_models))
         .route("/options", get(handlers::fetch_options))
-        .route("/content/{id}", get(handlers::fetch_content))
+        .route("/assets", get(asset::fetch_assets))
+        .route("/asset/{id}", get(asset::fetch_asset))
+        .route("/asset/{id}", delete(asset::delete_asset))
+        .route("/assets", post(asset::create_asset))
+        .route("/content/{id}", get(content::fetch_content))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Content(Mode::Read),
         });
 
     let content_write = Router::new()
-        .route("/model", post(handlers::create_model))
-        .route("/content", post(handlers::create_content))
-        .route("/content/{id}", post(handlers::create_content_value))
-        .route("/content/{id}/stage", put(handlers::update_content_stage))
-        .route("/value/{id}", put(handlers::update_content_value))
+        .route("/model", post(model::create_model))
+        .route("/content", post(content::create_content))
+        .route("/content/{id}", post(content::create_content_value))
+        .route("/content/{id}/stage", put(content::update_content_stage))
+        .route("/value/{id}", put(content::update_content_value))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Content(Mode::Write),

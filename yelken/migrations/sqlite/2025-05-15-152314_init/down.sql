@@ -11,6 +11,9 @@ drop table model_fields;
 
 drop table models;
 
+drop trigger assets_updated_at;
+drop table assets;
+
 drop table enum_options;
 
 drop table fields;

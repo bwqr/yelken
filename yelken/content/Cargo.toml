@@ -7,9 +7,12 @@ edition = "2021"
 base.path = "../base"
 
 anyhow.workspace = true
-axum.workspace = true
+axum = { workspace = true, features = ["multipart"] }
 diesel.workspace = true
 diesel-async.workspace = true
+futures.workspace = true
 log.workspace = true
+rand.workspace = true
+opendal.workspace = true
 serde.workspace = true
 tower.workspace = true

@@ -20,6 +20,7 @@ import Person from 'bootstrap-icons/icons/person.svg';
 import Plus from 'bootstrap-icons/icons/plus.svg';
 import PlusLg from 'bootstrap-icons/icons/plus-lg.svg';
 import PlusSquareDotted from 'bootstrap-icons/icons/plus-square-dotted.svg';
+import QuestionSquare from 'bootstrap-icons/icons/question-square.svg';
 import ShieldLock from 'bootstrap-icons/icons/shield-lock.svg';
 import Stack from 'bootstrap-icons/icons/stack.svg';
 import ThreeDotsVertical from 'bootstrap-icons/icons/three-dots-vertical.svg';
@@ -52,6 +53,7 @@ export {
     Plus,
     PlusLg,
     PlusSquareDotted,
+    QuestionSquare,
     ShieldLock,
     Stack,
     ThreeDotsVertical,

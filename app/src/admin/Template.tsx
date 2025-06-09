@@ -14,7 +14,7 @@ export const CreateTemplate = () => {
 };
 
 export const Templates = () => {
-    enum Actions {
+    enum Action {
         Delete,
     }
 
@@ -37,7 +37,7 @@ export const Templates = () => {
     }));
 
     const [item, setItem] = createSignal(undefined as Temp | undefined);
-    const [inProgress, setInProgress] = createSignal(undefined as Actions | undefined);
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     onCleanup(dropdownClickListener('template-quick-action', () => setItem(undefined), () => inProgress() === undefined));
 
@@ -46,7 +46,7 @@ export const Templates = () => {
             return;
         }
 
-        setInProgress(Actions.Delete);
+        setInProgress(Action.Delete);
 
         adminCtx.deleteTemplate(path, kind)
             .then(() => refetch())
@@ -102,10 +102,10 @@ export const Templates = () => {
                                                                     <li>
                                                                         <button
                                                                             class="dropdown-item icon-link text-danger"
-                                                                            disabled={inProgress() === Actions.Delete || template.kind === LocationKind.Theme}
+                                                                            disabled={inProgress() === Action.Delete || template.kind === LocationKind.Theme}
                                                                             on:click={(ev) => { ev.stopPropagation(); deleteTemplate(template.path, template.kind); }}
                                                                         >
-                                                                            <Show when={inProgress() === Actions.Delete}>
+                                                                            <Show when={inProgress() === Action.Delete}>
                                                                                 <div class="spinner-border" role="status">
                                                                                     <span class="visually-hidden">Loading...</span>
                                                                                 </div>

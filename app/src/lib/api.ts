@@ -36,7 +36,7 @@ export class Api {
             headers['Content-Type'] = 'application/json';
         }
 
-        const resp = await fetch(config.resolveURL(config.API_URL, path), {
+        const resp = await fetch(config.resolveURL(config.resolveURL(config.API_URL, 'api'), path), {
             body: body ? 'data' in body ? JSON.stringify(body.data) : body.formdata : null,
             headers,
             method,

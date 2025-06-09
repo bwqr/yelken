@@ -65,6 +65,9 @@ export interface Options {
 export interface Asset {
     id: number,
     name: string,
+    filename: string,
+    filetype: string | null,
+    createdBy: number | null,
     createdAt: string,
     updatedAt: string,
 }

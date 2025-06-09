@@ -92,7 +92,7 @@ export const CreatePage = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Create Page</h2>
             </div>

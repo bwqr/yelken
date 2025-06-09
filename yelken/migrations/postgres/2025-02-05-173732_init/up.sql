@@ -77,6 +77,23 @@ create table enum_options(
     constraint fk_enum_options_field_id foreign key (field_id) references fields (id) on delete no action on update no action
 );
 
+create table assets(
+    id         serial primary key not null,
+    name       varchar(128) not null,
+    filename   varchar(128) not null unique,
+    filetype   varchar(128) default null,
+    created_by int          default null,
+    created_at timestamp    not null default current_timestamp,
+    updated_at timestamp    not null default current_timestamp,
+    constraint fk_assets_created_by foreign key (created_by) references users (id) on delete set null on update no action
+);
+
+create trigger assets_updated_at
+    before update
+    on assets
+    for each row
+execute procedure update_timestamp();
+
 create table models(
     id        serial primary key  not null,
     namespace varchar(128)  default null,

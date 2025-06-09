@@ -80,7 +80,7 @@ export const CreateUser = () => {
     }
 
     return (
-        <div class="container mt-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-4">
                 <h2>Create User</h2>
             </div>
@@ -241,7 +241,7 @@ export const User = () => {
     };
 
     return (
-        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
+        <div class="container py-4 px-md-4">
             <Suspense fallback={<p>Loading...</p>}>
                 <div class="d-flex align-items-center mb-4">
                     <div class="flex-grow-1">

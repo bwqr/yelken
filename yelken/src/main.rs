@@ -95,13 +95,15 @@ fn config_from_env() -> Result<Config> {
 
 async fn logger(req: Request, next: Next) -> Response {
     let path = req.uri().path().to_owned();
+    let method = req.method().to_owned();
 
     let start = Instant::now();
 
     let res = next.run(req).await;
 
     log::info!(
-        "{:?} - {} - {}",
+        "{} {:?} - {} - {}",
+        method,
         path,
         res.status(),
         Instant::now().duration_since(start).as_secs_f32()

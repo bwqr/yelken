@@ -7,7 +7,7 @@ use axum::{
 };
 use base::{
     config::Options,
-    db::{BatchQuery, PooledConnection},
+    db::{BatchQuery, Pool, PooledConnection},
     middlewares::auth::AuthUser,
     models::{ContentStage, Field},
     responses::HttpError,
@@ -71,14 +71,6 @@ struct ThemeManifest {
     pages: Vec<Page>,
 }
 
-fn bad_request(error: &'static str) -> HttpError {
-    HttpError {
-        code: StatusCode::BAD_REQUEST,
-        error,
-        context: None,
-    }
-}
-
 pub async fn uninstall_theme(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
@@ -135,21 +127,21 @@ pub async fn install_theme(
     let field = multipart
         .next_field()
         .await
-        .map_err(|_| bad_request("invalid_multipart"))?
-        .ok_or(bad_request("missing_field_in_multipart"))?;
+        .map_err(|_| HttpError::bad_request("invalid_multipart"))?
+        .ok_or(HttpError::bad_request("missing_field_in_multipart"))?;
 
     let name = field
         .name()
-        .ok_or(bad_request("missing_field_in_multipart"))?;
+        .ok_or(HttpError::bad_request("missing_field_in_multipart"))?;
 
     if name != "theme" {
-        return Err(bad_request("missing_field_in_multipart"));
+        return Err(HttpError::bad_request("missing_field_in_multipart"));
     }
 
     let reader = field
         .bytes()
         .await
-        .map_err(|_| bad_request("invalid_multipart"))?
+        .map_err(|_| HttpError::bad_request("invalid_multipart"))?
         .reader();
 
     let tmp_theme_dir = (0..32)
@@ -157,9 +149,9 @@ pub async fn install_theme(
         .collect::<String>();
 
     let result = install(
-        state.storage.clone(),
-        state.tmp_storage.clone(),
-        &mut state.pool.get().await?,
+        &state.pool,
+        &state.storage,
+        &state.tmp_storage,
         reader,
         tmp_theme_dir.clone(),
         user.id,
@@ -181,16 +173,16 @@ pub async fn install_theme(
 }
 
 async fn install(
-    storage: Operator,
-    tmp_storage: Operator,
-    conn: &mut PooledConnection,
+    pool: &Pool,
+    storage: &Operator,
+    tmp_storage: &Operator,
     reader: impl Read + Send + 'static,
-    dir: String,
+    tmp_dir: String,
     user_id: i32,
 ) -> Result<(), HttpError> {
     let (manifest, files) = {
         let tmp_storage = tmp_storage.clone();
-        let extract_dir = dir.clone();
+        let extract_dir = tmp_dir.clone();
 
         spawn_blocking(move || extract_archive(reader, tmp_storage.clone(), extract_dir))
             .await
@@ -199,17 +191,17 @@ async fn install(
 
     let theme_id = manifest.id.clone();
 
-    conn.transaction(move |conn| {
-        async move { create_theme(conn, manifest, user_id).await }.scope_boxed()
-    })
-    .await?;
+    pool.get()
+        .await?
+        .transaction(move |conn| {
+            async move { create_theme(conn, manifest, user_id).await }.scope_boxed()
+        })
+        .await?;
 
     for file in files {
-        let src_path = [dir.as_str(), file.as_str()].join("/");
+        let src_path = [tmp_dir.as_str(), file.as_str()].join("/");
 
         let dest_path = ["themes", &theme_id, &file].join("/");
-
-        log::debug!("Paths are {src_path} and {dest_path}");
 
         let file = tmp_storage
             .read(&src_path)

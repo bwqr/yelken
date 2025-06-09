@@ -71,6 +71,23 @@ create table enum_options(
     foreign key (field_id) references fields (id) on delete no action on update no action
 );
 
+create table assets(
+    id         integer primary key autoincrement,
+    name       varchar(128) not null,
+    filename   varchar(128) not null unique,
+    filetype   varchar(128) default null,
+    created_by int          default null,
+    created_at timestamp    not null default current_timestamp,
+    updated_at timestamp    not null default current_timestamp,
+    foreign key (created_by) references users (id) on delete set null on update no action,
+);
+
+create trigger assets_updated_at update of name
+  for each row
+  begin
+    update assets set updated_at = current_timestamp where id = old.id;
+  end;
+
 create table models(
     id        integer primary key autoincrement,
     namespace varchar(128)  default null,

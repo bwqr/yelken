@@ -43,8 +43,7 @@ pub fn router(assets_storage: Operator, site_url: Url) -> Router<AppState> {
     api_url
         .path_segments_mut()
         .unwrap()
-        .pop_if_empty()
-        .push("api");
+        .pop_if_empty();
 
     let mut base_url = site_url.clone();
     base_url

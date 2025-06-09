@@ -209,3 +209,15 @@ pub struct Theme {
     pub name: String,
     pub created_at: NaiveDateTime,
 }
+
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Asset {
+    pub id: i32,
+    pub name: String,
+    pub filename: String,
+    pub filetype: Option<String>,
+    pub created_by: Option<i32>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
+}

@@ -96,12 +96,8 @@ pub async fn router(
 
     let app = Router::new()
         .nest_service(
-            "/assets/static",
-            ServeStorageDir::new(storage.clone(), || "assets".to_string()),
-        )
-        .nest_service(
             "/assets/content",
-            ServeStorageDir::new(storage.clone(), || "content".to_string()),
+            ServeStorageDir::new(storage.clone(), || "assets".to_string()),
         );
 
     let app = {
