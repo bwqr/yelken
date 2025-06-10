@@ -1,4 +1,5 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
+import { PaginationRequest } from '../models';
 import type { Asset, Content, ContentDetails, ContentStage, Field, Locale, Model, Options } from "./models";
 import type { CreateContent, CreateModel } from "./requests";
 import { Api } from "../api";
@@ -17,11 +18,11 @@ export interface ContentStore {
     loadModels(): Promise<void>;
     loadOptions(): Promise<void>;
 
-    fetchAssets(): Promise<Pagination<Asset>>;
+    fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>>;
     fetchAsset(id: number): Promise<Asset | undefined>;
     deleteAsset(id: number): Promise<void>;
 
-    fetchContents(modelId: number): Promise<Pagination<Content>>;
+    fetchContents(modelId: number, pagination?: PaginationRequest): Promise<Pagination<Content>>;
     fetchContent(contentId: number): Promise<ContentDetails>;
 
     createModel(model: CreateModel): Promise<void>;
@@ -82,8 +83,16 @@ export class ContentService implements ContentStore {
         this.setOptions(await ContentService.fetchOptions());
     }
 
-    async fetchAssets(): Promise<Pagination<Asset>> {
-        return Api.get('/content/assets');
+    async fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>> {
+        const params = pagination ? PaginationRequest.toSearchParams(pagination).toString() : '';
+
+        let url = '/content/assets';
+
+        if (params.length > 0) {
+            url = `${url}?${params}`;
+        }
+
+        return Api.get(url);
     }
 
     async fetchAsset(id: number): Promise<Asset | undefined> {
@@ -94,8 +103,12 @@ export class ContentService implements ContentStore {
         return Api.delete(`/content/asset/${id}`);
     }
 
-    async fetchContents(modelId: number): Promise<Pagination<Content>> {
-        return Api.get(`/content/contents?modelId=${modelId}`)
+    async fetchContents(modelId: number, pagination?: PaginationRequest): Promise<Pagination<Content>> {
+        const params = pagination ? PaginationRequest.toSearchParams(pagination) : new URLSearchParams();
+
+        params.append('modelId', modelId.toString());
+
+        return Api.get(`/content/contents?${params.toString()}`)
     }
 
     async fetchContent(contentId: number): Promise<ContentDetails> {

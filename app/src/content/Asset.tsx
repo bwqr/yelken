@@ -1,16 +1,20 @@
-import { createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createMemo, createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { ContentContext } from "../lib/content/context";
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { QuestionSquare, ThreeDotsVertical, Trash, Upload } from "../Icons";
 import { AlertContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
 import * as config from '../lib/config';
+import { PaginationRequest } from "../lib/models";
+import { Pagination } from "../components/Pagination";
+import { createStore } from "solid-js/store";
 
 export const PickAsset = (props: { close: () => void, pick: (asset: string) => void, }) => {
     const contentCtx = useContext(ContentContext)!;
+    const [pagination, setPagination] = createStore<PaginationRequest>({});
 
-    const [assets] = createResource(() => contentCtx.fetchAssets());
+    const [assets] = createResource(() => ({ page: pagination.page, perPage: pagination.perPage }), (pagination) => contentCtx.fetchAssets(pagination));
 
     return (
         <>
@@ -20,7 +24,7 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
                         <div class="modal-header">
                             <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Pick an Asset</h1>
                         </div>
-                        <div class="modal-body row m-0 gap-2">
+                        <div class="modal-body">
                             <Suspense fallback={<p>Loading...</p>}>
                                 <Switch>
                                     <Match when={assets.error}>
@@ -28,16 +32,26 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
                                     </Match>
                                     <Match when={assets()}>
                                         {(assets) => (
-                                            <For each={assets().items}>
-                                                {(asset) => (
-                                                    <div class="col-md-2 col-sm-6 card" style="cursor: pointer" onClick={() => props.pick(asset.filename)}>
-                                                        <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-4 text-secondary" viewBox="0 0 16 16" />}>
-                                                            <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
-                                                        </Show>
-                                                        <p class="card-text text-center">{asset.name}</p>
-                                                    </div>
-                                                )}
-                                            </For>
+                                            <>
+                                                <div class="row m-0 gap-2 mb-4">
+                                                    <For each={assets().items}>
+                                                        {(asset) => (
+                                                            <div class="col-md-2 col-sm-6 card" style="cursor: pointer" onClick={() => props.pick(asset.filename)}>
+                                                                <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-4 text-secondary" viewBox="0 0 16 16" />}>
+                                                                    <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
+                                                                </Show>
+                                                                <p class="card-text text-center">{asset.name}</p>
+                                                            </div>
+                                                        )}
+                                                    </For>
+                                                </div>
+                                                <Pagination
+                                                    totalPages={assets().totalPages}
+                                                    page={assets().currentPage}
+                                                    perPage={pagination.perPage}
+                                                    pageChange={(page) => setPagination('page', page)}
+                                                />
+                                            </>
                                         )}
                                     </Match>
                                 </Switch>
@@ -245,8 +259,11 @@ export const UploadAsset = () => {
 
 export const Assets = () => {
     const contentCtx = useContext(ContentContext)!;
+    const [searchParams, setSearchParams] = useSearchParams();
 
-    const [assets] = createResource(() => contentCtx.fetchAssets());
+    const pagination = createMemo(() => PaginationRequest.from(searchParams.page, searchParams.perPage));
+
+    const [assets] = createResource(pagination, (pagination) => contentCtx.fetchAssets(pagination));
 
     return (
         <div class="container py-4 px-md-4">
@@ -259,39 +276,47 @@ export const Assets = () => {
                     Upload Asset
                 </A>
             </div>
-            <div class="card p-3">
-                <div class="row m-0 gap-2">
-                    <Suspense>
-                        <Switch>
-                            <Match when={assets.error}>
-                                <span>Error: {assets.error.message}</span>
-                            </Match>
-                            <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
-                                <span>No asset exists yet</span>
-                            </Match>
-                            <Match when={assets() && assets()!.items.length === 0}>
-                                <span>No assets</span>
-                            </Match>
-                            <Match when={assets()}>
-                                {(assets) => (
-                                    <For each={assets().items}>
-                                        {(asset) => (
-                                            <div class="col-md-2 col-sm-6 card">
-                                                <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-4 text-secondary" viewBox="0 0 16 16" />}>
-                                                    <A href={`/assets/view/${asset.id}`}>
-                                                        <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
-                                                    </A>
-                                                </Show>
-                                                <A href={`/assets/view/${asset.id}`} class="card-text text-center">{asset.name}</A>
-                                            </div>
-                                        )}
-                                    </For>
-                                )}
-                            </Match>
-                        </Switch>
-                    </Suspense>
-                </div>
-            </div>
+            <Suspense>
+                <Switch>
+                    <Match when={assets.error}>
+                        <span>Error: {assets.error.message}</span>
+                    </Match>
+                    <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
+                        <span>No asset exists yet</span>
+                    </Match>
+                    <Match when={assets()}>
+                        {(assets) => (
+                            <>
+                                <div class="card p-3 mb-4">
+                                    <Show when={assets().items.length > 0} fallback={<span>No assets</span>}>
+                                        <div class="row m-0 gap-2">
+                                            <For each={assets().items}>
+                                                {(asset) => (
+                                                    <div class="col-md-2 col-sm-6">
+                                                        <A href={`/assets/view/${asset.id}`} class="card p-2 text-center">
+                                                            <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-2 text-secondary" viewBox="0 0 16 16" />}>
+                                                                <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
+                                                            </Show>
+                                                            {asset.name}
+                                                        </A>
+                                                    </div>
+                                                )}
+                                            </For>
+                                        </div>
+                                    </Show>
+                                </div>
+
+                                <Pagination
+                                    totalPages={assets().totalPages}
+                                    page={assets().currentPage}
+                                    perPage={pagination().perPage}
+                                    pageChange={(page) => setSearchParams({ page: page.toString() })}
+                                />
+                            </>
+                        )}
+                    </Match>
+                </Switch>
+            </Suspense>
         </div>
     );
 };
@@ -380,7 +405,7 @@ export const Asset = () => {
                                 <>
                                     <div class="col-md-6">
                                         <Show when={asset().filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 text-secondary" style="max-height: 40vh" viewBox="0 0 16 16" />}>
-                                            <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto" style="max-height: 40vh" alt={asset().name} />
+                                            <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto mw-100" style="max-height: 40vh" alt={asset().name} />
                                         </Show>
                                     </div>
                                     <div class="col-md-6">

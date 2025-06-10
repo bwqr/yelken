@@ -9,6 +9,8 @@ import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
 import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
+import { PaginationRequest } from "../lib/models";
+import { Pagination } from "../components/Pagination";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -41,7 +43,9 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 
 export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const pagination = createMemo(() => PaginationRequest.from(searchParams.page, searchParams.perPage));
 
     const model = createMemo(() => {
         const namespace = searchParams.namespace === undefined ? null : decodeURIComponent(searchParams.namespace as string);
@@ -50,7 +54,10 @@ export const Contents = () => {
         return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
 
-    const [contents] = createResource(model, (m) => contentCtx.fetchContents(m.id));
+    const [contents] = createResource(
+        () => model() && pagination() ? { model: model()!, pagination: pagination() } : undefined,
+        ({ model, pagination }) => contentCtx.fetchContents(model.id, pagination)
+    );
 
     return (
         <div class="container py-4 px-md-4">
@@ -76,30 +83,38 @@ export const Contents = () => {
                 <Match when={contents.error}>Error: {contents.error}</Match>
                 <Match when={contents()}>
                     {(contents) => (
-                        <div class="card p-2">
-                            <table class="table table-hover m-0">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">#</th>
-                                        <th scope="col">Name</th>
-                                        <th scope="col">Stage</th>
-                                        <th scope="col">Created At</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="table-group-divider">
-                                    <For each={contents().items}>
-                                        {(content) => (
-                                            <tr>
-                                                <td>{content.id}</td>
-                                                <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
-                                                <td>{content.stage}</td>
-                                                <td>{content.createdAt}</td>
-                                            </tr>
-                                        )}
-                                    </For>
-                                </tbody>
-                            </table>
-                        </div>
+                        <>
+                            <div class="card p-2 mb-4">
+                                <table class="table table-hover m-0">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Stage</th>
+                                            <th scope="col">Created At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="table-group-divider">
+                                        <For each={contents().items}>
+                                            {(content) => (
+                                                <tr>
+                                                    <td>{content.id}</td>
+                                                    <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
+                                                    <td>{content.stage}</td>
+                                                    <td>{content.createdAt}</td>
+                                                </tr>
+                                            )}
+                                        </For>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <Pagination
+                                totalPages={contents().totalPages}
+                                page={contents().currentPage}
+                                perPage={pagination().perPage}
+                                pageChange={(page) => setSearchParams({ page: page.toString() })}
+                            />
+                        </>
                     )}
                 </Match>
             </Switch>
