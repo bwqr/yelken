@@ -23,10 +23,16 @@ export interface Model {
     fields: ModelField[],
 }
 
+export enum FieldKind {
+    String = 'string',
+    Integer = 'integer',
+    Asset = 'asset',
+}
+
 export interface Field {
     id: number,
     name: string,
-    kind: string,
+    kind: FieldKind,
 }
 
 export enum ContentStage {

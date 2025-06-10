@@ -3,11 +3,12 @@ import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage } from "../lib/content/models";
+import { ContentStage, FieldKind } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
 import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, XLg } from "../Icons";
+import { PickAsset } from "./Asset";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -125,6 +126,7 @@ export const CreateContent = () => {
 
     const [name, setName] = createSignal('');
     const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);
+    const [showPickAsset, setShowPickAsset] = createSignal(undefined as CreateContentValue | undefined);
 
     createEffect(() => {
         const m = model();
@@ -249,11 +251,13 @@ export const CreateContent = () => {
                                                         return (
                                                             <div class="d-flex w-100 mb-2">
                                                                 <input
-                                                                    type={field.name === 'integer' ? 'number' : 'text'}
                                                                     id={`modelField-${mf.id}-${idx()}`}
                                                                     style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
                                                                     class="form-control flex-grow-1"
                                                                     name={`modelField-${mf.id}-${idx()}`}
+                                                                    type={field.kind === FieldKind.Integer ? 'number' : 'text'}
+                                                                    disabled={field.kind === FieldKind.Asset}
+                                                                    value={values[mf.id][idx()].value}
                                                                     onInput={(ev) => setValues(mf.id, idx(), 'value', ev.target.value)}
                                                                 />
                                                                 <Show when={mf.localized}>
@@ -287,12 +291,19 @@ export const CreateContent = () => {
                                                         class="btn btn-outline-secondary icon-link justify-content-center w-100"
                                                         onClick={() => {
                                                             const locale = mf.localized ? locales[values[mf.id]?.length ?? 0]?.key : undefined;
+                                                            const value = { modelFieldId: mf.id, value: '', locale };
 
-                                                            setValues(mf.id, values[mf.id].length, { modelFieldId: mf.id, value: '', locale });
+                                                            if (field.kind === FieldKind.Asset) {
+                                                                setShowPickAsset(value);
+                                                            } else {
+                                                                setValues(mf.id, values[mf.id].length, value);
+                                                            }
                                                         }}
                                                     >
                                                         <PlusSquareDotted viewBox="0 0 16 16" />
-                                                        Add value
+                                                        <Show when={field.kind !== FieldKind.Asset} fallback={<>Choose asset</>}>
+                                                            Add value
+                                                        </Show>
                                                     </button>
                                                 </Show>
                                             </div>
@@ -319,6 +330,22 @@ export const CreateContent = () => {
                     }}
                 </Show>
             </div>
+
+            <Show when={showPickAsset()}>
+                {(incompleteValue) => (
+                    <PickAsset
+                        pick={(asset) => {
+                            const value = incompleteValue();
+                            value.value = asset;
+
+                            setValues(value.modelFieldId, values[value.modelFieldId].length, value);
+
+                            setShowPickAsset(undefined);
+                        }}
+                        close={() => setShowPickAsset(undefined)}
+                    />
+                )}
+            </Show>
         </div >
     );
 }

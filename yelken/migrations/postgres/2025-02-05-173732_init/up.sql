@@ -110,7 +110,7 @@ create table model_fields(
     required  bool not null default false,
     unique (field_id, model_id, name),
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
-    constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete no action on update no action
+    constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete cascade on update no action
 );
 
 create table contents(

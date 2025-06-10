@@ -79,10 +79,10 @@ create table assets(
     created_by int          default null,
     created_at timestamp    not null default current_timestamp,
     updated_at timestamp    not null default current_timestamp,
-    foreign key (created_by) references users (id) on delete set null on update no action,
+    foreign key (created_by) references users (id) on delete set null on update no action
 );
 
-create trigger assets_updated_at update of name
+create trigger assets_updated_at update of name on assets
   for each row
   begin
     update assets set updated_at = current_timestamp where id = old.id;
@@ -104,7 +104,7 @@ create table model_fields(
     required  bool not null default false,
     unique (field_id, model_id, name),
     foreign key (field_id) references fields (id) on delete no action on update no action,
-    foreign key (model_id) references models (id) on delete no action on update no action
+    foreign key (model_id) references models (id) on delete cascade on update no action
 );
 
 create table contents(

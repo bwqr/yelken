@@ -152,26 +152,23 @@ async fn store_and_insert_assert(
         .get_result::<Asset>(&mut pool.get().await?)
         .await?;
 
-    let mut stream = tmp_storage
-        .reader(&file)
-        .into_send_future()
-        .await?
-        .into_stream(..)
-        .into_send_future()
-        .await?;
+    let send_future = async move |filename: &str| {
+        let mut writer = storage.writer(&format!("assets/{}", filename)).await?;
 
-    let mut writer = storage
-        .writer(&format!("assets/{}", asset.filename))
-        .into_send_future()
-        .await?;
+        let mut stream = tmp_storage.reader(&file).await?.into_stream(..).await?;
 
-    while let Some(result) = stream.next().into_send_future().await {
-        let chunk = result?;
+        while let Some(result) = stream.next().await {
+            let chunk = result?;
 
-        writer.write(chunk).into_send_future().await?;
-    }
+            writer.write(chunk).await?;
+        }
 
-    writer.close().into_send_future().await?;
+        writer.close().await?;
+
+        Result::<(), HttpError>::Ok(())
+    };
+
+    send_future(&asset.filename).into_send_future().await?;
 
     Ok(asset)
 }

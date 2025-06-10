@@ -7,6 +7,54 @@ import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
 import * as config from '../lib/config';
 
+export const PickAsset = (props: { close: () => void, pick: (asset: string) => void, }) => {
+    const contentCtx = useContext(ContentContext)!;
+
+    const [assets] = createResource(() => contentCtx.fetchAssets());
+
+    return (
+        <>
+            <div class="modal fade show d-block" tabindex="-1" aria-labelledby="createModelFieldModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Pick an Asset</h1>
+                        </div>
+                        <div class="modal-body row m-0 gap-2">
+                            <Suspense fallback={<p>Loading...</p>}>
+                                <Switch>
+                                    <Match when={assets.error}>
+                                        <span>Error: {assets.error}</span>
+                                    </Match>
+                                    <Match when={assets()}>
+                                        {(assets) => (
+                                            <For each={assets().items}>
+                                                {(asset) => (
+                                                    <div class="col-md-2 col-sm-6 card" style="cursor: pointer" onClick={() => props.pick(asset.filename)}>
+                                                        <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-4 text-secondary" viewBox="0 0 16 16" />}>
+                                                            <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
+                                                        </Show>
+                                                        <p class="card-text text-center">{asset.name}</p>
+                                                    </div>
+                                                )}
+                                            </For>
+                                        )}
+                                    </Match>
+                                </Switch>
+                            </Suspense>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-danger" onClick={props.close}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-backdrop fade show"></div>
+        </>
+    );
+}
+
 export const UploadAsset = () => {
     interface AssetDetail {
         type: string,
