@@ -681,11 +681,12 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 fn str_to_value(kind: &str, value: &str) -> Value {
     match kind {
         "string" => Value::from(value),
+        "asset" => Value::from(value),
         "integer" => Value::from(str::parse::<i64>(value).unwrap_or(0)),
         unknown => {
             log::error!("Unhandled field kind is found, {unknown}");
 
-            Value::UNDEFINED
+            Value::from(value)
         }
     }
 }
