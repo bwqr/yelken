@@ -6,6 +6,7 @@ import { AlertContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
 import * as config from '../lib/config';
+import { type Asset as AssetModel } from '../lib/content/models';
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { createStore } from "solid-js/store";
@@ -166,10 +167,10 @@ export const UploadAsset = () => {
         const formdata = new FormData();
         formdata.append('asset', asset()!);
 
-        Api.request('/content/assets', 'POST', { formdata })
-            .then(() => {
+        Api.request<unknown, AssetModel>('/content/assets', 'POST', { formdata })
+            .then((asset) => {
                 alertCtx.success('Asset is created successfully');
-                navigate('/assets');
+                navigate(`/assets/view/${asset.id}`, { replace: true });
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -332,15 +333,7 @@ export const Asset = () => {
 
     const params = useParams();
 
-    const [asset] = createResource(() => {
-        const id = parseInt(params.id);
-
-        if (isNaN(id)) {
-            return Promise.resolve(undefined);
-        }
-
-        return contentCtx.fetchAsset(id);
-    });
+    const [asset] = createResource(() => parseInt(params.id), (id) => contentCtx.fetchAsset(id));
 
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
@@ -360,7 +353,7 @@ export const Asset = () => {
         contentCtx.deleteAsset(a.id)
             .then(() => {
                 alertCtx.success('Asset is deleted successfully');
-                navigate('/assets');
+                navigate(-1);
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
@@ -374,8 +367,8 @@ export const Asset = () => {
                         <h2 class="m-0">{asset()?.name ?? '-'}</h2>
                         <small>Asset</small>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn icon-link ms-2" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                    <div class="dropdown mx-2">
+                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
                             <ThreeDotsVertical viewBox="0 0 16 16" />
                         </button>
                         <Show when={dropdown()}>

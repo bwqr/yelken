@@ -79,7 +79,7 @@ export const CreatePage = () => {
         adminCtx.createPage(name(), path(), template(), scope() === Scope.Theme, locale() || null)
             .then(() => {
                 alertCtx.success('Page is created successfully');
-                navigate('/pages');
+                navigate(-1);
             })
             .catch((e) => {
                 if (e instanceof HttpError) {

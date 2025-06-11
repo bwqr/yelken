@@ -183,7 +183,7 @@ export const CreateModel = () => {
             modelFields: unwrap(fields),
             themeScoped: scope() === ModelScope.Theme
         })
-            .then(() => navigate('/models'))
+            .then(() => navigate(-1))
             .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);

@@ -1,16 +1,17 @@
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { ContentContext } from "../lib/content/context";
-import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, Show, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
 import { ContentStage, FieldKind } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
-import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, XLg } from "../Icons";
+import { BookmarkCheck, BookmarkCheckFill, FloppyFill, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
+import { dropdownClickListener } from "../lib/utils";
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -128,6 +129,7 @@ export const CreateContent = () => {
         Field,
     }
 
+    const alertCtx = useContext(AlertContext)!;
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
     const navigate = useNavigate();
@@ -190,12 +192,9 @@ export const CreateContent = () => {
             modelId: model()!.id,
             values: Object.values(unwrap(values)).flat(),
         })
-            .then(() => {
-                const m = model();
-
-                if (m !== undefined) {
-                    navigate(m.namespace ? `/content/${m.namespace}/${m.name}/contents` : `/content/${m.name}/contents`)
-                }
+            .then((content) => {
+                alertCtx.success('Content is created successfully');
+                navigate(`/content/content/${content.id}`, { replace: true });
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -366,23 +365,33 @@ export const CreateContent = () => {
 }
 
 export const Content = () => {
+    enum Action {
+        UpdateStage,
+        Delete,
+    }
+
     const alertCtx = useContext(AlertContext)!;
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
+    const navigate = useNavigate();
 
-    const [content, { mutate }] = createResource(() => parseInt(params.id), async (id: number) => contentCtx.fetchContent(id));
+    const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => contentCtx.fetchContent(id));
 
-    const [inProgress, setInProgress] = createSignal(false);
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
-    const updateContentStage = () => {
+    const [dropdown, setDropdown] = createSignal(false);
+
+    onCleanup(dropdownClickListener('content-detail-dropdown', () => setDropdown(false), () => inProgress() === undefined));
+
+    const updateStage = () => {
         const c = content();
-        if (inProgress() || c === undefined) {
+
+        if (inProgress() !== undefined || c === undefined) {
             return;
         }
 
-        setInProgress(true);
-
         const stage = c.content.stage === ContentStage.Published ? ContentStage.Draft : ContentStage.Published;
+        setInProgress(Action.UpdateStage);
 
         contentCtx.updateContentStage(c.content.id, stage)
             .then(() => {
@@ -390,58 +399,99 @@ export const Content = () => {
 
                 alertCtx.success(stage === ContentStage.Published ? 'Content is published' : 'Content is marked as draft');
             })
-            .catch((e) => {
-                if (e instanceof HttpError) {
-                    alertCtx.fail(e.error);
-                } else {
-                    alertCtx.fail(`${e}`);
-                }
-            })
-            .finally(() => setInProgress(false));
+            .catch((e) => alertCtx.fail(e.message))
+            .finally(() => setInProgress(undefined));
     };
 
-    const contentUpdateClass = () => content()?.content.stage === ContentStage.Published ? 'btn-secondary' : 'btn-primary';
-    const contentUpdateIcon = () => content()?.content.stage === ContentStage.Published ? BookmarkCheck : BookmarkCheckFill;
+    const deleteContent = () => {
+        const c = content();
+
+        if (inProgress() !== undefined || c === undefined) {
+            return;
+        }
+
+        setInProgress(Action.Delete);
+
+        contentCtx.deleteContent(c.content.id)
+            .then(() => {
+                alertCtx.success('Content is deleted successfully');
+                navigate(-1);
+            })
+            .catch((e) => alertCtx.fail(e.message))
+            .finally(() => setInProgress(undefined));
+    }
+
+    const contentStyle = () => content()?.content.stage === ContentStage.Published ?
+        { button: 'btn-secondary', icon: BookmarkCheck } :
+        { button: 'btn-primary', icon: BookmarkCheckFill };
 
     return (
         <div class="container py-4 px-md-4">
-            <Switch>
-                <Match when={content.loading}>Loading ...</Match>
-                <Match when={content.error}>Error: {content.error}</Match>
-                <Match when={content()}>{(c) => (
-                    <>
-                        <div class="d-flex align-items-center mb-4">
-                            <div class="flex-grow-1">
-                                <h2 class="m-0">{c().content.name}</h2>
-                                <small>Content created by {c().user?.name}</small>
-                            </div>
-                            <Show when={content()}>
-                                {(c) => (
-                                    <button class={`btn icon-link ${contentUpdateClass()}`} onClick={updateContentStage} disabled={inProgress()}>
-                                        <Show when={inProgress()}>
+            <Suspense fallback={<p>Loading...</p>}>
+                <div class="d-flex align-items-center mb-4">
+                    <div class="flex-grow-1">
+                        <h2 class="m-0">{content()?.content.name ?? '-'}</h2>
+                        <small>Content</small>
+                    </div>
+                    <div class="dropdown mx-2">
+                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                            <ThreeDotsVertical viewBox="0 0 16 16" />
+                        </button>
+                        <Show when={dropdown()}>
+                            <ul id="content-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
+                                <li>
+                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteContent}>
+                                        <Show when={inProgress() === Action.Delete}>
                                             <div class="spinner-border" role="status">
                                                 <span class="visually-hidden">Loading...</span>
                                             </div>
                                         </Show>
-                                        <Dynamic component={contentUpdateIcon()} viewBox="0 0 16 16" />
-                                        <Switch>
-                                            <Match when={c().content.stage === ContentStage.Draft}>Publish</Match>
-                                            <Match when={c().content.stage === ContentStage.Published}>Mark as Draft</Match>
-                                        </Switch>
+                                        <Trash viewBox="0 0 16 16" />
+                                        Delete
                                     </button>
-                                )}
-                            </Show>
-                        </div>
-                        <div>
-                            <For each={c().values}>
-                                {(v) => (
-                                    <p>{v.value}</p>
-                                )}
-                            </For>
-                        </div>
-                    </>
-                )}</Match>
-            </Switch>
+                                </li>
+                            </ul>
+                        </Show>
+                    </div>
+                    <button class={`btn icon-link ${contentStyle().button}`} onClick={updateStage} disabled={inProgress() !== undefined}>
+                        <Show when={inProgress() === Action.UpdateStage}>
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </Show>
+                        <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
+                        <Switch>
+                            <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
+                            <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
+                        </Switch>
+                    </button>
+                </div>
+
+                <div class="row m-0">
+                    <Switch>
+                        <Match when={content.state === 'ready' && content() === undefined}>
+                            <span>Could not find the content with id {params.id}.</span>
+                        </Match>
+                        <Match when={content()}>
+                            {(content) => (
+                                <div class="offset-md-4 col-md-4 p-3 mb-4 card">
+                                    <h5>Details</h5>
+
+                                    <hr />
+                                    <table>
+                                        <tbody>
+                                            <tr>
+                                                <td>Name</td>
+                                                <td class="text-end">{content().content.name}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </Match>
+                    </Switch>
+                </div>
+            </Suspense>
         </div>
     );
 };

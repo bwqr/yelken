@@ -23,12 +23,12 @@ export interface ContentStore {
     deleteAsset(id: number): Promise<void>;
 
     fetchContents(modelId: number, pagination?: PaginationRequest): Promise<Pagination<Content>>;
-    fetchContent(contentId: number): Promise<ContentDetails>;
+    fetchContent(id: number): Promise<ContentDetails>;
+    createContent(model: CreateContent): Promise<Content>;
+    updateContentStage(id: number, stage: ContentStage): Promise<void>;
+    deleteContent(id: number): Promise<void>;
 
     createModel(model: CreateModel): Promise<void>;
-    createContent(model: CreateContent): Promise<void>;
-
-    updateContentStage(contentId: number, stage: ContentStage): Promise<void>;
 }
 
 export const ContentContext: Context<ContentStore | undefined> = createContext();
@@ -63,7 +63,7 @@ export class ContentService implements ContentStore {
         return this.loadModels();
     }
 
-    async createContent(content: CreateContent): Promise<void> {
+    async createContent(content: CreateContent): Promise<Content> {
         return Api.post('/content/content', content);
     }
 
@@ -111,12 +111,16 @@ export class ContentService implements ContentStore {
         return Api.get(`/content/contents?${params.toString()}`)
     }
 
-    async fetchContent(contentId: number): Promise<ContentDetails> {
-        return Api.get(`/content/content/${contentId}`)
+    async fetchContent(id: number): Promise<ContentDetails> {
+        return Api.get(`/content/content/${id}`)
     }
 
-    async updateContentStage(contentId: number, stage: ContentStage): Promise<void> {
-        return Api.put(`/content/content/${contentId}/stage`, { stage });
+    async updateContentStage(id: number, stage: ContentStage): Promise<void> {
+        return Api.put(`/content/content/${id}/stage`, { stage });
+    }
+
+    async deleteContent(id: number): Promise<void> {
+        return Api.delete(`/content/content/${id}`);
     }
 
     static async fetchFields(): Promise<Field[]> {

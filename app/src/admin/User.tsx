@@ -65,9 +65,9 @@ export const CreateUser = () => {
         setInProgress(true);
 
         adminCtx.createUser(name(), email(), password())
-            .then(() => {
+            .then((user) => {
                 alertCtx.success('User is created successfully');
-                navigate('/users');
+                navigate(`/users/view/${user.username}`, { replace: true });
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -234,7 +234,7 @@ export const User = () => {
         adminCtx.deleteUser(u.id)
             .then(() => {
                 alertCtx.success('User is deleted successfully');
-                navigate('/users');
+                navigate(-1);
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
@@ -248,8 +248,8 @@ export const User = () => {
                         <h2 class="m-0">{userAndRoles()?.user?.name ?? '-'}</h2>
                         <small>Role</small>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn icon-link ms-2" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                    <div class="dropdown mx-2">
+                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
                             <ThreeDotsVertical viewBox="0 0 16 16" />
                         </button>
                         <Show when={dropdown()}>

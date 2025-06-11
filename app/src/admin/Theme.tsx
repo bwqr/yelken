@@ -129,7 +129,7 @@ export const InstallTheme = () => {
         Api.request('/admin/theme/theme', 'POST', { formdata })
             .then(() => {
                 alertCtx.success('Theme is installed successfully');
-                navigate('/themes');
+                navigate(-1);
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -316,7 +316,7 @@ export const Themes = () => {
                                                             </Show>
                                                         </td>
                                                         <td class="dropdown text-end">
-                                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== theme.id ? theme.id : undefined) }}>
+                                                            <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== theme.id ? theme.id : undefined) }}>
                                                                 <ThreeDotsVertical viewBox="0 0 16 16" />
                                                             </button>
                                                             <Show when={item() === theme.id}>

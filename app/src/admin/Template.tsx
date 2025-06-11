@@ -94,7 +94,7 @@ export const Templates = () => {
                                                         <td><A href={`/templates/view?kind=${template.kind}&path=${encodeURIComponent(template.path)}`}>{template.path}</A></td>
                                                         <td>{template.kind === LocationKind.Global ? 'Global' : template.kind === LocationKind.Theme ? 'Theme' : 'Theme (modified)'}</td>
                                                         <td class="dropdown text-end">
-                                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem((item()?.path === template.path && item()?.kind === template.kind) ? undefined : template) }}>
+                                                            <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setItem((item()?.path === template.path && item()?.kind === template.kind) ? undefined : template) }}>
                                                                 <ThreeDotsVertical viewBox="0 0 16 16" />
                                                             </button>
                                                             <Show when={(item()?.path === template.path && item()?.kind === template.kind)}>

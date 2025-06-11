@@ -58,7 +58,7 @@ export const CreateLocale = () => {
             .then(() => contentCtx.loadLocales())
             .then(() => {
                 alertCtx.success('Locale is successfully created');
-                navigate('/locales');
+                navigate(-1);
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -363,7 +363,7 @@ export const Locales = () => {
                                             </A>
                                         </td>
                                         <td class="dropdown text-end">
-                                            <button class="btn icon-link" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
+                                            <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setItem(item() !== locale.key ? locale.key : undefined) }}>
                                                 <ThreeDotsVertical viewBox="0 0 16 16" />
                                             </button>
                                             <Show when={item() === locale.key}>

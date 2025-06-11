@@ -71,7 +71,7 @@ pub async fn create_content(
     Extension(options): Extension<Options>,
     user: AuthUser,
     Json(req): Json<CreateContent>,
-) -> Result<(), HttpError> {
+) -> Result<Json<Content>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let locales = options
@@ -144,43 +144,44 @@ pub async fn create_content(
         return Err(HttpError::not_found("model_field_not_found"));
     }
 
-    conn.transaction(|conn| {
-        async move {
-            let content = diesel::insert_into(contents::table)
-                .values((
-                    contents::model_id.eq(req.model_id),
-                    contents::name.eq(req.name),
-                    contents::stage.eq(ContentStage::Draft),
-                    contents::created_by.eq(user.id),
-                ))
-                .get_result::<base::models::Content>(conn)
-                .await?;
+    let content = conn
+        .transaction(|conn| {
+            async move {
+                let content = diesel::insert_into(contents::table)
+                    .values((
+                        contents::model_id.eq(req.model_id),
+                        contents::name.eq(req.name),
+                        contents::stage.eq(ContentStage::Draft),
+                        contents::created_by.eq(user.id),
+                    ))
+                    .get_result::<Content>(conn)
+                    .await?;
 
-            diesel::insert_into(content_values::table)
-                .values(
-                    req.values
-                        .into_iter()
-                        .map(|v| {
-                            (
-                                content_values::content_id.eq(content.id),
-                                content_values::model_field_id.eq(v.model_field_id),
-                                content_values::locale.eq(v.locale),
-                                content_values::value.eq(v.value),
-                            )
-                        })
-                        .collect::<Vec<_>>(),
-                )
-                .batched()
-                .execute(conn)
-                .await?;
+                diesel::insert_into(content_values::table)
+                    .values(
+                        req.values
+                            .into_iter()
+                            .map(|v| {
+                                (
+                                    content_values::content_id.eq(content.id),
+                                    content_values::model_field_id.eq(v.model_field_id),
+                                    content_values::locale.eq(v.locale),
+                                    content_values::value.eq(v.value),
+                                )
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                    .batched()
+                    .execute(conn)
+                    .await?;
 
-            Result::<(), HttpError>::Ok(())
-        }
-        .scope_boxed()
-    })
-    .await?;
+                Result::<Content, HttpError>::Ok(content)
+            }
+            .scope_boxed()
+        })
+        .await?;
 
-    Ok(())
+    Ok(Json(content))
 }
 
 pub async fn create_content_value(
@@ -307,6 +308,22 @@ pub async fn update_content_value(
 
     if effected_row == 0 {
         return Err(HttpError::not_found("content_value_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn delete_content(
+    State(state): State<AppState>,
+    Path(content_id): Path<i32>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::delete(contents::table)
+        .filter(contents::id.eq(content_id))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("content_not_found"));
     }
 
     Ok(())
