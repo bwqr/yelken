@@ -1,5 +1,7 @@
 #sidenav {
+   background: var(--custom-bg);
+
   .navbar-nav a[aria-current="page"] {
-    background: var(--custom-body-bg);
+    background: var(--bs-body-bg);
   }
 }

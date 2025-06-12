@@ -81,11 +81,11 @@ export const CreateUser = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <h2>Create User</h2>
             </div>
             <div class="row m-0">
-                <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
+                <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="form-floating mb-4">
                         <input
                             id="userName"
@@ -243,7 +243,7 @@ export const User = () => {
     return (
         <div class="container py-4 px-md-4">
             <Suspense fallback={<p>Loading...</p>}>
-                <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center mb-5">
                     <div class="flex-grow-1">
                         <h2 class="m-0">{userAndRoles()?.user?.name ?? '-'}</h2>
                         <small>Role</small>
@@ -286,12 +286,12 @@ export const User = () => {
                         <Match when={userAndRoles()}>
                             {(userAndRoles) => (
                                 <>
-                                    <div class="offset-md-4 col-md-4 p-3 mb-4 card">
+                                    <div class="offset-md-1 col-md-4 mb-5 mb-md-0">
                                         <h5>Details</h5>
 
                                         <hr />
 
-                                        <table>
+                                        <table class="w-100">
                                             <tbody>
                                                 <tr>
                                                     <td class="p-2">Name</td>
@@ -336,12 +336,12 @@ export const User = () => {
                                         </table>
                                     </div>
 
-                                    <div class="offset-md-4 col-md-4 p-3 card">
+                                    <div class="offset-md-1 col-md-4">
                                         <h5>Explicit Permissions</h5>
 
                                         <hr />
 
-                                        <table>
+                                        <table class="w-100">
                                             <tbody>
                                                 <For each={Object.entries(Permission)}>
                                                     {([perm, value]) => (
@@ -377,7 +377,7 @@ export const Users = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Users</h1>
                 </div>
@@ -395,20 +395,22 @@ export const Users = () => {
                         </Match>
                         <Match when={usersAndRoles()}>
                             {(usersAndRoles) => (
-                                <div class="offset-md-4 col-md-4 card p-3">
+                                <div class="offset-md-4 col-md-4">
                                     <Show when={usersAndRoles().users.length > 0} fallback={<p class="m-0">No users exists yet.</p>}>
-                                        <table class="table table-hover m-0">
+                                        <table class="table table-hover border shadow-sm">
                                             <thead>
                                                 <tr>
+                                                    <th></th>
                                                     <th scope="col">Name</th>
                                                     <th scope="col">Role</th>
-                                                    <th scope="col"></th>
+                                                    <th></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <For each={usersAndRoles().users}>
                                                     {(user) => (
                                                         <tr>
+                                                            <td></td>
                                                             <td>{user.name}</td>
                                                             <td>{usersAndRoles().roles.find((r) => r.id === user.roleId)?.name ?? '-'}</td>
                                                             <td class="text-end">

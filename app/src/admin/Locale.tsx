@@ -72,11 +72,11 @@ export const CreateLocale = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <h2>Create Locale</h2>
             </div>
             <div class="row m-0">
-                <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
+                <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="mb-4">
                         <label for="localeName" class="form-label">Name</label>
                         <input
@@ -211,7 +211,7 @@ export const Locale = () => {
 
             <Show when={locale()}>
                 {(locale) => (
-                    <div class="d-flex align-items-center mb-4">
+                    <div class="d-flex align-items-center mb-5">
                         <div class="flex-grow-1">
                             <h2 class="m-0">{locale().name}</h2>
                             <small>Translations</small>
@@ -314,7 +314,7 @@ export const Locales = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Locales</h1>
                 </div>
@@ -325,35 +325,31 @@ export const Locales = () => {
             </div>
 
             <div class="row m-0">
-                <div class="offset-md-2 col-md-8 card p-3">
-                    <table class="table table-hover m-0">
+                <div class="offset-md-3 col-md-6">
+                    <table class="table table-hover border shadow-sm">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th scope="col">Name</th>
                                 <th scope="col">Key</th>
-                                <th scope="col">State</th>
-                                <th scope="col"></th>
-                                <th scope="col"></th>
-                                <th scope="col"></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             <For each={contentCtx.locales()}>
                                 {(locale) => (
                                     <tr>
+                                        <td></td>
                                         <td>{locale.name}</td>
                                         <td>{locale.key}</td>
-                                        <td>
-                                            <span
-                                                class="badge border rounded-pill"
-                                                classList={{ 'border-success text-success': !locale.disabled, 'border-danger text-danger': locale.disabled }}
-                                            >
-                                                {locale.disabled ? 'Disabled' : 'Enabled'}
-                                            </span>
-                                        </td>
                                         <td class="text-center">
                                             <Show when={locale.key === contentCtx.options().defaultLocale}>
-                                                <span class="badge border rounded-pill border-link text-light-emphasis">Default</span>
+                                                <span class="badge border rounded-pill border-success text-success ms-2">Default</span>
+                                            </Show>
+                                            <Show when={locale.disabled}>
+                                                <span class="badge border rounded-pill border-danger text-danger ms-2">Disabled</span>
                                             </Show>
                                         </td>
                                         <td class="text-center">

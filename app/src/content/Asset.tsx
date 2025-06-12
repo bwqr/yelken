@@ -37,9 +37,9 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
                                                 <div class="row m-0 gap-2 mb-4">
                                                     <For each={assets().items}>
                                                         {(asset) => (
-                                                            <div class="col-md-2 col-sm-6 card" style="cursor: pointer" onClick={() => props.pick(asset.filename)}>
-                                                                <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-4 text-secondary" viewBox="0 0 16 16" />}>
-                                                                    <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
+                                                            <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word; cursor: pointer;" onClick={() => props.pick(asset.filename)}>
+                                                                <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-75 m-auto p-2 text-secondary" viewBox="0 0 16 16" />}>
+                                                                    <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-2" alt={asset.name} />
                                                                 </Show>
                                                                 <p class="card-text text-center">{asset.name}</p>
                                                             </div>
@@ -184,11 +184,11 @@ export const UploadAsset = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <h2>Upload Asset</h2>
             </div>
             <div class="row m-0">
-                <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
+                <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="mb-4">
                         <label for="assetFile" class="form-label">Choose an asset file</label>
                         <input
@@ -268,7 +268,7 @@ export const Assets = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Assets</h1>
                 </div>
@@ -288,24 +288,24 @@ export const Assets = () => {
                     <Match when={assets()}>
                         {(assets) => (
                             <>
-                                <div class="card p-3 mb-4">
-                                    <Show when={assets().items.length > 0} fallback={<span>No assets</span>}>
-                                        <div class="row m-0 gap-2">
-                                            <For each={assets().items}>
-                                                {(asset) => (
-                                                    <div class="col-md-2 col-sm-6">
-                                                        <A href={`/assets/view/${asset.id}`} class="card p-2 text-center">
-                                                            <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 p-2 text-secondary" viewBox="0 0 16 16" />}>
-                                                                <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-4" alt={asset.name} />
-                                                            </Show>
-                                                            {asset.name}
+                                <Show when={assets().items.length > 0} fallback={<span>No assets</span>}>
+                                    <div class="row m-0 gap-2 mb-4">
+                                        <For each={assets().items}>
+                                            {(asset) => (
+                                                <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word;">
+                                                    <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-75 m-auto p-2 text-secondary" viewBox="0 0 16 16" />}>
+                                                        <A href={`/assets/view/${asset.id}`} class="flex-grow-1">
+                                                            <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-2" alt={asset.name} />
                                                         </A>
-                                                    </div>
-                                                )}
-                                            </For>
-                                        </div>
-                                    </Show>
-                                </div>
+                                                    </Show>
+                                                    <A href={`/assets/view/${asset.id}`} class="text-center">
+                                                        {asset.name}
+                                                    </A>
+                                                </div>
+                                            )}
+                                        </For>
+                                    </div>
+                                </Show>
 
                                 <Pagination
                                     totalPages={assets().totalPages}
@@ -362,7 +362,7 @@ export const Asset = () => {
     return (
         <div class="container py-4 px-md-4">
             <Suspense fallback={<p>Loading...</p>}>
-                <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center mb-5">
                     <div class="flex-grow-1">
                         <h2 class="m-0">{asset()?.name ?? '-'}</h2>
                         <small>Asset</small>
@@ -401,31 +401,29 @@ export const Asset = () => {
                                             <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto mw-100" style="max-height: 40vh" alt={asset().name} />
                                         </Show>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="card p-3">
-                                            <h5>Details</h5>
+                                    <div class="offset-md-1 col-md-5 px-4">
+                                        <h5>Details</h5>
 
-                                            <hr />
+                                        <hr />
 
-                                            <table>
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="p-2">Name</td>
-                                                        <td class="text-end">{asset().name}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="p-2">Type</td>
-                                                        <td class="text-end">{asset().filetype}</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="p-2">Link</td>
-                                                        <td class="text-end">
-                                                            <a target="_blank" href={`${config.API_URL}/assets/content/${asset().filename}`}>{asset().filename}</a>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                        <table>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="p-2">Name</td>
+                                                    <td class="text-end">{asset().name}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-2">Type</td>
+                                                    <td class="text-end">{asset().filetype}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="p-2">Link</td>
+                                                    <td class="text-end">
+                                                        <a target="_blank" href={`${config.API_URL}/assets/content/${asset().filename}`}>{asset().filename}</a>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </>
                             )}

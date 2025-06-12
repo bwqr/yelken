@@ -196,10 +196,10 @@ export const CreateModel = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-4">Create Model</h2>
+            <h2 class="mb-5">Create Model</h2>
 
             <div class="row">
-                <form class="col-md-4" onSubmit={onSubmit}>
+                <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="mb-4">
                         <label for="modelName" class="form-label">Model Name</label>
                         <input
@@ -314,7 +314,7 @@ export const Models = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Models</h1>
                 </div>
@@ -325,20 +325,21 @@ export const Models = () => {
             </div>
 
             <div class="row m-0">
-                <div class="offset-md-2 col-md-8 card p-3">
-                    <table class="table table-hover m-0">
+                <div class="offset-md-3 col-md-6">
+                    <table class="table table-hover border shadow-sm">
                         <thead>
                             <tr>
+                                <th></th>
                                 <th scope="col">#</th>
                                 <th scope="col">Namespace</th>
                                 <th scope="col">Name</th>
-                                <th scope="col"># Fields</th>
                             </tr>
                         </thead>
                         <tbody>
                             <For each={contentCtx.models()}>
                                 {(model) => (
                                     <tr>
+                                        <td></td>
                                         <td>{model.id}</td>
                                         <td>{model.namespace ? model.namespace : '-'}</td>
                                         <td>
@@ -346,7 +347,6 @@ export const Models = () => {
                                                 {model.name}
                                             </A>
                                         </td>
-                                        <td> {model.fields.length} </td>
                                     </tr>
                                 )}
                             </For>
@@ -379,7 +379,7 @@ export const Model = () => {
                     </div>
 
                     <div class="row mt-4">
-                        <div class="col-md-4">
+                        <div class="offset-md-4 col-md-4">
                             <label class="form-label">Scope</label>
                             <div class="btn-group w-100 mb-4">
                                 <input

@@ -93,7 +93,7 @@ export const CreatePage = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <h2>Create Page</h2>
             </div>
             <div class="row m-0">
@@ -246,7 +246,7 @@ export const Pages = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Pages</h1>
                 </div>
@@ -264,10 +264,11 @@ export const Pages = () => {
                         </Match>
                         <Match when={pageGroups()}>
                             {(pageGroups) => (
-                                <div class="offset-md-2 col-md-8 card p-3">
-                                    <table class="table table-hover m-0">
+                                <div class="offset-md-3 col-md-6">
+                                    <table class="table table-hover border shadow-sm">
                                         <thead>
                                             <tr>
+                                                <th></th>
                                                 <th scope="col">Name</th>
                                                 <th scope="col">Locale</th>
                                             </tr>
@@ -276,6 +277,7 @@ export const Pages = () => {
                                             <For each={pageGroups()}>
                                                 {(group) => (
                                                     <tr>
+                                                        <td></td>
                                                         <td>{group.name}</td>
                                                         <td>
                                                             <Show when={group.locales}>

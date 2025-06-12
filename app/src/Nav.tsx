@@ -108,7 +108,7 @@ export function SideNav(): JSX.Element {
 
     return (
         <div class="p-2 vh-100">
-            <nav id="sidenav" class="bg-body text-secondary p-2 rounded shadow-sm overflow-auto" classList={{ 'h-100': show() }}>
+            <nav id="sidenav" class="p-2 rounded shadow-sm overflow-auto" classList={{ 'h-100': show() }}>
                 <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
                     <Show when={show()}><ArrowBarUp viewBox="0 0 16 16" /></Show>
                     <Show when={!show()}><ArrowBarDown viewBox="0 0 16 16" /></Show>
@@ -139,7 +139,7 @@ export function SideNav(): JSX.Element {
                                                     aria-current={(link.href === '/' ? link.href === location.pathname : location.pathname.startsWith(link.href)) ? 'page' : false}
                                                     classList={{ 'active': link.href === '/' ? link.href === location.pathname : location.pathname.startsWith(link.href) }}
                                                 >
-                                                    <Dynamic component={link.icon}  viewBox="0 0 16 16"/>
+                                                    <Dynamic component={link.icon} viewBox="0 0 16 16" />
                                                     <span class="d-none d-lg-block">{link.title}</span>
                                                 </A>
                                             </li>

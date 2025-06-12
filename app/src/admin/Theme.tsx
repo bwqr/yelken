@@ -143,11 +143,11 @@ export const InstallTheme = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <h2>Install Theme</h2>
             </div>
             <div class="row m-0">
-                <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
+                <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="mb-4">
                         <label for="themeFile" class="form-label">Choose a theme file</label>
                         <input
@@ -274,7 +274,7 @@ export const Themes = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Themes</h1>
                 </div>
@@ -292,27 +292,29 @@ export const Themes = () => {
                     <Match when={themes()}>
                         {(themes) => (
                             <div class="row m-0">
-                                <div class="offset-md-2 col-md-8 card p-3">
-                                    <table class="table table-hover m-0">
+                                <div class="offset-md-3 col-md-6">
+                                    <table class="table table-hover border shadow-sm">
                                         <thead>
                                             <tr>
+                                                <th></th>
                                                 <th scope="col">ID</th>
                                                 <th scope="col">Version</th>
                                                 <th scope="col">Name</th>
-                                                <th scope="col"></th>
-                                                <th scope="col"></th>
+                                                <th></th>
+                                                <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <For each={themes()}>
                                                 {(theme) => (
                                                     <tr>
+                                                        <td></td>
                                                         <td>{theme.id}</td>
                                                         <td>{theme.version}</td>
                                                         <td>{theme.name}</td>
                                                         <td class="text-center">
                                                             <Show when={theme.id === contentCtx.options().theme}>
-                                                                <span class="badge rounded-pill border border-link text-light-emphasis">Active</span>
+                                                                <span class="badge rounded-pill border border-success text-success ms-2">Active</span>
                                                             </Show>
                                                         </td>
                                                         <td class="dropdown text-end">

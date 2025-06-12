@@ -2,14 +2,17 @@
 @import "bootstrap/scss/functions";
 
 // 2. Include any default variable overrides here
-/* $font-size-base: .85rem; */
+$font-size-base: .85rem;
 $btn-border-radius: 0.5rem;
+
 $spinner-width: 1.5rem;
 $spinner-height: 1.5rem;
 $spinner-border-width: 0.15em;
 
+$table-cell-padding-y: 1rem;
+
 :root {
-  --custom-body-bg: #eff3f9;
+  --custom-bg: #f2f6fb;
 }
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
@@ -51,16 +54,20 @@ $spinner-border-width: 0.15em;
 .dropdown-menu {
   .dropdown-item:active, a[aria-current="page"] {
     color: var(--bs-text-black);
-    background: var(--custom-body-bg);
+    background: var(--custom-bg);
   }
 }
 
 @include color-mode(dark) {
-  --custom-body-bg: #2a2b33;
+  --custom-bg: #32333c;
 }
 
-body {
-  background: var(--custom-body-bg);
+table > thead > tr > th {
+  background: var(--custom-bg) !important;
+}
+
+table > tbody > tr > td {
+  vertical-align: middle;
 }
 
 @include media-breakpoint-up(sm) {

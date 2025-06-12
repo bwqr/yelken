@@ -60,7 +60,7 @@ export const Templates = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-4">
+            <div class="d-flex align-items-center mb-5">
                 <div class="flex-grow-1">
                     <h1>Templates</h1>
                 </div>
@@ -78,19 +78,21 @@ export const Templates = () => {
                         </Match>
                         <Match when={templates()}>
                             {(templates) => (
-                                <div class="offset-md-2 col-md-8 card p-3">
-                                    <table class="table table-hover m-0">
+                                <div class="offset-md-3 col-md-6">
+                                    <table class="table table-hover border shadow-sm">
                                         <thead>
                                             <tr>
+                                                <th></th>
                                                 <th scope="col">Path</th>
                                                 <th scope="col">Scope</th>
-                                                <th scope="col"></th>
+                                                <th></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <For each={templates()}>
                                                 {(template) => (
                                                     <tr>
+                                                        <td></td>
                                                         <td><A href={`/templates/view?kind=${template.kind}&path=${encodeURIComponent(template.path)}`}>{template.path}</A></td>
                                                         <td>{template.kind === LocationKind.Global ? 'Global' : template.kind === LocationKind.Theme ? 'Theme' : 'Theme (modified)'}</td>
                                                         <td class="dropdown text-end">
@@ -201,7 +203,7 @@ export const Template = () => {
                     </Match>
                     <Match when={template()}>
                         {(template) => (
-                            <div class="d-flex align-items-center mb-4">
+                            <div class="d-flex align-items-center mb-5">
                                 <div class="flex-grow-1">
                                     <h2 class="m-0">{template().path}</h2>
                                     <small>Template</small>
