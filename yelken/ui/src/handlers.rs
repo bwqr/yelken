@@ -169,7 +169,17 @@ pub async fn serve_page(
         if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
             if redirect.is_empty() || redirect.starts_with('/') {
                 let mut url = state.config.site_url.clone();
-                url.path_segments_mut().unwrap().push(redirect);
+
+                {
+                    let mut segments = url.path_segments_mut().unwrap();
+
+                    redirect
+                        .split('/')
+                        .filter(|path| !path.is_empty())
+                        .for_each(|path| {
+                            segments.push(path);
+                        });
+                }
 
                 return Ok(Response::builder()
                     .status(StatusCode::TEMPORARY_REDIRECT)
