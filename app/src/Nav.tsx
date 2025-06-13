@@ -2,66 +2,9 @@ import { A, useLocation } from "@solidjs/router";
 import { type Component, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
-import './Nav.scss';
 import { UserContext } from "./lib/user/context";
-import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, PersonCircle, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
+import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
-
-export function TopBar(): JSX.Element {
-    const userCtx = useContext(UserContext)!;
-
-    const [dropdown, setDropdown] = createSignal(false);
-
-    onCleanup(dropdownClickListener('topbar-dropdown', () => setDropdown(false)));
-
-    return (
-        <nav class="navbar px-4 py-2">
-            <div class="flex-grow-1">
-            </div>
-
-            <div class="dropdown">
-                <button
-                    class="btn icon-link fs-4"
-                    type="button"
-                    aria-expanded={dropdown()}
-                    on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()) }}
-                >
-                    <PersonCircle viewBox="0 0 16 16" />
-                </button>
-
-                <Show when={dropdown()}>
-                    <ul id="topbar-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0; min-width: 15rem;">
-                        <li>
-                            <a class="dropdown-item disabled icon-link py-2" aria-disabled="true">
-                                <svg class="bi" viewBox="0 0 16 16"></svg>
-                                {userCtx.user().name}
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li>
-                            <A class="dropdown-item icon-link py-2" href="/profile">
-                                <Person viewBox="0 0 16 16" />
-                                Profile
-                            </A>
-                        </li>
-                        <li>
-                            <a
-                                class="dropdown-item icon-link py-2"
-                                href={config.resolveURL(config.BASE_URL, '/auth/login')}
-                                on:click={_ => localStorage.removeItem('token')}
-                                rel="external"
-                            >
-                                <BoxArrowRight viewBox="0 0 16 16" />
-
-                                Logout
-                            </a>
-                        </li>
-                    </ul>
-                </Show>
-            </div>
-        </nav>
-    );
-}
 
 interface Link {
     title: string,
@@ -71,6 +14,10 @@ interface Link {
 
 export function SideNav(): JSX.Element {
     const location = useLocation();
+    const userCtx = useContext(UserContext)!;
+
+    const [dropdown, setDropdown] = createSignal(false);
+    onCleanup(dropdownClickListener('sidenav-dropdown', () => setDropdown(false)));
 
     const [show, setShow] = createSignal(true);
 
@@ -107,8 +54,8 @@ export function SideNav(): JSX.Element {
     ];
 
     return (
-        <div class="p-2 vh-100">
-            <nav id="sidenav" class="p-2 rounded shadow-sm overflow-auto" classList={{ 'h-100': show() }}>
+        <div class="p-2 pe-0" style="min-height: 100vh">
+            <nav id="sidenav" class="p-2 rounded shadow-sm" classList={{ 'h-100': show() }} style="background: var(--custom-bg);">
                 <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
                     <Show when={show()}><ArrowBarUp viewBox="0 0 16 16" /></Show>
                     <Show when={!show()}><ArrowBarDown viewBox="0 0 16 16" /></Show>
@@ -118,9 +65,47 @@ export function SideNav(): JSX.Element {
                     <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
                 </div>
 
-                <div classList={{ 'd-none': !show() }}>
-                    <hr class="mt-0" />
+                <hr class="" />
 
+                <div class="dropdown">
+                    <button
+                        class="btn icon-link nav-link py-2 px-1 w-100 rounded my-1"
+                        type="button"
+                        aria-expanded={dropdown()}
+                        on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()) }}
+                    >
+                        <svg viewBox="0 0 16 16" width="24" height="24" fill="currentColor" class="text-primary">
+                            <circle cx="8" cy="8" r="8" />
+                            <text x="50%" y="55%" fill="white" font-size="8" dominant-baseline="middle" text-anchor="middle">{userCtx.user().name.split(' ').map((word) => word[0]?.toUpperCase())}</text>
+                        </svg>
+                        {userCtx.user().name}
+                    </button>
+
+                    <Show when={dropdown()}>
+                        <ul id="sidenav-dropdown" class="dropdown-menu mt-1 show shadow highlight-links w-100" style="left: 0;">
+                            <li>
+                                <A class="dropdown-item icon-link py-2" href="/profile">
+                                    <Person viewBox="0 0 16 16" />
+                                    Profile
+                                </A>
+                            </li>
+                            <li>
+                                <a
+                                    class="dropdown-item icon-link py-2"
+                                    href={config.resolveURL(config.BASE_URL, '/auth/login')}
+                                    on:click={_ => localStorage.removeItem('token')}
+                                    rel="external"
+                                >
+                                    <BoxArrowRight viewBox="0 0 16 16" />
+
+                                    Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </Show>
+                </div>
+
+                <div class="highlight-links" classList={{ 'd-none': !show() }}>
                     <For each={categories}>
                         {(category) => (
                             <>

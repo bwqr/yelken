@@ -1,8 +1,8 @@
 import { createResource, For, Match, Show, Suspense, Switch, type Component, type JSX } from 'solid-js';
 import { Router, Route } from "@solidjs/router";
-import { SideNav, TopBar } from './Nav';
+import { SideNav } from './Nav';
 import Dashboard from './Dashboard';
-import { Content, ContentRoot, Contents, CreateContent } from './content/Content';
+import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './content/Content';
 import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
 import * as config from './lib/config';
@@ -168,15 +168,13 @@ const App: Component = () => {
 
                 <Route path="/" component={(props) => (
                     <div class="d-flex">
-                        <SideNav />
+                        <BackgroundServices>
+                            <SideNav />
 
-                        <main class="flex-grow-1 d-flex flex-column">
-                            <BackgroundServices>
-                                <TopBar />
-
+                            <main class="flex-grow-1 d-flex flex-column">
                                 {props.children}
-                            </BackgroundServices>
-                        </main>
+                            </main>
+                        </BackgroundServices>
                     </div>
                 )}>
                     <Route path="/" component={Dashboard} />
@@ -191,17 +189,11 @@ const App: Component = () => {
 
                     <Route path="/contents" component={ContentRoot}>
                         <Route path="/" component={Contents} />
+                        <Route path="/by-model/:name" component={ContentsByModel} />
+                        <Route path="/by-model/:namespace/:name" component={ContentsByModel} />
                         <Route path="/view/:id" component={Content} />
-                        <Route path="/create" component={CreateContent} />
-                    </Route>
-
-                    <Route path="/content" component={ContentRoot}>
-                        <Route path="/" component={() => (<></>)} />
-                        <Route path="/:namespace/:name/create-content" component={CreateContent} />
-                        <Route path="/:name/create-content" component={CreateContent} />
-                        <Route path="/:namespace/:name/contents" component={Contents} />
-                        <Route path="/:name/contents" component={Contents} />
-                        <Route path="/content/:id" component={Content} />
+                        <Route path="/create/:name" component={CreateContent} />
+                        <Route path="/create/:namespace/:name" component={CreateContent} />
                     </Route>
 
                     <Route path="/assets" component={(props) => <>{props.children}</>}>

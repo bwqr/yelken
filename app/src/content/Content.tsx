@@ -1,4 +1,4 @@
-import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
+import { A, Navigate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
@@ -7,7 +7,7 @@ import { ContentStage, FieldKind } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
-import { BookmarkCheck, BookmarkCheckFill, FloppyFill, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
+import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
@@ -18,17 +18,18 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 
     return (
         <div class="d-flex flex-grow-1">
-            <nav id="second-nav" class="h-100 text-secondary" style="width: 13rem; border-right: 1px solid #d8d8d8">
-                <p class="text-secondary ps-3 mt-4 mb-2 text-uppercase" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)"><b>Models</b></p>
-                <ul class="navbar-nav mb-4">
+            <nav id="second-nav" class="h-100" style="width: 13rem; border-right: 1px solid #d8d8d8">
+                <p class="ps-3 mt-4 mb-2 text-uppercase"><b>Models</b></p>
+                <ul class="navbar-nav mb-4 highlight-links">
                     <For each={models}>
                         {(model) => (
                             <li class="nav-item">
                                 <A
-                                    href={model.namespace ? `/contents?namespace=${encodeURIComponent(model.namespace)}&name=${encodeURIComponent(model.name)}` : `/contents?name=${encodeURIComponent(model.name)}`}
+                                    href={model.namespace ? `/contents/by-model/${encodeURIComponent(model.namespace)}/${encodeURIComponent(model.name)}` : `/contents/by-model/${encodeURIComponent(model.name)}`}
                                     class="nav-link d-block ps-3 pe-4 py-2"
                                 >
                                     {model.name}
+                                    {model.namespace ? ` (${model.namespace})` : ''}
                                 </A>
                             </li>
                         )}
@@ -44,13 +45,23 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 
 export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
+    return (
+        <Show when={contentCtx.models()[0]}>
+            {(model) => (<Navigate href={model().namespace ? `/contents/by-model/${encodeURIComponent(model().namespace!)}/${encodeURIComponent(model().name)}` : `/contents/by-model/${encodeURIComponent(model().name)}`} />)}
+        </Show>
+    );
+};
+
+export const ContentsByModel = () => {
+    const contentCtx = useContext(ContentContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
+    const params = useParams();
 
     const pagination = createMemo(() => PaginationRequest.from(searchParams.page, searchParams.perPage));
 
     const model = createMemo(() => {
-        const namespace = searchParams.namespace === undefined ? null : decodeURIComponent(searchParams.namespace as string);
-        const name = decodeURIComponent(searchParams.name as string);
+        const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace as string);
+        const name = decodeURIComponent(params.name as string);
 
         return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
     });
@@ -68,57 +79,64 @@ export const Contents = () => {
                 </div>
                 <Show when={model()}>
                     {(m) => (
-                        <A class="btn btn-outline-primary icon-link" href={m().namespace ? `/content/${m().namespace}/${m().name}/create-content` : `/content/${m().name}/create-content`}>
+                        <A class="btn btn-outline-primary icon-link" href={m().namespace ? `/contents/create/${m().namespace}/${m().name}` : `/contents/create/${m().name}`}>
                             <PlusLg viewBox="0 0 16 16" />
-                            Create content
+                            Create Content
                         </A>
                     )}
                 </Show>
             </div>
 
-            <Switch>
-                <Match when={!model()}>
-                    Choose a model from left
-                </Match>
-                <Match when={contents.loading}>Loading ...</Match>
-                <Match when={contents.error}>Error: {contents.error}</Match>
-                <Match when={contents()}>
-                    {(contents) => (
-                        <>
-                            <div class="card p-2 mb-4">
-                                <table class="table table-hover m-0">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">#</th>
-                                            <th scope="col">Name</th>
-                                            <th scope="col">Stage</th>
-                                            <th scope="col">Created At</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="table-group-divider">
-                                        <For each={contents().items}>
-                                            {(content) => (
-                                                <tr>
-                                                    <td>{content.id}</td>
-                                                    <td><A href={`/content/content/${content.id}`}>{content.name}</A></td>
-                                                    <td>{content.stage}</td>
-                                                    <td>{content.createdAt}</td>
-                                                </tr>
-                                            )}
-                                        </For>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <Pagination
-                                totalPages={contents().totalPages}
-                                page={contents().currentPage}
-                                perPage={pagination().perPage}
-                                pageChange={(page) => setSearchParams({ page: page.toString() })}
-                            />
-                        </>
-                    )}
-                </Match>
-            </Switch>
+            <div class="row m-0">
+                <div class="offset-md-2 col-md-8">
+                    <Switch>
+                        <Match when={!model()}>
+                            Choose a model from left
+                        </Match>
+                        <Match when={contents.loading}>Loading ...</Match>
+                        <Match when={contents.error}>Error: {contents.error}</Match>
+                        <Match when={contents()}>
+                            {(contents) => (
+                                <Show when={contents().items.length > 0} fallback={
+                                    <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
+                                }>
+                                    <table class="table table-hover mb-4 border shadow-sm">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th scope="col">#</th>
+                                                <th scope="col">Name</th>
+                                                <th scope="col">Stage</th>
+                                                <th scope="col">Created At</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <For each={contents().items}>
+                                                {(content) => (
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>{content.id}</td>
+                                                        <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
+                                                        <td>{content.stage}</td>
+                                                        <td>{content.createdAt}</td>
+                                                    </tr>
+                                                )}
+                                            </For>
+                                        </tbody>
+                                    </table>
+
+                                    <Pagination
+                                        totalPages={contents().totalPages}
+                                        page={contents().currentPage}
+                                        perPage={pagination().perPage}
+                                        pageChange={(page) => setSearchParams({ page: page.toString() })}
+                                    />
+                                </Show>
+                            )}
+                        </Match>
+                    </Switch>
+                </div>
+            </div>
         </div>
     );
 };
@@ -210,11 +228,11 @@ export const CreateContent = () => {
         <div class="container py-4 px-md-4">
             <h2 class="mb-4">Create Content</h2>
 
-            <div class="row">
+            <div class="row m-0">
                 <Show when={model()}>
                     {(m) => {
                         return (
-                            <form class="col-md-4" onSubmit={onSubmit}>
+                            <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                                 <div class="mb-4">
                                     <label for="contentName" class="form-label">Content Name</label>
                                     <input
@@ -238,7 +256,7 @@ export const CreateContent = () => {
                                         id="modelName"
                                         class="form-control"
                                         name="modelName"
-                                        value={m().name}
+                                        value={m().namespace ? `${m().name} (${m().namespace})` : m().name}
                                         disabled
                                     />
                                 </div>

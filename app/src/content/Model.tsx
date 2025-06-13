@@ -320,38 +320,42 @@ export const Models = () => {
                 </div>
                 <A class="btn btn-outline-primary icon-link" href="/models/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Create model
+                    Create Model
                 </A>
             </div>
 
             <div class="row m-0">
                 <div class="offset-md-3 col-md-6">
-                    <table class="table table-hover border shadow-sm">
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th scope="col">#</th>
-                                <th scope="col">Namespace</th>
-                                <th scope="col">Name</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <For each={contentCtx.models()}>
-                                {(model) => (
-                                    <tr>
-                                        <td></td>
-                                        <td>{model.id}</td>
-                                        <td>{model.namespace ? model.namespace : '-'}</td>
-                                        <td>
-                                            <A href={model.namespace ? `/models/view/${model.namespace}/${model.name}` : `/models/view/${model.name}`}>
-                                                {model.name}
-                                            </A>
-                                        </td>
-                                    </tr>
-                                )}
-                            </For>
-                        </tbody>
-                    </table>
+                    <Show when={contentCtx.models().length > 0} fallback={
+                        <p class="text-secondary text-center">There is no model to display yet. You can create a new one by using <strong>Create Model</strong> button.</p>
+                    }>
+                        <table class="table table-hover border shadow-sm">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Namespace</th>
+                                    <th scope="col">Name</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <For each={contentCtx.models()}>
+                                    {(model) => (
+                                        <tr>
+                                            <td></td>
+                                            <td>{model.id}</td>
+                                            <td>{model.namespace ? model.namespace : '-'}</td>
+                                            <td>
+                                                <A href={model.namespace ? `/models/view/${model.namespace}/${model.name}` : `/models/view/${model.name}`}>
+                                                    {model.name}
+                                                </A>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </For>
+                            </tbody>
+                        </table>
+                    </Show>
                 </div>
             </div>
         </div>

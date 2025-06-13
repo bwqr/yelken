@@ -9,10 +9,12 @@ $spinner-width: 1.5rem;
 $spinner-height: 1.5rem;
 $spinner-border-width: 0.15em;
 
-$table-cell-padding-y: 1rem;
+$table-cell-padding-y: 0.85rem;
+$input-padding-y: 0.5rem;
 
 :root {
   --custom-bg: #f2f6fb;
+  --custom-highlight-bg: var(--bs-primary-bg-subtle);
 }
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
@@ -51,15 +53,23 @@ $table-cell-padding-y: 1rem;
 
 // 8. Add additional custom code here
 
+@include color-mode(dark) {
+  --custom-bg: #32333c;
+  --custom-highlight-bg: #3e4b6a;
+}
+
 .dropdown-menu {
   .dropdown-item:active, a[aria-current="page"] {
     color: var(--bs-text-black);
-    background: var(--custom-bg);
-  }
-}
+    background: var(--custom-highlight-bg);
+   }
+ }
 
-@include color-mode(dark) {
-  --custom-bg: #32333c;
+.highlight-links {
+  a[aria-current="page"] {
+    color: var(--bs-text-black);
+    background: var(--custom-highlight-bg);
+  }
 }
 
 table > thead > tr > th {
