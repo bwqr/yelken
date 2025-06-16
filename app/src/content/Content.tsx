@@ -3,7 +3,7 @@ import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage, FieldKind } from "../lib/content/models";
+import { ContentStage, FieldKind, Model } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
@@ -25,7 +25,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
                         {(model) => (
                             <li class="nav-item">
                                 <A
-                                    href={model.namespace ? `/contents/by-model/${encodeURIComponent(model.namespace)}/${encodeURIComponent(model.name)}` : `/contents/by-model/${encodeURIComponent(model.name)}`}
+                                    href={`/contents/by-model/${model.urlPath()}`}
                                     class="nav-link d-block ps-3 pe-4 py-2"
                                 >
                                     {model.name}
@@ -47,7 +47,7 @@ export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
     return (
         <Show when={contentCtx.models()[0]}>
-            {(model) => (<Navigate href={model().namespace ? `/contents/by-model/${encodeURIComponent(model().namespace!)}/${encodeURIComponent(model().name)}` : `/contents/by-model/${encodeURIComponent(model().name)}`} />)}
+            {(model) => (<Navigate href={`/contents/by-model/${model().urlPath()}`} />)}
         </Show>
     );
 };
@@ -57,17 +57,12 @@ export const ContentsByModel = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const params = useParams();
 
-    const pagination = createMemo(() => PaginationRequest.from(searchParams.page, searchParams.perPage));
+    const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
-    const model = createMemo(() => {
-        const namespace = params.namespace === undefined ? null : decodeURIComponent(params.namespace as string);
-        const name = decodeURIComponent(params.name as string);
-
-        return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
-    });
+    const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [contents] = createResource(
-        () => model() && pagination() ? { model: model()!, pagination: pagination() } : undefined,
+        () => model() ? { model: model()!, pagination: pagination() } : undefined,
         ({ model, pagination }) => contentCtx.fetchContents(model.id, pagination)
     );
 
@@ -79,7 +74,7 @@ export const ContentsByModel = () => {
                 </div>
                 <Show when={model()}>
                     {(m) => (
-                        <A class="btn btn-outline-primary icon-link" href={m().namespace ? `/contents/create/${m().namespace}/${m().name}` : `/contents/create/${m().name}`}>
+                        <A class="btn btn-outline-primary icon-link" href={`/contents/create/${m().urlPath()}`}>
                             <PlusLg viewBox="0 0 16 16" />
                             Create Content
                         </A>
@@ -152,12 +147,7 @@ export const CreateContent = () => {
     const params = useParams();
     const navigate = useNavigate();
 
-    const model = createMemo(() => {
-        const namespace = typeof params.namespace === 'string' ? decodeURIComponent(params.namespace) : null;
-        const name = typeof params.name === 'string' ? decodeURIComponent(params.name) : null;
-
-        return contentCtx.models().find((m) => m.namespace === namespace && m.name === name);
-    });
+    const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [name, setName] = createSignal('');
     const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);

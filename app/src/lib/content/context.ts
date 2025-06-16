@@ -1,7 +1,7 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
 import { PaginationRequest } from '../models';
-import type { Asset, Content, ContentDetails, ContentStage, Field, Locale, Model, Options } from "./models";
-import type { CreateContent, CreateModel } from "./requests";
+import { Model, type ModelResponse, type Asset, type Content, type ContentDetails, type ContentStage, type Field, type Locale, type Options, type ModelField } from "./models";
+import type { CreateContent, CreateModel, CreateModelField, UpdateModelField } from "./requests";
 import { Api } from "../api";
 import type { Pagination } from "../models";
 
@@ -28,7 +28,12 @@ export interface ContentStore {
     updateContentStage(id: number, stage: ContentStage): Promise<void>;
     deleteContent(id: number): Promise<void>;
 
-    createModel(model: CreateModel): Promise<void>;
+    createModel(model: CreateModel): Promise<Model>;
+    createModelField(id: number, req: CreateModelField): Promise<ModelField>;
+    updateModelDetails(id: number, name: string, desc: string | null): Promise<void>;
+    updateModelField(id: number, req: UpdateModelField): Promise<void>;
+    deleteModel(id: number): Promise<void>;
+    deleteModelField(id: number): Promise<void>;
 }
 
 export const ContentContext: Context<ContentStore | undefined> = createContext();
@@ -57,10 +62,28 @@ export class ContentService implements ContentStore {
         return this.locales().filter((l) => !l.disabled);
     }
 
-    async createModel(model: CreateModel): Promise<void> {
-        await Api.post('/content/model', model);
+    async createModel(request: CreateModel): Promise<Model> {
+        return Api.post<CreateModel, ModelResponse>('/content/model', request).then(Model.fromResponse);
+    }
 
-        return this.loadModels();
+    async createModelField(id: number, req: CreateModelField): Promise<ModelField> {
+        return Api.post(`/content/model/${id}/field`, req);
+    }
+
+    async updateModelDetails(id: number, name: string, desc: string | null): Promise<void> {
+        return Api.put(`/content/model/${id}`, { name, desc });
+    }
+
+    async updateModelField(id: number, req: UpdateModelField): Promise<void> {
+        return Api.put(`/content/model-field/${id}`, req);
+    }
+
+    async deleteModel(id: number): Promise<void> {
+        return Api.delete(`/content/model/${id}`);
+    }
+
+    async deleteModelField(id: number): Promise<void> {
+        return Api.delete(`/content/model-field/${id}`);
     }
 
     async createContent(content: CreateContent): Promise<Content> {
@@ -132,7 +155,7 @@ export class ContentService implements ContentStore {
     }
 
     static async fetchModels(): Promise<Model[]> {
-        return Api.get('/content/models');
+        return Api.get<ModelResponse[]>('/content/models').then((models) => models.map(Model.fromResponse));
     }
 
     static async fetchOptions(): Promise<Options> {

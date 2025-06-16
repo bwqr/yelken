@@ -291,7 +291,7 @@ export const User = () => {
 
                                         <hr />
 
-                                        <table class="w-100">
+                                        <table class="table table-borderless w-100">
                                             <tbody>
                                                 <tr>
                                                     <td class="p-2">Name</td>
@@ -303,7 +303,7 @@ export const User = () => {
                                                 </tr>
                                                 <tr>
                                                     <td class="p-2">State</td>
-                                                    <td class="text-end">
+                                                    <td class="py-1">
                                                         <select
                                                             class="form-select float-end"
                                                             style="width: unset;"
@@ -318,7 +318,7 @@ export const User = () => {
                                                 </tr>
                                                 <tr>
                                                     <td class="p-2">Role</td>
-                                                    <td>
+                                                    <td class="py-1">
                                                         <select
                                                             class="form-select float-end"
                                                             style="width: unset;"

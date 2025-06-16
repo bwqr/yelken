@@ -55,7 +55,7 @@ export function SideNav(): JSX.Element {
 
     return (
         <div class="p-2 pe-0" style="min-height: 100vh">
-            <nav id="sidenav" class="p-2 rounded shadow-sm" classList={{ 'h-100': show() }} style="background: var(--custom-bg);">
+            <nav id="sidenav" class="p-2 rounded shadow-sm border" classList={{ 'h-100': show() }} style="background: linear-gradient(to bottom, var(--custom-bg), color-mix(in srgb, var(--custom-bg) 50%, var(--bs-primary-bg-subtle) 50%));">
                 <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
                     <Show when={show()}><ArrowBarUp viewBox="0 0 16 16" /></Show>
                     <Show when={!show()}><ArrowBarDown viewBox="0 0 16 16" /></Show>

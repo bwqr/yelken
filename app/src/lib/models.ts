@@ -4,7 +4,7 @@ export interface PaginationRequest {
 }
 
 export namespace PaginationRequest {
-    export function from(page: string | string[] | undefined, perPage: string | string[] | undefined): PaginationRequest {
+    export function fromParams(page: string | string[] | undefined, perPage: string | string[] | undefined): PaginationRequest {
         return {
             page: (typeof page === 'string' ? parseInt(page) : undefined) || undefined,
             perPage: (typeof perPage === 'string' ? parseInt(perPage) : undefined) || undefined,

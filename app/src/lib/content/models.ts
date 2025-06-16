@@ -10,17 +10,54 @@ export interface ModelField {
     id: number,
     fieldId: number,
     modelId: number,
+    key: string,
     name: string,
+    desc: string | null,
     localized: boolean,
     multiple: boolean,
     required: boolean,
 }
 
-export interface Model {
+export interface ModelResponse {
     id: number,
     namespace: string | null,
+    key: string,
     name: string,
+    desc: string | null,
     fields: ModelField[],
+    createdAt: string,
+}
+
+export class Model implements Omit<ModelResponse, 'createdAt'> {
+    constructor(
+        public id: number,
+        public namespace: string | null,
+        public key: string,
+        public name: string,
+        public desc: string | null,
+        public fields: ModelField[],
+        public createdAt: Date,
+    ) { }
+
+    static fromResponse(response: ModelResponse): Model {
+        return new Model(
+            response.id,
+            response.namespace,
+            response.key,
+            response.name,
+            response.desc,
+            response.fields,
+            new Date(response.createdAt),
+        )
+    }
+
+    static searchWithParams(namespace: string | string[] | undefined, key: string | string[] | undefined): (model: Model) => boolean {
+        return (model) => model.key === key && (namespace ? model.namespace === namespace : model.namespace === null);
+    }
+
+    urlPath(): string {
+        return this.namespace ? `${this.namespace}/${this.key}` : this.key;
+    }
 }
 
 export enum FieldKind {

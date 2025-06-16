@@ -262,7 +262,7 @@ export const Assets = () => {
     const contentCtx = useContext(ContentContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const pagination = createMemo(() => PaginationRequest.from(searchParams.page, searchParams.perPage));
+    const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
     const [assets] = createResource(pagination, (pagination) => contentCtx.fetchAssets(pagination));
 

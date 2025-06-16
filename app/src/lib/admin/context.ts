@@ -16,7 +16,7 @@ export interface AdminStore {
 
     fetchRoles(): Promise<Role[]>;
     fetchRole(id: number): Promise<RoleDetail | undefined>;
-    createRole(name: string): Promise<Role>;
+    createRole(key: string, name: string, desc: string | null): Promise<Role>;
     updateRolePermission(id: number, permissions: Permission[]): Promise<void>;
     deleteRole(id: number): Promise<void>;
 
@@ -86,8 +86,8 @@ export class AdminService implements AdminStore {
             .catch(Api.handleNotFound);
     }
 
-    async createRole(name: string): Promise<Role> {
-        return Api.post('/admin/role', { name });
+    async createRole(key: string, name: string, desc: string | null): Promise<Role> {
+        return Api.post('/admin/role', { key, name, desc });
     }
 
     async updateRolePermission(id: number, permissions: Permission[]): Promise<void> {

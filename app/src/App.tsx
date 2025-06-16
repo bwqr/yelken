@@ -182,18 +182,18 @@ const App: Component = () => {
 
                     <Route path="/models" component={(props) => (<>{props.children}</>)}>
                         <Route path="/" component={Models} />
-                        <Route path="/view/:namespace/:name" component={Model} />
-                        <Route path="/view/:name" component={Model} />
+                        <Route path="/view/:namespace/:key" component={Model} />
+                        <Route path="/view/:key" component={Model} />
                         <Route path="/create" component={CreateModel} />
                     </Route>
 
                     <Route path="/contents" component={ContentRoot}>
                         <Route path="/" component={Contents} />
-                        <Route path="/by-model/:name" component={ContentsByModel} />
-                        <Route path="/by-model/:namespace/:name" component={ContentsByModel} />
+                        <Route path="/by-model/:key" component={ContentsByModel} />
+                        <Route path="/by-model/:namespace/:key" component={ContentsByModel} />
                         <Route path="/view/:id" component={Content} />
-                        <Route path="/create/:name" component={CreateContent} />
-                        <Route path="/create/:namespace/:name" component={CreateContent} />
+                        <Route path="/create/:key" component={CreateContent} />
+                        <Route path="/create/:namespace/:key" component={CreateContent} />
                     </Route>
 
                     <Route path="/assets" component={(props) => <>{props.children}</>}>

@@ -9,6 +9,7 @@ import { dropdownClickListener } from "../lib/utils";
 
 export const CreateRole = () => {
     enum ValidationError {
+        Key,
         Name,
     }
 
@@ -16,7 +17,9 @@ export const CreateRole = () => {
     const alertCtx = useContext(AlertContext)!;
     const navigate = useNavigate();
 
+    const [key, setKey] = createSignal('');
     const [name, setName] = createSignal('');
+    const [desc, setDesc] = createSignal('');
 
     const [inProgress, setInProgress] = createSignal(false);
 
@@ -34,6 +37,10 @@ export const CreateRole = () => {
 
         const errors = new Set<ValidationError>();
 
+        if (key().trim().length === 0) {
+            errors.add(ValidationError.Key);
+        }
+
         if (name().trim().length === 0) {
             errors.add(ValidationError.Name);
         }
@@ -46,7 +53,7 @@ export const CreateRole = () => {
 
         setInProgress(true);
 
-        adminCtx.createRole(name())
+        adminCtx.createRole(key().trim(), name().trim(), desc().trim() || null)
             .then((role) => {
                 alertCtx.success('Role is created successfully');
                 navigate(`/roles/view/${role.id}`, { replace: true });
@@ -68,7 +75,8 @@ export const CreateRole = () => {
             </div>
             <div class="row m-0">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
-                    <div class="form-floating mb-4">
+                    <div class="mb-4">
+                        <label for="roleName" class="form-label">Name</label>
                         <input
                             id="roleName"
                             type="text"
@@ -79,14 +87,39 @@ export const CreateRole = () => {
                             value={name()}
                             onChange={(ev) => setName(ev.target.value)}
                         />
-                        <label for="roleName" class="form-label">Name</label>
                         <Show when={validationErrors().has(ValidationError.Name)}>
                             <small class="invalid-feedback">Please specify a name for role.</small>
                         </Show>
                     </div>
+                    <div class="mb-4">
+                        <label for="roleKey" class="form-label">Reference Key</label>
+                        <input
+                            id="roleKey"
+                            type="text"
+                            name="key"
+                            placeholder="Reference Key"
+                            class="form-control"
+                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Key) }}
+                            value={key()}
+                            onChange={(ev) => setKey(ev.target.value)}
+                        />
+                        <Show when={validationErrors().has(ValidationError.Key)}>
+                            <small class="invalid-feedback">Please specify a reference key for role.</small>
+                        </Show>
+                    </div>
+                    <div class="mb-4">
+                        <label for="roleDesc" class="form-label">Description <small class="text-secondary">(optional)</small></label>
+                        <textarea
+                            id="roleDesc"
+                            class="form-control"
+                            rows="3"
+                            value={desc()}
+                            onChange={(ev) => setDesc(ev.target.value)}
+                        ></textarea>
+                    </div>
 
                     <Show when={serverError()}>
-                        <small class="text-danger mb-3">{serverError()}</small>
+                        <small class="text-danger mb-4">{serverError()}</small>
                     </Show>
 
                     <div class="d-flex justify-content-center">
@@ -174,7 +207,7 @@ export const Role = () => {
                         <Show when={dropdown()}>
                             <ul id="role-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
                                 <li>
-                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteRole}>
+                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteRole} disabled={inProgress() !== undefined}>
                                         <Show when={inProgress() === Action.Delete}>
                                             <div class="spinner-border" role="status">
                                                 <span class="visually-hidden">Loading...</span>
@@ -197,18 +230,19 @@ export const Role = () => {
                         Save
                     </button>
                 </div>
-                <div class="row m-0">
-                    <Switch>
-                        <Match when={role.state === 'ready' && role() === undefined}>
-                            <span>Could not find the role with id {params.id}.</span>
-                        </Match>
-                        <Match when={role()}>
-                            {(role) => (
-                                <>
-                                    <div class="offset-md-1 col-md-4 mb-5 mb-md-0">
+                <Switch>
+                    <Match when={role.state === 'ready' && role() === undefined}>
+                        <p class="text-secondary text-center">Could not find the role with id <strong>{params.id}</strong>.</p>
+                    </Match>
+                    <Match when={role()}>
+                        {(role) => (
+                            <div class="row m-0">
+                                <div class="offset-md-1 col-md-4 mb-5 mb-md-0">
+                                    <div class="border rounded p-3">
                                         <h5>Details</h5>
 
                                         <hr />
+
                                         <table class="w-100">
                                             <tbody>
                                                 <tr>
@@ -218,8 +252,10 @@ export const Role = () => {
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
 
-                                    <div class="offset-md-1 col-md-4">
+                                <div class="offset-md-1 col-md-4">
+                                    <div class="border rounded p-3">
                                         <h5>Permissions</h5>
 
                                         <hr />
@@ -249,11 +285,11 @@ export const Role = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                </>
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
+                                </div>
+                            </div>
+                        )}
+                    </Match>
+                </Switch>
             </Suspense>
         </div>
     );
