@@ -9,6 +9,8 @@ import { FloppyFill, PencilSquare, PlusLg, PlusSquareDotted, ThreeDotsVertical, 
 import { AlertContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import { Dynamic } from "solid-js/web";
+import ProgressSpinner from "../components/ProgressSpinner";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 const ModelFieldModal = (props: {
     close: () => void;
@@ -38,6 +40,14 @@ const ModelFieldModal = (props: {
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
     const [serverError, setServerError] = createSignal(undefined as string | undefined);
+
+    const close = () => {
+        if (inProgress()) {
+            return;
+        }
+
+        props.close();
+    }
 
     const createField = (ev: SubmitEvent) => {
         ev.preventDefault();
@@ -189,13 +199,9 @@ const ModelFieldModal = (props: {
                             </Show>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-danger" onClick={props.close}>Discard</button>
+                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>Discard</button>
                             <button type="submit" class="btn btn-primary icon-link" disabled={inProgress()}>
-                                <Show when={inProgress()}>
-                                    <div class="spinner-border" role="status">
-                                        <span class="visually-hidden">Loading...</span>
-                                    </div>
-                                </Show>
+                                <ProgressSpinner show={inProgress()} />
                                 <Dynamic component={props.initial ? FloppyFill : PlusLg} viewBox="0 0 16 16" />
                                 {props.initial ? 'Save' : 'Add'}
                             </button>
@@ -436,11 +442,7 @@ export const CreateModel = () => {
                             class="btn btn-primary icon-link justify-content-center w-100"
                             disabled={inProgress()}
                         >
-                            <Show when={inProgress()}>
-                                <div class="spinner-border" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </Show>
+                            <ProgressSpinner show={inProgress()} />
                             <PlusLg viewBox="0 0 16 16" />
                             Create
                         </button>
@@ -530,8 +532,6 @@ export const Models = () => {
 
 export const Model = () => {
     enum Action {
-        DeleteModel,
-        DeleteModelField,
         UpdateDetails,
     }
 
@@ -548,8 +548,13 @@ export const Model = () => {
 
     const [modelDetails, setModelDetails] = createStore({ name: model()?.name ?? '', desc: model()?.desc ?? '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
-    const [selectedField, setSelectedField] = createSignal(undefined as ModelField | undefined);
+
+    const [editingField, setEditingField] = createSignal(undefined as ModelField | undefined);
     const [creatingField, setCreatingField] = createSignal(false);
+
+    const [deletingModel, setDeletingModel] = createSignal(false);
+    const [deletingField, setDeletingField] = createSignal(undefined as ModelField | undefined);
+
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
@@ -557,25 +562,21 @@ export const Model = () => {
     createEffect(() => setModelDetails({ name: model()?.name ?? '', desc: model()?.desc ?? '' }));
 
     const [dropdown, setDropdown] = createSignal(false);
-    onCleanup(dropdownClickListener('model-detail-dropdown', () => setDropdown(false), () => inProgress() === undefined));
+    onCleanup(dropdownClickListener('model-detail-dropdown', () => setDropdown(false), () => !deletingModel()));
 
     const deleteModel = () => {
         const m = model();
 
-        if (inProgress() !== undefined || !m) {
+        if (!m) {
             return;
         }
 
-        setInProgress(Action.DeleteModel);
-
-        contentCtx.deleteModel(m.id)
+        return contentCtx.deleteModel(m.id)
             .then(() => contentCtx.loadModels())
             .then(() => {
                 alertCtx.success(`Model "${m.name}" is deleted successfully`);
                 navigate(-1);
-            })
-            .catch((e) => alertCtx.fail(e.message))
-            .finally(() => setInProgress(undefined));
+            });
     }
 
     const saveDetails = () => {
@@ -606,17 +607,15 @@ export const Model = () => {
         )
             .then(() => contentCtx.loadModels())
             .then(() => {
-                alertCtx.success(`Model "${m.name}" is updated successfully`);
+                alertCtx.success(`Model "${modelDetails.name}" is updated successfully`);
                 setEditingDetails(false);
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
     }
 
-    const saveField = async (updatedField: CreateModelField) => {
-        const field = selectedField()!;
-
-        return contentCtx.updateModelField(field.id, {
+    const saveField = async (id: number, updatedField: CreateModelField) => {
+        return contentCtx.updateModelField(id, {
             name: updatedField.name,
             desc: updatedField.desc,
             localized: updatedField.localized,
@@ -625,8 +624,8 @@ export const Model = () => {
         })
             .then(() => contentCtx.loadModels())
             .then(() => {
-                setSelectedField(undefined);
-                alertCtx.success(`Field "${field.name}" is successfully updated`);
+                setEditingField(undefined);
+                alertCtx.success(`Field "${updatedField.name}" is successfully updated`);
             });
     };
 
@@ -645,18 +644,13 @@ export const Model = () => {
             });
     };
 
-    const deleteField = (modelField: ModelField) => {
-        if (inProgress() !== undefined) {
-            return;
-        }
-
-        setInProgress(Action.DeleteModelField);
-
-        contentCtx.deleteModelField(modelField.id)
+    const deleteField = async (modelField: ModelField) => {
+        return contentCtx.deleteModelField(modelField.id)
             .then(() => contentCtx.loadModels())
-            .then(() => alertCtx.success(`Field "${modelField.name}" is deleted successfully`))
-            .catch((e) => alertCtx.fail(e.message))
-            .finally(() => setInProgress(undefined));
+            .then(() => {
+                setDeletingField(undefined);
+                alertCtx.success(`Field "${modelField.name}" is deleted successfully`);
+            });
     }
 
     return (
@@ -673,12 +667,7 @@ export const Model = () => {
                     <Show when={dropdown()}>
                         <ul id="model-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
                             <li>
-                                <button class="dropdown-item text-danger icon-link py-2" onClick={deleteModel} disabled={inProgress() !== undefined}>
-                                    <Show when={inProgress() === Action.DeleteModel}>
-                                        <div class="spinner-border" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                    </Show>
+                                <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingModel(true)}>
                                     <Trash viewBox="0 0 16 16" />
                                     Delete
                                 </button>
@@ -716,11 +705,7 @@ export const Model = () => {
                                             onClick={saveDetails}
                                             disabled={inProgress() === Action.UpdateDetails}
                                         >
-                                            <Show when={inProgress() === Action.UpdateDetails}>
-                                                <div class="spinner-border spinner-border-sm" role="status">
-                                                    <span class="visually-hidden">Loading...</span>
-                                                </div>
-                                            </Show>
+                                            <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                             <FloppyFill viewBox="0 0 16 16" />
                                             Save
                                         </button>
@@ -804,14 +789,14 @@ export const Model = () => {
                                                     <button
                                                         type="button"
                                                         class="btn icon-link py-0 px-1"
-                                                        onClick={() => setSelectedField({ ...mf })}
+                                                        onClick={() => setEditingField(mf)}
                                                     >
                                                         <PencilSquare viewBox="0 0 16 16" />
                                                     </button>
                                                     <button
                                                         type="button"
                                                         class="btn text-danger icon-link py-0 px-1 ms-2"
-                                                        onClick={() => deleteField(mf)}
+                                                        onClick={() => setDeletingField(mf)}
                                                     >
                                                         <XLg viewBox="0 0 16 16" />
                                                     </button>
@@ -847,12 +832,12 @@ export const Model = () => {
                     </div>
                 )}
             </Show>
-            <Show when={selectedField()}>
+            <Show when={editingField()}>
                 {(field) => (
                     <ModelFieldModal
-                        close={() => setSelectedField(undefined)}
-                        create={saveField}
-                        initial={field()}
+                        close={() => setEditingField(undefined)}
+                        create={(updatedField) => saveField(field().id, updatedField)}
+                        initial={{ ...field() }}
                     />
                 )}
             </Show>
@@ -861,6 +846,22 @@ export const Model = () => {
                     close={() => setCreatingField(false)}
                     create={createField}
                 />
+            </Show>
+            <Show when={deletingModel()}>
+                <DeleteConfirmModal
+                    message={<p>Are you sure about deleting the model <strong>{model()?.name}</strong>?</p>}
+                    close={() => setDeletingModel(false)}
+                    confirm={deleteModel}
+                />
+            </Show>
+            <Show when={deletingField()}>
+                {(field) => (
+                    <DeleteConfirmModal
+                        message={<p>Are you sure about deleting the field <strong>{field().name}</strong>?</p>}
+                        close={() => setDeletingField(undefined)}
+                        confirm={() => deleteField(field())}
+                    />
+                )}
             </Show>
         </div>
     );
