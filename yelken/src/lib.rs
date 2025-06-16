@@ -25,8 +25,8 @@ pub struct DatabaseConfig {
 async fn load_options(mut conn: PooledConnection) -> Options {
     let option_values = options::table
         .filter(options::namespace.is_null())
-        .filter(options::name.eq_any(&["theme", "default_locale"]))
-        .select((options::name, options::value))
+        .filter(options::key.eq_any(&["theme", "default_locale"]))
+        .select((options::key, options::value))
         .load::<(String, String)>(&mut conn)
         .await
         .unwrap();
@@ -94,11 +94,10 @@ pub async fn router(
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
 
-    let app = Router::new()
-        .nest_service(
-            "/assets/content",
-            ServeStorageDir::new(storage.clone(), || "assets".to_string()),
-        );
+    let app = Router::new().nest_service(
+        "/assets/content",
+        ServeStorageDir::new(storage.clone(), || "assets".to_string()),
+    );
 
     let app = {
         let options = options.clone();

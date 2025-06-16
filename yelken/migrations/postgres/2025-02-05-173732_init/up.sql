@@ -8,7 +8,7 @@ $$ language plpgsql;
 create table options(
     id        serial primary key not null,
     namespace varchar(128) default null,
-    name      varchar(128) not null,
+    key       varchar(128) not null,
     value     varchar(128) not null
 );
 
@@ -29,9 +29,11 @@ create table themes(
 );
 
 create table roles(
-    id    serial primary key not null,
-    name  varchar(32)        not null unique,
-    created_at timestamp     not null default current_timestamp
+    id         serial primary key not null,
+    key        varchar(128) not null,
+    name       varchar(128) not null,
+    "desc"     text         default null,
+    created_at timestamp    not null default current_timestamp
 );
 
 create table users(
@@ -52,7 +54,7 @@ create table permissions(
     id         serial  primary key not null,
     user_id    int default null,
     role_id    int default null,
-    name       varchar(32) not null,
+    key        varchar(32) not null,
     created_at timestamp   not null default current_timestamp,
     constraint fk_permissions_user_id foreign key (user_id) references users (id) on delete cascade on update no action,
     constraint fk_permissions_role_id foreign key (role_id) references roles (id) on delete cascade on update no action
@@ -66,6 +68,7 @@ create table locales(
 
 create table fields(
     id   serial primary key not null,
+    key  varchar(128)   not null,
     name varchar(128)   not null,
     kind varchar(16)    not null
 );
@@ -95,20 +98,25 @@ create trigger assets_updated_at
 execute procedure update_timestamp();
 
 create table models(
-    id        serial primary key  not null,
-    namespace varchar(128)  default null,
-    name      varchar(128) not null
+    id         serial primary key not null,
+    namespace  varchar(128) default null,
+    key        varchar(128) not null,
+    name       varchar(128) not null,
+    "desc"     text         default null,
+    created_at timestamp    not null default current_timestamp
 );
 
 create table model_fields(
     id        serial primary key not null,
     field_id  int not null,
     model_id  int not null,
+    key       varchar(128) not null,
     name      varchar(128) not null,
-    localized bool not null default false,
-    multiple  bool not null default false,
-    required  bool not null default false,
-    unique (field_id, model_id, name),
+    "desc"    text         default null,
+    localized bool         not null default false,
+    multiple  bool         not null default false,
+    required  bool         not null default false,
+    unique (model_id, key),
     constraint fk_model_fields_field_id foreign key (field_id) references fields (id) on delete no action on update no action,
     constraint fk_model_fields_model_id foreign key (model_id) references models (id) on delete cascade on update no action
 );
@@ -144,8 +152,10 @@ create table content_values(
 
 create table pages(
     id         serial primary key not null,
-    namespace  varchar(128)  default null,
+    namespace  varchar(128) default null,
+    key        varchar(128) not null,
     name       varchar(128) not null,
+    "desc"     text         default null,
     path       varchar(255) not null,
     template   varchar(128) not null,
     locale     varchar(8)   default null,

@@ -7,32 +7,13 @@ pub struct FilterByModel {
     pub model_id: i32,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModelField {
-    pub id: i32,
-    pub field_id: i32,
-    pub model_id: i32,
-    pub name: String,
-    pub localized: bool,
-    pub multiple: bool,
-    pub required: bool,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Model {
-    pub id: i32,
-    pub namespace: Option<String>,
-    pub name: String,
-    pub fields: Vec<ModelField>,
-}
-
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateModelField {
     pub field_id: i32,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub localized: bool,
     pub multiple: bool,
     pub required: bool,
@@ -41,9 +22,11 @@ pub struct CreateModelField {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateModel {
+    pub namespace: Option<String>,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub model_fields: Vec<CreateModelField>,
-    pub theme_scoped: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -72,4 +55,19 @@ pub struct UpdateContentStage {
 #[serde(rename_all = "camelCase")]
 pub struct UpdateContentValue {
     pub value: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateModel {
+    pub name: String,
+    pub desc: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateModelField {
+    pub name: String,
+    pub desc: Option<String>,
+    pub localized: bool,
+    pub required: bool,
+    pub multiple: bool,
 }

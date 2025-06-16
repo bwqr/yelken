@@ -82,7 +82,7 @@ fn create_user(
         .values(
             perms
                 .into_iter()
-                .map(|perm| (permissions::user_id.eq(user.id), permissions::name.eq(perm)))
+                .map(|perm| (permissions::user_id.eq(user.id), permissions::key.eq(perm)))
                 .collect::<Vec<_>>(),
         )
         .execute(&mut conn)

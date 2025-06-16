@@ -52,6 +52,8 @@ diesel::table! {
     fields (id) {
         id -> Int4,
         #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 128]
         name -> Varchar,
         #[max_length = 16]
         kind -> Varchar,
@@ -84,7 +86,10 @@ diesel::table! {
         field_id -> Int4,
         model_id -> Int4,
         #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 128]
         name -> Varchar,
+        desc -> Nullable<Text>,
         localized -> Bool,
         multiple -> Bool,
         required -> Bool,
@@ -97,7 +102,11 @@ diesel::table! {
         #[max_length = 128]
         namespace -> Nullable<Varchar>,
         #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 128]
         name -> Varchar,
+        desc -> Nullable<Text>,
+        created_at -> Timestamp,
     }
 }
 
@@ -107,7 +116,7 @@ diesel::table! {
         #[max_length = 128]
         namespace -> Nullable<Varchar>,
         #[max_length = 128]
-        name -> Varchar,
+        key -> Varchar,
         #[max_length = 128]
         value -> Varchar,
     }
@@ -119,7 +128,10 @@ diesel::table! {
         #[max_length = 128]
         namespace -> Nullable<Varchar>,
         #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 128]
         name -> Varchar,
+        desc -> Nullable<Text>,
         #[max_length = 255]
         path -> Varchar,
         #[max_length = 128]
@@ -136,7 +148,7 @@ diesel::table! {
         user_id -> Nullable<Int4>,
         role_id -> Nullable<Int4>,
         #[max_length = 32]
-        name -> Varchar,
+        key -> Varchar,
         created_at -> Timestamp,
     }
 }
@@ -158,8 +170,11 @@ diesel::table! {
 diesel::table! {
     roles (id) {
         id -> Int4,
-        #[max_length = 32]
+        #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 128]
         name -> Varchar,
+        desc -> Nullable<Text>,
         created_at -> Timestamp,
     }
 }

@@ -93,7 +93,9 @@ pub struct User {
 #[derive(Queryable, Serialize)]
 pub struct Role {
     pub id: i32,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub created_at: NaiveDateTime,
 }
 
@@ -104,26 +106,34 @@ pub struct Locale {
     pub disabled: bool,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Model {
     pub id: i32,
     pub namespace: Option<String>,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Queryable, Serialize)]
 pub struct Field {
     pub id: i32,
+    pub key: String,
     pub name: String,
     pub kind: String,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ModelField {
     pub id: i32,
     pub field_id: i32,
     pub model_id: i32,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub localized: bool,
     pub multiple: bool,
     pub required: bool,
@@ -185,7 +195,7 @@ pub struct Permission {
     pub id: i32,
     pub user_id: Option<i32>,
     pub role_id: Option<i32>,
-    pub name: String,
+    pub key: String,
     pub created_at: NaiveDateTime,
 }
 
@@ -194,7 +204,9 @@ pub struct Permission {
 pub struct Page {
     pub id: i32,
     pub namespace: Option<String>,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub path: String,
     pub template: String,
     pub locale: Option<String>,

@@ -1,5 +1,10 @@
-use axum::{extract::State, Extension, Json};
-use base::{config::Options, models::Page, responses::HttpError, schema::pages, AppState};
+use axum::{extract::State, Json};
+use base::{
+    models::Page,
+    responses::HttpError,
+    schema::{pages, themes},
+    AppState,
+};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -15,19 +20,24 @@ pub async fn fetch_pages(State(state): State<AppState>) -> Result<Json<Vec<Page>
 
 pub async fn create_page(
     State(state): State<AppState>,
-    Extension(options): Extension<Options>,
     Json(req): Json<CreatePage>,
 ) -> Result<Json<Page>, HttpError> {
     use diesel::dsl::{exists, select};
 
     let mut conn = state.pool.get().await?;
 
-    let theme = options.theme();
-
     let exists_query = pages::table.into_boxed();
 
-    let exists_query = if req.theme_scoped {
-        exists_query.filter(pages::namespace.eq(&*theme))
+    let exists_query = if let Some(namespace) = &req.namespace {
+        let theme = themes::table
+            .filter(themes::id.eq(namespace))
+            .select(themes::id)
+            .first::<String>(&mut conn)
+            .await
+            .optional()?
+            .ok_or_else(|| HttpError::not_found("namespace_not_found"))?;
+
+        exists_query.filter(pages::namespace.eq(theme))
     } else {
         exists_query.filter(pages::namespace.is_null())
     };
@@ -37,14 +47,14 @@ pub async fn create_page(
             pages::path
                 .eq(&req.path)
                 .and(pages::locale.eq(locale))
-                .or(pages::name.eq(&req.name)),
+                .or(pages::key.eq(&req.key)),
         )
     } else {
         exists_query.filter(
             pages::path
                 .eq(&req.path)
                 .and(pages::locale.is_null())
-                .or(pages::name.eq(&req.name)),
+                .or(pages::key.eq(&req.key)),
         )
     };
 
@@ -57,8 +67,10 @@ pub async fn create_page(
 
     diesel::insert_into(pages::table)
         .values((
-            pages::namespace.eq(req.theme_scoped.then_some(&*theme)),
+            pages::namespace.eq(req.namespace),
+            pages::key.eq(req.key),
             pages::name.eq(req.name),
+            pages::desc.eq(req.desc),
             pages::path.eq(req.path),
             pages::template.eq(req.template),
             pages::locale.eq(req.locale),

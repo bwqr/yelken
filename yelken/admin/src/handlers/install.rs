@@ -41,21 +41,28 @@ struct Content {
 
 #[derive(Debug, Deserialize)]
 struct ModelField {
-    name: String,
     field: String,
+    key: String,
+    name: String,
+    desc: Option<String>,
     localized: Option<bool>,
     multiple: Option<bool>,
+    required: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Model {
+    key: String,
     name: String,
+    desc: Option<String>,
     fields: Vec<ModelField>,
 }
 
 #[derive(Debug, Deserialize)]
 struct Page {
+    key: String,
     name: String,
+    desc: Option<String>,
     path: String,
     template: String,
     locale: Option<String>,
@@ -331,7 +338,9 @@ async fn create_theme(
                 .map(|page| {
                     (
                         pages::namespace.eq(manifest.id.clone()),
+                        pages::key.eq(page.key),
                         pages::name.eq(page.name),
+                        pages::desc.eq(page.desc),
                         pages::path.eq(page.path),
                         pages::template.eq(page.template),
                         pages::locale.eq(page.locale),
@@ -352,7 +361,9 @@ async fn create_theme(
                     .map(|model| {
                         (
                             models::namespace.eq(manifest.id.clone()),
+                            models::key.eq(model.key.clone()),
                             models::name.eq(model.name.clone()),
+                            models::desc.eq(model.desc.clone()),
                         )
                     })
                     .collect::<Vec<_>>(),
@@ -361,7 +372,7 @@ async fn create_theme(
             .get_results::<base::models::Model>(conn)
             .await?
             .into_iter()
-            .map(|model| (model.name.clone(), model)),
+            .map(|model| (model.key.clone(), model)),
     );
 
     let fields = HashMap::<String, Field>::from_iter(
@@ -369,7 +380,7 @@ async fn create_theme(
             .load::<Field>(conn)
             .await?
             .into_iter()
-            .map(|field| (field.name.clone(), field)),
+            .map(|field| (field.key.clone(), field)),
     );
 
     for model in manifest.models {
@@ -402,10 +413,13 @@ async fn create_theme(
                             (
                                 model_fields::model_id.eq(model_id),
                                 model_fields::field_id.eq(model_field.0),
+                                model_fields::key.eq(model_field.1.key.clone()),
+                                model_fields::name.eq(model_field.1.name.clone()),
+                                model_fields::desc.eq(model_field.1.desc.clone()),
                                 model_fields::localized
                                     .eq(model_field.1.localized.unwrap_or(false)),
                                 model_fields::multiple.eq(model_field.1.multiple.unwrap_or(false)),
-                                model_fields::name.eq(model_field.1.name.clone()),
+                                model_fields::required.eq(model_field.1.required.unwrap_or(false)),
                             )
                         })
                         .collect::<Vec<_>>(),
@@ -414,7 +428,7 @@ async fn create_theme(
                 .get_results::<base::models::ModelField>(conn)
                 .await?
                 .into_iter()
-                .map(|mf| (mf.name.clone(), mf)),
+                .map(|mf| (mf.key.clone(), mf)),
         );
 
         for content in manifest.contents.iter().filter(|c| c.model == model.name) {

@@ -1,7 +1,7 @@
 create table options(
     id        integer primary key autoincrement,
     namespace varchar(128) default null,
-    name      varchar(128) not null,
+    key       varchar(128) not null,
     value     varchar(128) not null
 );
 
@@ -22,9 +22,11 @@ create table themes(
 );
 
 create table roles(
-    id    integer primary key autoincrement,
-    name  varchar(32)        not null unique,
-    created_at timestamp     not null default current_timestamp
+    id         integer primary key autoincrement,
+    key        varchar(128) not null,
+    name       varchar(128) not null,
+    "desc"     text         default null,
+    created_at timestamp    not null default current_timestamp
 );
 
 create table users(
@@ -46,7 +48,7 @@ create table permissions(
     id         integer primary key autoincrement,
     user_id    int default null,
     role_id    int default null,
-    name       varchar(32) not null,
+    key        varchar(32) not null,
     created_at timestamp   not null default current_timestamp,
     foreign key (user_id) references users (id) on delete cascade on update no action,
     foreign key (role_id) references roles (id) on delete cascade on update no action
@@ -60,6 +62,7 @@ create table locales(
 
 create table fields(
     id   integer primary key autoincrement,
+    key  varchar(128)   not null,
     name varchar(128)   not null,
     kind varchar(16)    not null
 );
@@ -89,20 +92,25 @@ create trigger assets_updated_at update of name on assets
   end;
 
 create table models(
-    id        integer primary key autoincrement,
-    namespace varchar(128)  default null,
-    name      varchar(128) not null
+    id         integer primary key autoincrement,
+    namespace  varchar(128) default null,
+    key        varchar(128) not null,
+    name       varchar(128) not null,
+    "desc"     text         default null,
+    created_at timestamp    not null default current_timestamp
 );
 
 create table model_fields(
     id        integer primary key autoincrement,
     field_id  int not null,
     model_id  int not null,
+    key       varchar(128) not null,
     name      varchar(128) not null,
-    localized bool not null default false,
-    multiple  bool not null default false,
-    required  bool not null default false,
-    unique (field_id, model_id, name),
+    "desc"    text         default null,
+    localized bool         not null default false,
+    multiple  bool         not null default false,
+    required  bool         not null default false,
+    unique (model_id, key),
     foreign key (field_id) references fields (id) on delete no action on update no action,
     foreign key (model_id) references models (id) on delete cascade on update no action
 );
@@ -139,8 +147,10 @@ create table content_values(
 
 create table pages(
     id         integer primary key autoincrement,
-    namespace  varchar(128)  default null,
+    namespace  varchar(128) default null,
+    key        varchar(128) not null,
     name       varchar(128) not null,
+    "desc"     text         default null,
     path       varchar(255) not null,
     template   varchar(128) not null,
     locale     varchar(8)   default null,

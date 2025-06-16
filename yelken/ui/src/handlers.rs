@@ -113,7 +113,7 @@ pub async fn serve_page(
                 .is_null()
                 .or(pages::namespace.eq(&*options.theme())),
         )
-        .select((pages::name, pages::path, pages::template, pages::locale))
+        .select((pages::key, pages::path, pages::template, pages::locale))
         .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
         .await?;
 
@@ -125,7 +125,7 @@ pub async fn serve_page(
     let template_pages: Arc<[Page]> = pages
         .iter()
         .map(|page| Page {
-            name: page.0.clone(),
+            key: page.0.clone(),
             path: page.1.clone(),
             locale: page
                 .3
@@ -137,9 +137,9 @@ pub async fn serve_page(
 
     pages
         .into_iter()
-        .for_each(|(name, path, template, locale)| {
+        .for_each(|(key, path, template, locale)| {
             let Ok(locale) = locale.map(|l| l.parse::<LanguageIdentifier>()).transpose() else {
-                log::warn!("invalid language identifier is found in page {name}");
+                log::warn!("invalid language identifier is found in page {key}");
                 return;
             };
 
@@ -156,14 +156,14 @@ pub async fn serve_page(
                 _ => path.to_string(),
             };
 
-            if let Err(e) = router.insert(localized_path, (name.clone(), template, locale)) {
-                log::warn!("Failed to add path {path} of page {name} due to {e:?}");
+            if let Err(e) = router.insert(localized_path, (key.clone(), template, locale)) {
+                log::warn!("Failed to add path {path} of page {key} due to {e:?}");
             }
         });
 
     let Ok(Match {
         params,
-        value: (name, template, page_locale),
+        value: (key, template, page_locale),
     }) = router.at(req.uri().path())
     else {
         if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
@@ -235,7 +235,7 @@ pub async fn serve_page(
         if !page_locale.matches(&current_locale, true, true)
             && router
                 .at(localized_path)
-                .map(|localized_route| localized_route.value.0 == *name)
+                .map(|localized_route| localized_route.value.0 == *key)
                 .unwrap_or(false)
         {
             return Ok(Response::builder()

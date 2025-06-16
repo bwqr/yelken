@@ -33,15 +33,13 @@ pub async fn update_role_permissions(
         .await?
         .transaction(|conn| {
             async move {
-                let Some(role_id) = roles::table
+                let role_id = roles::table
                     .filter(roles::id.eq(role_id))
                     .select(roles::id)
                     .first::<i32>(conn)
                     .await
                     .optional()?
-                else {
-                    return Err(HttpError::not_found("role_not_found"));
-                };
+                    .ok_or_else(|| HttpError::not_found("role_not_found"))?;
 
                 diesel::delete(permissions::table)
                     .filter(permissions::role_id.eq(role_id))
@@ -53,7 +51,7 @@ pub async fn update_role_permissions(
                     .map(|perm| {
                         (
                             permissions::role_id.eq(role_id),
-                            permissions::name.eq(perm.as_str()),
+                            permissions::key.eq(perm.as_str()),
                         )
                     })
                     .collect::<Vec<_>>();
@@ -101,15 +99,13 @@ pub async fn update_user_permissions(
         .await?
         .transaction(|conn| {
             async move {
-                let Some(user_id) = users::table
+                let user_id = users::table
                     .filter(users::id.eq(user_id))
                     .select(users::id)
                     .first::<i32>(conn)
                     .await
                     .optional()?
-                else {
-                    return Err(HttpError::not_found("user_not_found"));
-                };
+                    .ok_or_else(|| HttpError::not_found("user_not_found"))?;
 
                 diesel::delete(permissions::table)
                     .filter(permissions::user_id.eq(user_id))
@@ -121,7 +117,7 @@ pub async fn update_user_permissions(
                     .map(|perm| {
                         (
                             permissions::user_id.eq(user_id),
-                            permissions::name.eq(perm.as_str()),
+                            permissions::key.eq(perm.as_str()),
                         )
                     })
                     .collect::<Vec<_>>();

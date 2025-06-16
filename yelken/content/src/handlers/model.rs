@@ -1,10 +1,16 @@
-use crate::requests::{CreateModel, Model, ModelField};
-use axum::{extract::State, Extension, Json};
+use crate::{
+    requests::{CreateModel, CreateModelField, UpdateModel, UpdateModelField},
+    responses::Model,
+};
+use axum::{
+    extract::{Path, State},
+    Json,
+};
 use base::{
-    config::Options,
     db::BatchQuery,
+    models::ModelField,
     responses::HttpError,
-    schema::{model_fields, models},
+    schema::{model_fields, models, themes},
     AppState,
 };
 use diesel::prelude::*;
@@ -15,31 +21,19 @@ pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Mode
 
     let models = models::table.load::<base::models::Model>(&mut conn).await?;
 
-    let model_fields = model_fields::table
+    let mut model_fields = model_fields::table
         .load::<base::models::ModelField>(&mut conn)
         .await?;
 
     Ok(Json(
         models
             .into_iter()
-            .map(|m| Model {
-                id: m.id,
-                namespace: m.namespace,
-                name: m.name,
-                fields: model_fields
-                    .iter()
-                    .filter_map(|mf| {
-                        (mf.model_id == m.id).then(|| ModelField {
-                            id: mf.id,
-                            field_id: mf.field_id,
-                            model_id: mf.model_id,
-                            name: mf.name.clone(),
-                            localized: mf.localized,
-                            multiple: mf.multiple,
-                            required: mf.required,
-                        })
-                    })
-                    .collect(),
+            .map(|m| {
+                let fields = model_fields
+                    .extract_if(.., |mf| mf.model_id == m.id)
+                    .collect();
+
+                Model { model: m, fields }
             })
             .collect(),
     ))
@@ -47,26 +41,27 @@ pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Mode
 
 pub async fn create_model(
     State(state): State<AppState>,
-    Extension(options): Extension<Options>,
     Json(req): Json<CreateModel>,
 ) -> Result<Json<Model>, HttpError> {
     let mut conn = state.pool.get().await?;
 
-    let theme = options.theme();
+    let exists = if let Some(namespace) = &req.namespace {
+        let theme = themes::table
+            .filter(themes::id.eq(namespace))
+            .select(themes::id)
+            .first::<String>(&mut conn)
+            .await
+            .optional()?
+            .ok_or_else(|| HttpError::not_found("namespace_not_found"))?;
 
-    let exists = if req.theme_scoped {
         diesel::dsl::select(diesel::dsl::exists(
-            models::table.filter(
-                models::namespace
-                    .eq(&*theme)
-                    .and(models::name.eq(&req.name)),
-            ),
+            models::table.filter(models::namespace.eq(theme).and(models::key.eq(&req.key))),
         ))
         .get_result::<bool>(&mut conn)
         .await
     } else {
         diesel::dsl::select(diesel::dsl::exists(
-            models::table.filter(models::namespace.is_null().and(models::name.eq(&req.name))),
+            models::table.filter(models::namespace.is_null().and(models::key.eq(&req.key))),
         ))
         .get_result::<bool>(&mut conn)
         .await
@@ -76,13 +71,15 @@ pub async fn create_model(
         return Err(HttpError::conflict("model_already_exists"));
     }
 
-    let (model, model_fields) = conn
+    let (model, fields) = conn
         .transaction(|conn| {
             async move {
                 let model = diesel::insert_into(models::table)
                     .values((
-                        models::namespace.eq(req.theme_scoped.then_some(&*theme)),
+                        models::namespace.eq(req.namespace),
+                        models::key.eq(req.key),
                         models::name.eq(req.name),
+                        models::desc.eq(req.desc),
                     ))
                     .get_result::<base::models::Model>(conn)
                     .await?;
@@ -95,7 +92,9 @@ pub async fn create_model(
                                 (
                                     model_fields::field_id.eq(mf.field_id),
                                     model_fields::model_id.eq(model.id),
+                                    model_fields::key.eq(mf.key),
                                     model_fields::name.eq(mf.name),
+                                    model_fields::desc.eq(mf.desc),
                                     model_fields::localized.eq(mf.localized),
                                     model_fields::multiple.eq(mf.multiple),
                                     model_fields::required.eq(mf.required),
@@ -116,21 +115,121 @@ pub async fn create_model(
         })
         .await?;
 
-    Ok(Json(Model {
-        id: model.id,
-        namespace: model.namespace,
-        name: model.name,
-        fields: model_fields
-            .into_iter()
-            .map(|mf| ModelField {
-                id: mf.id,
-                field_id: mf.field_id,
-                model_id: mf.model_id,
-                name: mf.name.clone(),
-                localized: mf.localized,
-                multiple: mf.multiple,
-                required: mf.required,
-            })
-            .collect(),
-    }))
+    Ok(Json(Model { model, fields }))
+}
+
+pub async fn update_model(
+    State(state): State<AppState>,
+    Path(model_id): Path<i32>,
+    Json(req): Json<UpdateModel>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(models::table)
+        .filter(models::id.eq(model_id))
+        .set((models::name.eq(req.name), models::desc.eq(req.desc)))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("model_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn delete_model(
+    State(state): State<AppState>,
+    Path(model_id): Path<i32>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::delete(models::table)
+        .filter(models::id.eq(model_id))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("model_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn create_model_field(
+    State(state): State<AppState>,
+    Path(model_id): Path<i32>,
+    Json(req): Json<CreateModelField>,
+) -> Result<Json<ModelField>, HttpError> {
+    diesel::insert_into(model_fields::table)
+        .values((
+            model_fields::field_id.eq(req.field_id),
+            model_fields::model_id.eq(model_id),
+            model_fields::key.eq(req.key),
+            model_fields::name.eq(req.name),
+            model_fields::desc.eq(req.desc),
+            model_fields::localized.eq(req.localized),
+            model_fields::multiple.eq(req.multiple),
+            model_fields::required.eq(req.required),
+        ))
+        .get_result::<ModelField>(&mut state.pool.get().await?)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            use diesel::result::{DatabaseErrorKind, Error};
+
+            match e {
+                Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, ref info) => {
+                    if let Some(name) = info.constraint_name() {
+                        if name.contains("model_id") {
+                            return HttpError::conflict("model_not_found");
+                        } else if name.contains("field_id") {
+                            return HttpError::conflict("field_not_found");
+                        }
+                    }
+
+                    return e.into();
+                }
+                Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => {
+                    HttpError::conflict("model_field_already_exists")
+                }
+                e => e.into(),
+            }
+        })
+}
+
+pub async fn update_model_field(
+    State(state): State<AppState>,
+    Path(model_field_id): Path<i32>,
+    Json(req): Json<UpdateModelField>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(model_fields::table)
+        .filter(model_fields::id.eq(model_field_id))
+        .set((
+            model_fields::name.eq(req.name),
+            model_fields::desc.eq(req.desc),
+            model_fields::localized.eq(req.localized),
+            model_fields::required.eq(req.required),
+            model_fields::multiple.eq(req.multiple),
+        ))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("model_field_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn delete_model_field(
+    State(state): State<AppState>,
+    Path(model_field_id): Path<i32>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::delete(model_fields::table)
+        .filter(model_fields::id.eq(model_field_id))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("model_field_not_found"));
+    }
+
+    Ok(())
 }

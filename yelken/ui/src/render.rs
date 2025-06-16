@@ -24,7 +24,7 @@ pub mod context {
 
     #[derive(Debug)]
     pub struct Page {
-        pub name: String,
+        pub key: String,
         pub locale: LanguageIdentifier,
         pub path: String,
     }
@@ -135,7 +135,10 @@ async fn load_templates(storage: &Operator, locations: &[Location]) -> Vec<(Stri
             }
 
             let Some(key) = entry.path().strip_prefix(&prefix) else {
-                log::debug!("Encoutered invalid prefix while loading template {}", entry.path());
+                log::debug!(
+                    "Encoutered invalid prefix while loading template {}",
+                    entry.path()
+                );
 
                 continue;
             };
@@ -308,7 +311,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
             .downcast_object()
             .expect("locale variable does not have expected type");
 
-        if let Some(name) = args.get::<'_, Option<String>>("page")? {
+        if let Some(key) = args.get::<'_, Option<String>>("page")? {
             let page_context: Arc<PageContext> = state
                 .lookup("pages")
                 .expect("could not find pages in render context")
@@ -318,7 +321,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
             let path_params: Vec<String> = args.get("params")?;
 
             for p in page_context.pages.into_iter() {
-                if name != p.name || locale.current != p.locale {
+                if key != p.key || locale.current != p.locale {
                     continue;
                 }
 
@@ -373,7 +376,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
             let id: Result<i32, HttpError> = block_on(async move {
                 Ok(enum_options::table
                     .inner_join(fields::table)
-                    .filter(fields::name.eq(field))
+                    .filter(fields::key.eq(field))
                     .filter(enum_options::value.eq(value))
                     .select(enum_options::id)
                     .first::<i32>(&mut pool.get().await?)
@@ -412,7 +415,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
                     let model_id = models::table
                         .filter(
-                            models::name.eq(model).and(
+                            models::key.eq(model).and(
                                 models::namespace
                                     .is_null()
                                     .or(models::namespace.eq(&namespace)),
@@ -427,7 +430,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         .filter(model_fields::model_id.eq(model_id))
                         .select((
                             model_fields::id,
-                            model_fields::name,
+                            model_fields::key,
                             model_fields::multiple,
                             fields::kind,
                         ))
@@ -475,7 +478,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
                     let mut content = BTreeMap::new();
 
-                    for (model_field_id, model_field_name, multiple, kind) in model_fields {
+                    for (model_field_id, model_field_key, multiple, kind) in model_fields {
                         let mut values = content_values.iter().filter(|cv| cv.0 == model_field_id);
 
                         let value = if multiple {
@@ -491,7 +494,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         };
 
                         if let Some(value) = value {
-                            content.insert(model_field_name.clone(), value);
+                            content.insert(model_field_key.clone(), value);
                         }
                     }
 
@@ -541,7 +544,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
                     let model_id = models::table
                         .filter(
-                            models::name.eq(model).and(
+                            models::key.eq(model).and(
                                 models::namespace
                                     .is_null()
                                     .or(models::namespace.eq(&namespace)),
@@ -554,10 +557,10 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     let model_fields = model_fields::table
                         .inner_join(fields::table)
                         .filter(model_fields::model_id.eq(model_id))
-                        .filter(model_fields::name.eq_any(&fields))
+                        .filter(model_fields::key.eq_any(&fields))
                         .select((
                             model_fields::id,
-                            model_fields::name,
+                            model_fields::key,
                             model_fields::multiple,
                             fields::kind,
                         ))
@@ -591,7 +594,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                         .filter(
                                             c2.field(contents::stage).eq(ContentStage::Published),
                                         )
-                                        .filter(mf2.field(model_fields::name).eq(&filter[0]))
+                                        .filter(mf2.field(model_fields::key).eq(&filter[0]))
                                         .filter(cv2.field(content_values::value).eq(&filter[1])),
                                 ),
                             )

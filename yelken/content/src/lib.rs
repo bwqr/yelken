@@ -31,6 +31,11 @@ pub fn router(state: AppState) -> Router<AppState> {
 
     let content_write = Router::new()
         .route("/model", post(model::create_model))
+        .route("/model/{id}", put(model::update_model))
+        .route("/model/{id}", delete(model::delete_model))
+        .route("/model/{id}/field", post(model::create_model_field))
+        .route("/model-field/{id}", put(model::update_model_field))
+        .route("/model-field/{id}", delete(model::delete_model_field))
         .route("/assets", post(asset::create_asset))
         .route("/asset/{id}", delete(asset::delete_asset))
         .route("/content", post(content::create_content))

@@ -98,7 +98,7 @@ pub async fn fetch_user(
 
     let perms = permissions::table
         .filter(permissions::user_id.eq(user.id))
-        .select(permissions::name)
+        .select(permissions::key)
         .load::<String>(&mut conn)
         .await?;
 

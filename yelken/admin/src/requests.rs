@@ -10,7 +10,9 @@ pub struct CreateUser {
 
 #[derive(Deserialize)]
 pub struct CreateRole {
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -22,11 +24,13 @@ pub struct CreateLocale {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatePage {
+    pub namespace: Option<String>,
+    pub key: String,
     pub name: String,
+    pub desc: Option<String>,
     pub path: String,
     pub template: String,
     pub locale: Option<String>,
-    pub theme_scoped: bool,
 }
 
 #[derive(Deserialize)]

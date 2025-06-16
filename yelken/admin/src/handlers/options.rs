@@ -28,14 +28,14 @@ pub async fn update_theme(
         .await?;
 
     let effected_row: usize = diesel::update(options::table)
-        .filter(options::namespace.is_null().and(options::name.eq("theme")))
+        .filter(options::namespace.is_null().and(options::key.eq("theme")))
         .set(options::value.eq(&theme))
         .execute(&mut conn)
         .await?;
 
     if effected_row == 0 {
         diesel::insert_into(options::table)
-            .values((options::name.eq("theme"), options::value.eq(&theme)))
+            .values((options::key.eq("theme"), options::value.eq(&theme)))
             .execute(&mut conn)
             .await?;
     }
@@ -86,7 +86,7 @@ pub async fn update_default_locale(
         .filter(
             options::namespace
                 .is_null()
-                .and(options::name.eq("default_locale")),
+                .and(options::key.eq("default_locale")),
         )
         .set(options::value.eq(&locale))
         .execute(&mut conn)
@@ -95,7 +95,7 @@ pub async fn update_default_locale(
     if effected_row == 0 {
         diesel::insert_into(options::table)
             .values((
-                options::name.eq("default_locale"),
+                options::key.eq("default_locale"),
                 options::value.eq(&locale),
             ))
             .execute(&mut conn)

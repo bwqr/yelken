@@ -40,7 +40,7 @@ pub async fn fetch_role(
 
     let perms = permissions::table
         .filter(permissions::role_id.eq(role_id))
-        .select(permissions::name)
+        .select(permissions::key)
         .load::<String>(&mut conn)
         .await?;
 
@@ -62,7 +62,11 @@ pub async fn create_role(
     Json(req): Json<CreateRole>,
 ) -> Result<Json<Role>, HttpError> {
     diesel::insert_into(roles::table)
-        .values(roles::name.eq(req.name))
+        .values((
+            roles::key.eq(req.key),
+            roles::name.eq(req.name),
+            roles::desc.eq(req.desc),
+        ))
         .get_result::<Role>(&mut state.pool.get().await?)
         .await
         .map(Json)

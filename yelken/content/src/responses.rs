@@ -20,3 +20,11 @@ pub struct Options {
     pub theme: String,
     pub default_locale: String,
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Model {
+    #[serde(flatten)]
+    pub model: base::models::Model,
+    pub fields: Vec<base::models::ModelField>,
+}

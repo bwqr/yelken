@@ -142,7 +142,7 @@ where
                         .filter(
                             users::id
                                 .eq(user.id)
-                                .and(permissions::name.eq(*&layer.perm.as_str())),
+                                .and(permissions::key.eq(*&layer.perm.as_str())),
                         ),
                 ))
                 .get_result::<bool>(&mut conn)
