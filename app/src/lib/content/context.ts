@@ -1,6 +1,6 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
 import { PaginationRequest } from '../models';
-import { Model, type ModelResponse, type Asset, type Content, type ContentDetails, type ContentStage, type Field, type Locale, type Options, type ModelField } from "./models";
+import { Content, Model, type ModelResponse, type Asset, type ContentDetails, type ContentStage, type Field, type Locale, type Options, type ModelField, type ContentResponse, type ContentDetailsResponse } from "./models";
 import type { CreateContent, CreateModel, CreateModelField, UpdateModelField } from "./requests";
 import { Api } from "../api";
 import type { Pagination } from "../models";
@@ -131,11 +131,13 @@ export class ContentService implements ContentStore {
 
         params.append('modelId', modelId.toString());
 
-        return Api.get(`/content/contents?${params.toString()}`)
+        return Api.get<Pagination<ContentResponse>>(`/content/contents?${params.toString()}`)
+            .then((pg) => ({ ...pg, items: pg.items.map(Content.fromResponse) }))
     }
 
     async fetchContent(id: number): Promise<ContentDetails> {
-        return Api.get(`/content/content/${id}`)
+        return Api.get<ContentDetailsResponse>(`/content/content/${id}`)
+            .then((resp) => ({ ...resp, content: Content.fromResponse(resp.content) }));
     }
 
     async updateContentStage(id: number, stage: ContentStage): Promise<void> {

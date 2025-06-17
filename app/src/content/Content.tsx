@@ -3,15 +3,231 @@ import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage, FieldKind, Model } from "../lib/content/models";
+import { ContentStage, FieldKind, Model, type ModelField } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
-import { BookmarkCheck, BookmarkCheckFill, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
+import { BookmarkCheck, BookmarkCheckFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, QuestionSquare, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { dropdownClickListener } from "../lib/utils";
+import ProgressSpinner from "../components/ProgressSpinner";
+import * as config from '../lib/config';
+
+function imageFile(filename: string): boolean {
+    return ['.bmp', '.png', '.ico', '.tif', '.tiff', '.jpeg', '.jpg', '.webp', '.svg', '.gif'].findIndex((ext) => filename.endsWith(ext)) > -1;
+}
+
+const ContentValueModal = (props: {
+    close: () => void;
+    create: (field: CreateContentValue) => Promise<void> | void;
+    modelField: ModelField,
+    initial?: CreateContentValue
+}) => {
+    enum ValidationError {
+        Value,
+        Locale,
+    }
+
+    const alertCtx = useContext(AlertContext)!;
+    const contentCtx = useContext(ContentContext)!;
+
+    const [store, setStore] = createStore(props.initial ?? {
+        value: '',
+        locale: '',
+    });
+
+    const [inProgress, setInProgress] = createSignal(false);
+    const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
+    const [serverError, setServerError] = createSignal(undefined as string | undefined);
+
+    const [showPickAsset, setShowPickAsset] = createSignal(false);
+
+    const field = () => contentCtx.fields().find((f) => f.id === props.modelField.fieldId);
+
+    const close = () => {
+        if (inProgress()) {
+            return;
+        }
+
+        props.close();
+    }
+
+    const createValue = (ev: SubmitEvent) => {
+        ev.preventDefault();
+
+        if (inProgress()) {
+            return;
+        }
+
+        setServerError(undefined);
+
+        const errors = new Set<ValidationError>();
+
+        if (store.value.trim().length === 0) {
+            errors.add(ValidationError.Value);
+        }
+
+        if (props.modelField.localized && store.locale?.length === 0) {
+            errors.add(ValidationError.Locale);
+        }
+
+        setValidationErrors(errors);
+
+        if (errors.size > 0) {
+            return;
+        }
+
+        const promise = props.create({
+            modelFieldId: props.modelField.id,
+            value: store.value.trim(),
+            locale: props.modelField.localized ? store.locale : undefined
+        });
+
+        if (promise instanceof Promise) {
+            setInProgress(true);
+
+            promise
+                .catch((e) => {
+                    if (e instanceof HttpError) {
+                        setServerError(e.error);
+                    } else {
+                        alertCtx.fail(e.message);
+                    }
+                })
+                .finally(() => setInProgress(false));
+        }
+    };
+
+    return (
+        <>
+            <div class="modal show d-block" tabindex="-1" aria-labelledby="createModelFieldModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <form class="modal-content" onSubmit={createValue}>
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{props.initial ? 'Edit Value' : 'Add Value'}</h1>
+                        </div>
+                        <div class="modal-body">
+                            <Show when={field()} fallback={<p>Unknown field</p>}>
+                                {(field) => (
+                                    <>
+                                        <div>
+                                            <label for="modelFieldName" class="form-label">{props.modelField.name}</label>
+                                            <Switch fallback={<p>Unsupported field</p>}>
+                                                <Match when={field().kind === FieldKind.Asset}>
+                                                    <Show when={store.value}>
+                                                        <div class="mb-2" style="height: 6rem">
+                                                            <Show when={imageFile(store.value)} fallback={
+                                                                <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
+                                                            }>
+                                                                <img
+                                                                    class="d-block m-auto w-auto"
+                                                                    src={`${config.API_URL}/assets/content/${store.value}`}
+                                                                    alt={store.value}
+                                                                    style="max-height: 100%;"
+                                                                />
+                                                            </Show>
+                                                        </div>
+                                                    </Show>
+                                                    <input
+                                                        id="modelFieldValue"
+                                                        name="modelFieldValue"
+                                                        type="text"
+                                                        class="form-control"
+                                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Value) }}
+                                                        value={store.value}
+                                                        disabled={true}
+                                                    />
+                                                    <Show when={validationErrors().has(ValidationError.Value)}>
+                                                        <small class="invalid-feedback">Please pick an asset for {props.modelField.name}.</small>
+                                                    </Show>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-secondary icon-link mt-2"
+                                                        classList={{ 'btn-warning': validationErrors().has(ValidationError.Value) }}
+                                                        onClick={() => setShowPickAsset(true)}
+                                                    >
+                                                        <Images viewBox="0 0 16 16" />
+                                                        Pick Asset
+                                                    </button>
+                                                </Match>
+                                                <Match when={field().kind === FieldKind.String || field().kind === FieldKind.Integer}>
+                                                    <input
+                                                        id="modelFieldValue"
+                                                        name="modelFieldValue"
+                                                        type={field().kind === FieldKind.Integer ? 'number' : 'text'}
+                                                        class="form-control"
+                                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Value) }}
+                                                        value={store.value}
+                                                        onInput={(ev) => setStore('value', ev.target.value)}
+                                                    />
+                                                    <Show when={validationErrors().has(ValidationError.Value)}>
+                                                        <small class="invalid-feedback">Please enter a value for {props.modelField.name}.</small>
+                                                    </Show>
+                                                </Match>
+                                            </Switch>
+                                        </div>
+
+                                        <Show when={props.modelField.localized}>
+                                            <div class="mt-4">
+                                                <label for="modelFieldLocale" class="form-label">Locale</label>
+                                                <select
+                                                    id="modelFieldLocale"
+                                                    class="form-select"
+                                                    classList={{ 'is-invalid': validationErrors().has(ValidationError.Locale) }}
+                                                    name="modelFieldLocale"
+                                                    value={store.locale}
+                                                    onChange={(ev) => setStore('locale', ev.target.value)}
+                                                >
+                                                    <option value="" disabled selected>Select a locale</option>
+                                                    <For each={contentCtx.activeLocales()}>
+                                                        {(locale) => (
+                                                            <option value={locale.key}>{locale.name}</option>
+                                                        )}
+                                                    </For>
+                                                </select>
+                                                <Show when={validationErrors().has(ValidationError.Locale)}>
+                                                    <small class="invalid-feedback">Please select a locale.</small>
+                                                </Show>
+                                            </div>
+                                        </Show>
+                                    </>
+                                )}
+                            </Show>
+
+                            <Show when={serverError()}>
+                                <div class="mt-2">
+                                    <small class="text-danger">{serverError()}</small>
+                                </div>
+                            </Show>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>Discard</button>
+                            <button type="submit" class="btn btn-primary icon-link" disabled={inProgress()}>
+                                <ProgressSpinner show={inProgress()} />
+                                <Dynamic component={props.initial ? FloppyFill : PlusLg} viewBox="0 0 16 16" />
+                                {props.initial ? 'Save' : 'Add'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <Show when={showPickAsset()}>
+                <PickAsset
+                    pick={(asset) => {
+                        setStore('value', asset.filename);
+                        setShowPickAsset(false);
+                    }}
+                    close={() => setShowPickAsset(false)}
+                />
+            </Show>
+
+            <div class="modal-backdrop show"></div>
+        </>
+    );
+}
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
     const models = useContext(ContentContext)!.models();
@@ -20,21 +236,24 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
         <div class="d-flex flex-grow-1">
             <nav id="second-nav" class="h-100" style="width: 13rem; border-right: 1px solid #d8d8d8">
                 <p class="ps-3 mt-4 mb-2 text-uppercase"><b>Models</b></p>
-                <ul class="navbar-nav mb-4 highlight-links">
-                    <For each={models}>
-                        {(model) => (
-                            <li class="nav-item">
-                                <A
-                                    href={`/contents/by-model/${model.urlPath()}`}
-                                    class="nav-link d-block ps-3 pe-4 py-2"
-                                >
-                                    {model.name}
-                                    {model.namespace ? ` (${model.namespace})` : ''}
-                                </A>
-                            </li>
-                        )}
-                    </For>
-                </ul>
+                <Show when={models.length > 0} fallback={
+                    <p class="ps-3 mt-4 mb-2 text-secondary">No model found</p>
+                }>
+                    <ul class="navbar-nav mb-4 highlight-links">
+                        <For each={models}>
+                            {(model) => (
+                                <li class="nav-item">
+                                    <A
+                                        href={`/contents/by-model/${model.urlPath()}`}
+                                        class="nav-link d-block ps-3 pe-4 py-2"
+                                    >
+                                        {model.title()}
+                                    </A>
+                                </li>
+                            )}
+                        </For>
+                    </ul>
+                </Show>
             </nav>
             <main class="flex-grow-1">
                 {props.children}
@@ -46,9 +265,13 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 export const Contents = () => {
     const contentCtx = useContext(ContentContext)!;
     return (
-        <Show when={contentCtx.models()[0]}>
-            {(model) => (<Navigate href={`/contents/by-model/${model().urlPath()}`} />)}
-        </Show>
+        <div class="container py-4 px-md-4">
+            <Show when={contentCtx.models()[0]} fallback={
+                <p class="text-secondary text-center">A <strong>Model</strong> needs to be created first to create a <strong>Content</strong>. You can create a new model in <A href="/models">Models</A> page.</p>
+            }>
+                {(model) => (<Navigate href={`/contents/by-model/${model().urlPath()}`} />)}
+            </Show>
+        </div>
     );
 };
 
@@ -82,19 +305,23 @@ export const ContentsByModel = () => {
                 </Show>
             </div>
 
-            <div class="row m-0">
-                <div class="offset-md-2 col-md-8">
-                    <Switch>
-                        <Match when={!model()}>
-                            Choose a model from left
-                        </Match>
-                        <Match when={contents.loading}>Loading ...</Match>
-                        <Match when={contents.error}>Error: {contents.error}</Match>
-                        <Match when={contents()}>
-                            {(contents) => (
-                                <Show when={contents().items.length > 0} fallback={
-                                    <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
-                                }>
+            <Switch>
+                <Match when={!model()}>
+                    <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
+                </Match>
+                <Match when={contents.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={contents.error}>
+                    <p class="text-danger">Error while fetching contents: <strong>{contents.error.message}</strong></p>
+                </Match>
+                <Match when={contents()}>
+                    {(contents) => (
+                        <Show when={contents().items.length > 0} fallback={
+                            <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
+                        }>
+                            <div class="row">
+                                <div class="offset-md-2 col-md-8">
                                     <table class="table table-hover mb-4 border shadow-sm">
                                         <thead>
                                             <tr>
@@ -113,7 +340,7 @@ export const ContentsByModel = () => {
                                                         <td>{content.id}</td>
                                                         <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
                                                         <td>{content.stage}</td>
-                                                        <td>{content.createdAt}</td>
+                                                        <td>{content.createdAt.toDateString()}</td>
                                                     </tr>
                                                 )}
                                             </For>
@@ -126,12 +353,12 @@ export const ContentsByModel = () => {
                                         perPage={pagination().perPage}
                                         pageChange={(page) => setSearchParams({ page: page.toString() })}
                                     />
-                                </Show>
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
-            </div>
+                                </div>
+                            </div>
+                        </Show>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 };
@@ -147,11 +374,12 @@ export const CreateContent = () => {
     const params = useParams();
     const navigate = useNavigate();
 
+    const locales = contentCtx.activeLocales();
     const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [name, setName] = createSignal('');
     const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);
-    const [showPickAsset, setShowPickAsset] = createSignal(undefined as CreateContentValue | undefined);
+    const [showContentValueModal, setShowContentValueModal] = createSignal(undefined as { modelField: ModelField, initial?: CreateContentValue } | undefined);
 
     createEffect(() => {
         const m = model();
@@ -202,13 +430,13 @@ export const CreateContent = () => {
         })
             .then((content) => {
                 alertCtx.success('Content is created successfully');
-                navigate(`/content/content/${content.id}`, { replace: true });
+                navigate(`/contents/view/${content.id}`, { replace: true });
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
                 } else {
-                    throw e;
+                    alertCtx.fail(e.message);
                 }
             })
             .finally(() => setInProgress(false));
@@ -218,126 +446,135 @@ export const CreateContent = () => {
         <div class="container py-4 px-md-4">
             <h2 class="mb-4">Create Content</h2>
 
-            <div class="row m-0">
-                <Show when={model()}>
-                    {(m) => {
+            <div class="row">
+                <Show when={model()} fallback={
+                    <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
+                }>
+                    {(model) => {
                         return (
-                            <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
-                                <div class="mb-4">
-                                    <label for="contentName" class="form-label">Content Name</label>
-                                    <input
-                                        type="text"
-                                        id="contentName"
-                                        class="form-control"
-                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
-                                        name="contentName"
-                                        value={name()}
-                                        onInput={(ev) => setName(ev.target.value)}
-                                    />
-                                    <Show when={validationErrors().has(ValidationError.Name)}>
-                                        <small class="invalid-feedback">Please enter a name.</small>
-                                    </Show>
+                            <form class="offset-md-3 col-md-6" onSubmit={onSubmit}>
+                                <div class="border rounded p-3 mb-4">
+                                    <div class="mb-4">
+                                        <label for="contentName" class="form-label">Name</label>
+                                        <input
+                                            type="text"
+                                            id="contentName"
+                                            class="form-control"
+                                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                            name="contentName"
+                                            value={name()}
+                                            onInput={(ev) => setName(ev.target.value)}
+                                        />
+                                        <Show when={validationErrors().has(ValidationError.Name)}>
+                                            <small class="invalid-feedback">Please enter a name.</small>
+                                        </Show>
+                                    </div>
+
+                                    <div class="mb-4">
+                                        <label for="modelName" class="form-label">Model</label>
+                                        <input
+                                            type="text"
+                                            id="modelName"
+                                            class="form-control"
+                                            name="modelName"
+                                            value={model().title()}
+                                            disabled
+                                        />
+                                    </div>
                                 </div>
 
-                                <div class="mb-4">
-                                    <label for="modelName" class="form-label">Model Name</label>
-                                    <input
-                                        type="text"
-                                        id="modelName"
-                                        class="form-control"
-                                        name="modelName"
-                                        value={m().namespace ? `${m().name} (${m().namespace})` : m().name}
-                                        disabled
-                                    />
-                                </div>
+                                <hr />
 
-                                <label class="form-label">Fields</label>
+                                <h5 class="mb-4">Fields</h5>
 
-                                <hr class="mt-0" />
-
-                                <For each={m().fields}>
+                                <For each={model().fields}>
                                     {(mf) => {
-                                        const field = contentCtx.fields().find((f) => f.id === mf.fieldId);
-                                        const locales = contentCtx.activeLocales();
-
-                                        if (field === undefined) {
-                                            return (<p>Unsupported field</p>);
-                                        }
 
                                         return (
-                                            <div class="mb-3">
-                                                <label for={`modelField-${mf.id}-0`} class="form-label">{mf.name}</label>
-
-                                                <For each={values[mf.id]}>
-                                                    {(_, idx) => {
-                                                        return (
-                                                            <div class="d-flex w-100 mb-2">
-                                                                <input
-                                                                    id={`modelField-${mf.id}-${idx()}`}
-                                                                    style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
-                                                                    class="form-control flex-grow-1"
-                                                                    name={`modelField-${mf.id}-${idx()}`}
-                                                                    type={field.kind === FieldKind.Integer ? 'number' : 'text'}
-                                                                    disabled={field.kind === FieldKind.Asset}
-                                                                    value={values[mf.id][idx()].value}
-                                                                    onInput={(ev) => setValues(mf.id, idx(), 'value', ev.target.value)}
-                                                                />
-                                                                <Show when={mf.localized}>
-                                                                    <select
-                                                                        class="form-select rounded-0"
-                                                                        name={`modelFieldLocale-${mf.id}-${idx()}`}
-                                                                        style="width: unset;"
-                                                                        value={values[mf.id][idx()].locale}
-                                                                        onChange={(ev) => setValues(mf.id, idx(), 'locale', ev.target.value)}
-                                                                    >
-                                                                        <For each={locales}>
-                                                                            {(locale) => (<option value={locale.key}>{locale.name}</option>)}
-                                                                        </For>
-                                                                    </select>
-                                                                </Show>
-                                                                <button
-                                                                    type="button"
-                                                                    class="btn btn-outline-danger icon-link"
-                                                                    style=" border-top-left-radius: 0; border-bottom-left-radius: 0;"
-                                                                    onClick={() => setValues(mf.id, values[mf.id].filter((_, i) => i !== idx()))}>
-                                                                    <XLg viewBox="0 0 16 16" />
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    }}
-                                                </For>
-
-                                                <Show when={(mf.localized && (values[mf.id]?.length ?? 0) < locales.length) || mf.multiple || (values[mf.id]?.length ?? 0) === 0}>
-                                                    <button
-                                                        type="button"
-                                                        class="btn btn-outline-secondary icon-link justify-content-center w-100"
-                                                        onClick={() => {
-                                                            const locale = mf.localized ? locales[values[mf.id]?.length ?? 0]?.key : undefined;
-                                                            const value = { modelFieldId: mf.id, value: '', locale };
-
-                                                            if (field.kind === FieldKind.Asset) {
-                                                                setShowPickAsset(value);
-                                                            } else {
-                                                                setValues(mf.id, values[mf.id].length, value);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <PlusSquareDotted viewBox="0 0 16 16" />
-                                                        <Show when={field.kind !== FieldKind.Asset} fallback={<>Choose asset</>}>
-                                                            Add value
+                                            <>
+                                                <div class="card mb-4">
+                                                    <div class="card-header d-flex align-items-center">
+                                                        <h5 class="flex-grow-1 m-0">{mf.name}</h5>
+                                                        <Show when={(mf.localized && (values[mf.id]?.length ?? 0) < locales.length) || mf.multiple || (values[mf.id]?.length ?? 0) === 0}>
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-sm btn-secondary icon-link justify-content-center"
+                                                                onClick={() => setShowContentValueModal({ modelField: mf })}
+                                                            >
+                                                                <PlusSquareDotted viewBox="0 0 16 16" />
+                                                                Add value
+                                                            </button>
                                                         </Show>
-                                                    </button>
-                                                </Show>
-                                            </div>
+                                                    </div>
+                                                    <ul class="list-group list-group-flush">
+                                                        <For each={values[mf.id]}>
+                                                            {(value) => {
+                                                                const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+
+                                                                return (
+                                                                    <li class="list-group-item d-flex align-items-center">
+                                                                        <Switch fallback={
+                                                                            <p
+                                                                                class="flex-grow-1 m-0 overflow-hidden"
+                                                                                style="text-overflow: ellipsis; white-space: nowrap;"
+                                                                            >
+                                                                                {value.value}
+                                                                            </p>
+
+                                                                        }>
+                                                                            <Match when={field()?.kind === FieldKind.Asset}>
+                                                                                <Show when={imageFile(value.value)} fallback={
+                                                                                    <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
+                                                                                }>
+                                                                                    <div class="flex-grow-1">
+                                                                                        <img
+                                                                                            class=""
+                                                                                            src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                            alt={value.value}
+                                                                                            style="max-width: 100%; max-height: 5rem;"
+                                                                                        />
+                                                                                    </div>
+                                                                                </Show>
+                                                                            </Match>
+                                                                        </Switch>
+                                                                        <Show when={value.locale}>
+                                                                            <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
+                                                                        </Show>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="btn icon-link p-1 ms-2"
+                                                                            onClick={() => setShowContentValueModal({ modelField: mf, initial: value })}
+                                                                        >
+                                                                            <PencilSquare viewBox="0 0 16 16" />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="btn text-danger icon-link p-1 ms-2"
+                                                                            onClick={() => setValues(mf.id, values[mf.id].filter((v) => v !== value))}
+                                                                        >
+                                                                            <XLg viewBox="0 0 16 16" />
+                                                                        </button>
+                                                                    </li>
+                                                                )
+                                                            }}
+                                                        </For>
+                                                    </ul>
+                                                </div>
+                                            </>
                                         );
                                     }}
                                 </For>
 
-                                <div class="mb-3">
-                                    <Show when={serverError()}>
-                                        <small class="text-danger">{serverError()}</small>
-                                    </Show>
-                                    <button type="submit" class="btn btn-primary icon-link justify-content-center w-100" disabled={inProgress()}>
+                                <Show when={serverError()}>
+                                    <small class="text-danger mb-2">{serverError()}</small>
+                                </Show>
+
+                                <div class="d-flex justify-content-center">
+                                    <button
+                                        type="submit"
+                                        style="max-width: 10rem;"
+                                        class="btn btn-primary icon-link justify-content-center w-100"
+                                        disabled={inProgress()}>
                                         <Show when={inProgress()}>
                                             <div class="spinner-border" role="status">
                                                 <span class="visually-hidden">Loading...</span>
@@ -353,18 +590,25 @@ export const CreateContent = () => {
                 </Show>
             </div>
 
-            <Show when={showPickAsset()}>
-                {(incompleteValue) => (
-                    <PickAsset
-                        pick={(asset) => {
-                            const value = incompleteValue();
-                            value.value = asset;
+            <Show when={showContentValueModal()}>
+                {(value) => (
+                    <ContentValueModal
+                        initial={value().initial ? { ...value().initial as CreateContentValue } : undefined}
+                        modelField={value().modelField}
+                        create={(newValue) => {
+                            const initialValue = value().initial;
 
-                            setValues(value.modelFieldId, values[value.modelFieldId].length, value);
+                            if (initialValue) {
+                                const idx = values[newValue.modelFieldId].findIndex((v) => v === initialValue);
 
-                            setShowPickAsset(undefined);
+                                setValues(newValue.modelFieldId, idx, newValue);
+                            } else {
+                                setValues(newValue.modelFieldId, values[newValue.modelFieldId].length, newValue);
+                            }
+
+                            setShowContentValueModal(undefined);
                         }}
-                        close={() => setShowPickAsset(undefined)}
+                        close={() => setShowContentValueModal(undefined)}
                     />
                 )}
             </Show>
@@ -475,7 +719,7 @@ export const Content = () => {
                     </button>
                 </div>
 
-                <div class="row m-0">
+                <div class="row">
                     <Switch>
                         <Match when={content.state === 'ready' && content() === undefined}>
                             <span>Could not find the content with id {params.id}.</span>

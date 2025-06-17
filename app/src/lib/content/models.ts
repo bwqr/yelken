@@ -58,11 +58,15 @@ export class Model implements Omit<ModelResponse, 'createdAt'> {
     urlPath(): string {
         return this.namespace ? `${this.namespace}/${this.key}` : this.key;
     }
+
+    title(): string {
+        return this.namespace ? `${this.name} (${this.namespace})` : this.name;
+    }
 }
 
 export enum FieldKind {
     String = 'string',
-    Integer = 'integer',
+    Integer = 'int',
     Asset = 'asset',
 }
 
@@ -77,7 +81,7 @@ export enum ContentStage {
     Draft = 'draft',
 }
 
-export interface Content {
+export interface ContentResponse {
     id: number,
     modelId: number,
     name: string,
@@ -87,6 +91,30 @@ export interface Content {
     updatedAt: string,
 }
 
+export class Content implements Omit<ContentResponse, 'createdAt' | 'updatedAt'> {
+    constructor(
+        public id: number,
+        public modelId: number,
+        public name: string,
+        public stage: ContentStage,
+        public createdBy: number | null,
+        public createdAt: Date,
+        public updatedAt: Date,
+    ) { }
+
+    static fromResponse(response: ContentResponse): Content {
+        return new Content(
+            response.id,
+            response.modelId,
+            response.name,
+            response.stage,
+            response.createdBy,
+            new Date(response.createdAt),
+            new Date(response.updatedAt),
+        )
+    }
+}
+
 export interface ContentValue {
     id: number,
     modelFieldId: number,
@@ -94,7 +122,13 @@ export interface ContentValue {
     value: string,
 }
 
-export interface ContentDetails {
+export interface ContentDetailsResponse {
+    content: ContentResponse,
+    values: ContentValue[],
+    user: User | null,
+}
+
+export interface ContentDetails extends Omit<ContentDetailsResponse, 'content'> {
     content: Content,
     values: ContentValue[],
     user: User | null,

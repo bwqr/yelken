@@ -11,7 +11,7 @@ import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { createStore } from "solid-js/store";
 
-export const PickAsset = (props: { close: () => void, pick: (asset: string) => void, }) => {
+export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) => void, }) => {
     const contentCtx = useContext(ContentContext)!;
     const [pagination, setPagination] = createStore<PaginationRequest>({});
 
@@ -19,8 +19,8 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
 
     return (
         <>
-            <div class="modal fade show d-block" tabindex="-1" aria-labelledby="createModelFieldModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-xl">
+            <div class="modal show d-block" tabindex="-1" aria-labelledby="createModelFieldModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Pick an Asset</h1>
@@ -29,15 +29,15 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
                             <Suspense fallback={<p>Loading...</p>}>
                                 <Switch>
                                     <Match when={assets.error}>
-                                        <span>Error: {assets.error}</span>
+                                        <span>Error: {assets.error.message}</span>
                                     </Match>
                                     <Match when={assets()}>
                                         {(assets) => (
                                             <>
-                                                <div class="row m-0 gap-2 mb-4">
+                                                <div class="row g-2 mb-4">
                                                     <For each={assets().items}>
                                                         {(asset) => (
-                                                            <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word; cursor: pointer;" onClick={() => props.pick(asset.filename)}>
+                                                            <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word; cursor: pointer;" onClick={() => props.pick(asset)}>
                                                                 <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-75 m-auto p-2 text-secondary" viewBox="0 0 16 16" />}>
                                                                     <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-2" alt={asset.name} />
                                                                 </Show>
@@ -65,7 +65,7 @@ export const PickAsset = (props: { close: () => void, pick: (asset: string) => v
                 </div>
             </div>
 
-            <div class="modal-backdrop fade show"></div>
+            <div class="modal-backdrop show"></div>
         </>
     );
 }
@@ -187,7 +187,7 @@ export const UploadAsset = () => {
             <div class="d-flex align-items-center mb-5">
                 <h2>Upload Asset</h2>
             </div>
-            <div class="row m-0">
+            <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="mb-4">
                         <label for="assetFile" class="form-label">Choose an asset file</label>
@@ -289,7 +289,7 @@ export const Assets = () => {
                         {(assets) => (
                             <>
                                 <Show when={assets().items.length > 0} fallback={<span>No assets</span>}>
-                                    <div class="row m-0 gap-2 mb-4">
+                                    <div class="row g-2 mb-4">
                                         <For each={assets().items}>
                                             {(asset) => (
                                                 <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word;">

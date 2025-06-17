@@ -168,7 +168,7 @@ const ModelFieldModal = (props: {
                                     <option value="" disabled selected>Select a field</option>
                                     <For each={contentCtx.fields()}>
                                         {(field) => (
-                                            <option value={field.id}> {field.name}</option>
+                                            <option value={field.id}>{field.name}</option>
                                         )}
                                     </For>
                                 </select>
@@ -285,7 +285,7 @@ export const CreateModel = () => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
                 } else {
-                    throw e;
+                    alertCtx.fail(e.message);
                 }
             })
             .finally(() => setInProgress(false));
@@ -342,7 +342,7 @@ export const CreateModel = () => {
                         </div>
 
                         <label class="form-label">Namespace</label>
-                        <div class="">
+                        <div>
                             <div class="form-check form-check-inline">
                                 <input
                                     type="radio"
@@ -398,10 +398,10 @@ export const CreateModel = () => {
                                 <div class="card mb-4">
                                     <div class="card-header d-flex">
                                         <h5 class="flex-grow-1 m-0">{mf.name} (<small>{mf.key}</small>)</h5>
-                                        <button type="button" class="btn icon-link py-0 px-1" onClick={() => setShowModal(mf)}>
+                                        <button type="button" class="btn icon-link p-1 ms-2" onClick={() => setShowModal(mf)}>
                                             <PencilSquare viewBox="0 0 16 16" />
                                         </button>
-                                        <button type="button" class="btn text-danger icon-link py-0 px-1 ms-2" onClick={() => setFields(fields.filter((f) => f !== mf))}>
+                                        <button type="button" class="btn text-danger icon-link p-1 ms-2" onClick={() => setFields(fields.filter((f) => f !== mf))}>
                                             <XLg viewBox="0 0 16 16" />
                                         </button>
                                     </div>
@@ -490,11 +490,11 @@ export const Models = () => {
                 </A>
             </div>
 
-            <div class="row m-0">
-                <div class="offset-md-3 col-md-6">
-                    <Show when={contentCtx.models().length > 0} fallback={
-                        <p class="text-secondary text-center">There is no model to display yet. You can create a new one by using <strong>Create Model</strong> button.</p>
-                    }>
+            <Show when={contentCtx.models().length > 0} fallback={
+                <p class="text-secondary text-center">There is no model to display yet. You can create a new one by using <strong>Create Model</strong> button.</p>
+            }>
+                <div class="row">
+                    <div class="offset-md-3 col-md-6">
                         <table class="table table-hover border shadow-sm">
                             <thead>
                                 <tr>
@@ -523,9 +523,9 @@ export const Models = () => {
                                 </For>
                             </tbody>
                         </table>
-                    </Show>
+                    </div>
                 </div>
-            </div>
+            </Show>
         </div>
     );
 };
@@ -681,8 +681,8 @@ export const Model = () => {
                 <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
             }>
                 {(model) => (
-                    <div class="row">
-                        <div class="offset-md-1 col-md-4 mb-5 mb-md-0">
+                    <div class="row g-4">
+                        <div class="offset-md-1 col-md-4">
                             <div class="border rounded p-3">
                                 <div class="d-flex justify-content-center">
                                     <h5 class="flex-grow-1 m-0">Details</h5>
@@ -788,14 +788,14 @@ export const Model = () => {
                                                     <h5 class="flex-grow-1 m-0">{mf.name} (<small>{mf.key}</small>)</h5>
                                                     <button
                                                         type="button"
-                                                        class="btn icon-link py-0 px-1"
+                                                        class="btn icon-link p-1 ms-2"
                                                         onClick={() => setEditingField(mf)}
                                                     >
                                                         <PencilSquare viewBox="0 0 16 16" />
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        class="btn text-danger icon-link py-0 px-1 ms-2"
+                                                        class="btn text-danger icon-link p-1 ms-2"
                                                         onClick={() => setDeletingField(mf)}
                                                     >
                                                         <XLg viewBox="0 0 16 16" />
