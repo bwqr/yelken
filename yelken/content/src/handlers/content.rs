@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     requests::{
-        ContentValue, CreateContent, FilterByModel, UpdateContentStage, UpdateContentValue,
+        ContentValue, CreateContent, FilterByModel, UpdateContent, UpdateContentStage,
+        UpdateContentValue,
     },
     responses::ContentDetails,
 };
@@ -184,12 +185,30 @@ pub async fn create_content(
     Ok(Json(content))
 }
 
+pub async fn update_content(
+    State(state): State<AppState>,
+    Path(content_id): Path<i32>,
+    Json(req): Json<UpdateContent>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(contents::table)
+        .filter(contents::id.eq(content_id))
+        .set(contents::name.eq(req.name))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("content_not_found"));
+    }
+
+    Ok(())
+}
+
 pub async fn create_content_value(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Path(content_id): Path<i32>,
     Json(req): Json<ContentValue>,
-) -> Result<(), HttpError> {
+) -> Result<Json<base::models::ContentValue>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let Some(model_id) = models::table
@@ -271,10 +290,10 @@ pub async fn create_content_value(
             content_values::locale.eq(req.locale),
             content_values::value.eq(req.value),
         ))
-        .execute(&mut conn)
-        .await?;
-
-    Ok(())
+        .get_result::<base::models::ContentValue>(&mut conn)
+        .await
+        .map(Json)
+        .map_err(Into::into)
 }
 
 pub async fn update_content_stage(
@@ -324,6 +343,22 @@ pub async fn delete_content(
 
     if effected_row == 0 {
         return Err(HttpError::not_found("content_not_found"));
+    }
+
+    Ok(())
+}
+
+pub async fn delete_content_value(
+    State(state): State<AppState>,
+    Path(value_id): Path<i32>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::delete(content_values::table)
+        .filter(content_values::id.eq(value_id))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("value_not_found"));
     }
 
     Ok(())

@@ -71,3 +71,8 @@ pub struct UpdateModelField {
     pub required: bool,
     pub multiple: bool,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateContent {
+    pub name: String,
+}

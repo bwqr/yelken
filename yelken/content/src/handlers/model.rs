@@ -13,7 +13,10 @@ use base::{
     schema::{model_fields, models, themes},
     AppState,
 };
-use diesel::prelude::*;
+use diesel::{
+    prelude::*,
+    result::{DatabaseErrorKind, Error},
+};
 use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 
 pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Model>>, HttpError> {
@@ -143,7 +146,14 @@ pub async fn delete_model(
     let effected_row: usize = diesel::delete(models::table)
         .filter(models::id.eq(model_id))
         .execute(&mut state.pool.get().await?)
-        .await?;
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) = &e {
+                return HttpError::conflict("model_being_used");
+            }
+
+            e.into()
+        })?;
 
     if effected_row == 0 {
         return Err(HttpError::not_found("model_not_found"));
@@ -171,26 +181,22 @@ pub async fn create_model_field(
         .get_result::<ModelField>(&mut state.pool.get().await?)
         .await
         .map(Json)
-        .map_err(|e| {
-            use diesel::result::{DatabaseErrorKind, Error};
-
-            match e {
-                Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, ref info) => {
-                    if let Some(name) = info.constraint_name() {
-                        if name.contains("model_id") {
-                            return HttpError::conflict("model_not_found");
-                        } else if name.contains("field_id") {
-                            return HttpError::conflict("field_not_found");
-                        }
+        .map_err(|e| match e {
+            Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, ref info) => {
+                if let Some(name) = info.constraint_name() {
+                    if name.contains("model_id") {
+                        return HttpError::conflict("model_not_found");
+                    } else if name.contains("field_id") {
+                        return HttpError::conflict("field_not_found");
                     }
+                }
 
-                    return e.into();
-                }
-                Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => {
-                    HttpError::conflict("model_field_already_exists")
-                }
-                e => e.into(),
+                return e.into();
             }
+            Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) => {
+                HttpError::conflict("model_field_already_exists")
+            }
+            e => e.into(),
         })
 }
 

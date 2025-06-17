@@ -5,6 +5,7 @@ import * as config from './lib/config';
 import { UserContext } from "./lib/user/context";
 import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
+import ProfileIcon from "./components/ProfileIcon";
 
 interface Link {
     title: string,
@@ -74,10 +75,7 @@ export function SideNav(): JSX.Element {
                         aria-expanded={dropdown()}
                         on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()) }}
                     >
-                        <svg viewBox="0 0 16 16" width="24" height="24" fill="currentColor" class="text-primary">
-                            <circle cx="8" cy="8" r="8" />
-                            <text x="50%" y="55%" fill="white" font-size="8" dominant-baseline="middle" text-anchor="middle">{userCtx.user().name.split(' ').map((word) => word[0]?.toUpperCase())}</text>
-                        </svg>
+                        <ProfileIcon name={userCtx.user().name} />
                         {userCtx.user().name}
                     </button>
 

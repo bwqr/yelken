@@ -278,7 +278,9 @@ export const CreateModel = () => {
         })
             .then(async (model) => {
                 await contentCtx.loadModels();
+
                 alertCtx.success(`Model "${model.name}" is created successfully`);
+
                 navigate(`/models/view/${model.urlPath()}`, { replace: true });
             })
             .catch((e) => {
@@ -549,6 +551,8 @@ export const Model = () => {
     const [modelDetails, setModelDetails] = createStore({ name: model()?.name ?? '', desc: model()?.desc ?? '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
 
+    createEffect(() => setModelDetails({ name: model()?.name ?? '', desc: model()?.desc ?? '' }));
+
     const [editingField, setEditingField] = createSignal(undefined as ModelField | undefined);
     const [creatingField, setCreatingField] = createSignal(false);
 
@@ -558,8 +562,6 @@ export const Model = () => {
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
-
-    createEffect(() => setModelDetails({ name: model()?.name ?? '', desc: model()?.desc ?? '' }));
 
     const [dropdown, setDropdown] = createSignal(false);
     onCleanup(dropdownClickListener('model-detail-dropdown', () => setDropdown(false), () => !deletingModel()));
@@ -574,8 +576,11 @@ export const Model = () => {
         return contentCtx.deleteModel(m.id)
             .then(() => contentCtx.loadModels())
             .then(() => {
+                setDeletingModel(false);
+
                 alertCtx.success(`Model "${m.name}" is deleted successfully`);
-                navigate(-1);
+
+                navigate('/models', { replace: true });
             });
     }
 
@@ -607,8 +612,9 @@ export const Model = () => {
         )
             .then(() => contentCtx.loadModels())
             .then(() => {
-                alertCtx.success(`Model "${modelDetails.name}" is updated successfully`);
                 setEditingDetails(false);
+
+                alertCtx.success(`Model "${modelDetails.name}" is updated successfully`);
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
@@ -625,6 +631,7 @@ export const Model = () => {
             .then(() => contentCtx.loadModels())
             .then(() => {
                 setEditingField(undefined);
+
                 alertCtx.success(`Field "${updatedField.name}" is successfully updated`);
             });
     };
@@ -640,6 +647,7 @@ export const Model = () => {
             .then(() => contentCtx.loadModels())
             .then(() => {
                 setCreatingField(false);
+
                 alertCtx.success(`Field "${newField.name}" is successfully created`);
             });
     };
@@ -649,6 +657,7 @@ export const Model = () => {
             .then(() => contentCtx.loadModels())
             .then(() => {
                 setDeletingField(undefined);
+
                 alertCtx.success(`Field "${modelField.name}" is deleted successfully`);
             });
     }
@@ -766,7 +775,7 @@ export const Model = () => {
                             </div>
                         </div>
 
-                        <div class="offset-md-1 col-md-4">
+                        <div class="offset-md-1 col-md-5">
                             <div class="border rounded p-3">
                                 <div class="d-flex justify-content-center">
                                     <h5 class="flex-grow-1 m-0">Fields</h5>

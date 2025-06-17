@@ -40,9 +40,11 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/asset/{id}", delete(asset::delete_asset))
         .route("/content", post(content::create_content))
         .route("/content/{id}", post(content::create_content_value))
+        .route("/content/{id}", put(content::update_content))
         .route("/content/{id}", delete(content::delete_content))
         .route("/content/{id}/stage", put(content::update_content_stage))
         .route("/value/{id}", put(content::update_content_value))
+        .route("/value/{id}", delete(content::delete_content_value))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Content(Mode::Write),

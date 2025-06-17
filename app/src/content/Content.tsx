@@ -3,7 +3,7 @@ import { ContentContext } from "../lib/content/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage, FieldKind, Model, type ModelField } from "../lib/content/models";
+import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
@@ -14,6 +14,8 @@ import { Pagination } from "../components/Pagination";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
 import * as config from '../lib/config';
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import ProfileIcon from "../components/ProfileIcon";
 
 function imageFile(filename: string): boolean {
     return ['.bmp', '.png', '.ico', '.tif', '.tiff', '.jpeg', '.jpg', '.webp', '.svg', '.gif'].findIndex((ext) => filename.endsWith(ext)) > -1;
@@ -429,7 +431,8 @@ export const CreateContent = () => {
             values: Object.values(unwrap(values)).flat(),
         })
             .then((content) => {
-                alertCtx.success('Content is created successfully');
+                alertCtx.success(`Content "${content.name}" is created successfully`);
+
                 navigate(`/contents/view/${content.id}`, { replace: true });
             })
             .catch((e) => {
@@ -618,8 +621,12 @@ export const CreateContent = () => {
 
 export const Content = () => {
     enum Action {
+        UpdateDetails,
         UpdateStage,
-        Delete,
+    }
+
+    enum ValidationError {
+        Name,
     }
 
     const alertCtx = useContext(AlertContext)!;
@@ -628,12 +635,25 @@ export const Content = () => {
     const navigate = useNavigate();
 
     const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => contentCtx.fetchContent(id));
+    const model = createMemo(() => contentCtx.models().find((m) => m.id === content()?.content.modelId));
+
+    const [contentDetails, setContentDetails] = createStore({ name: content()?.content.name ?? '' });
+    const [editingDetails, setEditingDetails] = createSignal(false);
+
+    createEffect(() => setContentDetails({ name: content()?.content.name ?? '' }));
+
+    const [creatingValue, setCreatingValue] = createSignal(undefined as ModelField | undefined);
+    const [editingValue, setEditingValue] = createSignal(undefined as { modelField: ModelField, value: ContentValue } | undefined);
+
+    const [deletingContent, setDeletingContent] = createSignal(false);
+    const [deletingValue, setDeletingValue] = createSignal(undefined as ContentValue | undefined);
 
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
-    const [dropdown, setDropdown] = createSignal(false);
+    const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
 
-    onCleanup(dropdownClickListener('content-detail-dropdown', () => setDropdown(false), () => inProgress() === undefined));
+    const [dropdown, setDropdown] = createSignal(false);
+    onCleanup(dropdownClickListener('content-detail-dropdown', () => setDropdown(false), () => !deletingContent()));
 
     const updateStage = () => {
         const c = content();
@@ -647,30 +667,127 @@ export const Content = () => {
 
         contentCtx.updateContentStage(c.content.id, stage)
             .then(() => {
-                mutate({ ...c, content: { ...c.content, stage } });
-
                 alertCtx.success(stage === ContentStage.Published ? 'Content is published' : 'Content is marked as draft');
+
+                mutate({ ...c, content: { ...c.content, stage } });
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
     };
 
-    const deleteContent = () => {
+    const saveDetails = () => {
         const c = content();
 
-        if (inProgress() !== undefined || c === undefined) {
+        if (inProgress() !== undefined || !c) {
             return;
         }
 
-        setInProgress(Action.Delete);
+        const errors = new Set<ValidationError>();
 
-        contentCtx.deleteContent(c.content.id)
+        if (contentDetails.name.trim().length === 0) {
+            errors.add(ValidationError.Name);
+        }
+
+        setValidationErrors(errors);
+
+        if (errors.size > 0) {
+            return;
+        }
+
+        setInProgress(Action.UpdateDetails);
+
+        contentCtx.updateContentDetails(
+            c.content.id,
+            contentDetails.name.trim(),
+        )
             .then(() => {
-                alertCtx.success('Content is deleted successfully');
-                navigate(-1);
+                setEditingDetails(false);
+
+                alertCtx.success(`Model "${contentDetails.name}" is updated successfully`);
+
+                mutate({ ...c, content: { ...c.content, name: contentDetails.name.trim() } })
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
+    };
+
+    const createValue = (value: CreateContentValue) => {
+        const c = content();
+        const modelField = model()?.fields.find((mf) => mf.id === value.modelFieldId);
+
+        if (!c) {
+            return;
+        }
+
+        return contentCtx.createContentValue(c.content.id, value)
+            .then((value) => {
+                setCreatingValue(undefined);
+
+                alertCtx.success(`Value for field "${modelField?.name ?? '-'}" is created successfully`);
+
+                mutate({ ...c, values: [...c.values, value] });
+            });
+    };
+
+    const saveValue = (id: number, value: CreateContentValue) => {
+        const c = content();
+        const modelField = model()?.fields.find((mf) => mf.id === value.modelFieldId);
+
+        if (!c) {
+            return;
+        }
+
+        return contentCtx.updateContentValue(id, value)
+            .then(() => {
+                setEditingValue(undefined);
+
+                alertCtx.success(`Value for field "${modelField?.name ?? '-'}" is updated successfully`);
+
+                const idx = c.values.findIndex((v) => v.id === id);
+                if (idx > -1) {
+                    const values = [...c.values];
+
+                    values[idx] = { ...values[idx], ...value };
+
+                    mutate({ ...c, values });
+                }
+            });
+    };
+
+    const deleteContent = () => {
+        const c = content();
+        const m = model();
+
+        if (!c) {
+            return;
+        }
+
+        contentCtx.deleteContent(c.content.id)
+            .then(() => {
+                setDeletingContent(false);
+
+                alertCtx.success(`Content "${c.content.name}" is deleted successfully`);
+
+                if (m) {
+                    navigate(`/contents/by-model/${m.urlPath()}`, { replace: true });
+                }
+            });
+    }
+
+    const deleteValue = async (value: ContentValue) => {
+        const c = content();
+        const modelField = model()?.fields.find((mf) => mf.id === value.modelFieldId);
+
+        return contentCtx.deleteContentValue(value.id)
+            .then(() => {
+                setDeletingValue(undefined);
+
+                alertCtx.success(`Value for "${modelField?.name ?? '-'}" field is deleted successfully`);
+
+                if (c) {
+                    mutate({ ...c, values: c.values.filter((v) => v.id !== value.id) })
+                }
+            });
     }
 
     const contentStyle = () => content()?.content.stage === ContentStage.Published ?
@@ -679,7 +796,9 @@ export const Content = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <Suspense fallback={<p>Loading...</p>}>
+            <Suspense fallback={
+                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+            }>
                 <div class="d-flex align-items-center mb-4">
                     <div class="flex-grow-1">
                         <h2 class="m-0">{content()?.content.name ?? '-'}</h2>
@@ -692,12 +811,7 @@ export const Content = () => {
                         <Show when={dropdown()}>
                             <ul id="content-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
                                 <li>
-                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteContent}>
-                                        <Show when={inProgress() === Action.Delete}>
-                                            <div class="spinner-border" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </Show>
+                                    <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
                                         <Trash viewBox="0 0 16 16" />
                                         Delete
                                     </button>
@@ -722,27 +836,228 @@ export const Content = () => {
                 <div class="row">
                     <Switch>
                         <Match when={content.state === 'ready' && content() === undefined}>
-                            <span>Could not find the content with id {params.id}.</span>
+                            <p class="text-secondary text-center">Could not find the content with id {params.id}.</p>
                         </Match>
                         <Match when={content()}>
                             {(content) => (
-                                <div class="offset-md-4 col-md-4 p-3 mb-4 card">
-                                    <h5>Details</h5>
+                                <>
+                                    <div class="offset-md-1 col-md-4">
+                                        <div class="border rounded p-3">
+                                            <div class="d-flex justify-content-center">
+                                                <h5 class="flex-grow-1 m-0">Details</h5>
+                                                <Show when={editingDetails()} fallback={
+                                                    <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
+                                                        <PencilSquare viewBox="0 0 16 16" />
+                                                        Edit
+                                                    </button>
+                                                }>
+                                                    <button
+                                                        type="button"
+                                                        class="btn text-danger icon-link py-0 px-1"
+                                                        onClick={() => setEditingDetails(false)}
+                                                    >
+                                                        Discard
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="btn icon-link py-0 px-1 ms-2"
+                                                        onClick={saveDetails}
+                                                        disabled={inProgress() === Action.UpdateDetails}
+                                                    >
+                                                        <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
+                                                        <FloppyFill viewBox="0 0 16 16" />
+                                                        Save
+                                                    </button>
+                                                </Show>
+                                            </div>
 
-                                    <hr />
-                                    <table>
-                                        <tbody>
-                                            <tr>
-                                                <td>Name</td>
-                                                <td class="text-end">{content().content.name}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            <hr />
+
+                                            <table class="table table-borderless w-100 m-0">
+                                                <tbody>
+                                                    <tr>
+                                                        <td>Name</td>
+                                                        <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                            <Show when={editingDetails()} fallback={content().content.name}>
+                                                                <input
+                                                                    id="modelName"
+                                                                    type="text"
+                                                                    class="form-control float-end w-auto"
+                                                                    classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                                                    name="name"
+                                                                    value={contentDetails.name}
+                                                                    onInput={(ev) => setContentDetails('name', ev.target.value)}
+                                                                />
+                                                            </Show>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Model</td>
+                                                        <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                            <Show when={editingDetails()} fallback={model()?.title() ?? '-'}>
+                                                                <input
+                                                                    type="text"
+                                                                    class="form-control float-end w-auto"
+                                                                    value={model()?.title() ?? '-'}
+                                                                    disabled={true}
+                                                                />
+                                                            </Show>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Created By</td>
+                                                        <td class="text-end py-1">
+                                                            <Show when={editingDetails()} fallback={
+                                                                <p class="icon-link m-0">
+                                                                    <ProfileIcon name={content().user?.name ?? '-'} />
+                                                                    {content().user?.name ?? '-'}
+                                                                </p>
+                                                            }>
+                                                                <input
+                                                                    type="text"
+                                                                    class="form-control float-end w-auto"
+                                                                    value={content().user?.name ?? '-'}
+                                                                    disabled={true}
+                                                                />
+                                                            </Show>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="offset-md-1 col-md-5">
+                                        <div class="border rounded p-3">
+                                            <h5>Fields</h5>
+
+                                            <hr />
+
+                                            <For each={model()?.fields ?? []}>
+                                                {(mf) => {
+                                                    const locales = contentCtx.activeLocales();
+                                                    const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
+                                                    const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
+
+                                                    return (
+                                                        <>
+                                                            <div class="card mb-4">
+                                                                <div class="card-header d-flex align-items-center">
+                                                                    <h5 class="flex-grow-1 m-0">{mf.name}</h5>
+                                                                    <Show when={(mf.localized && values().length < locales.length) || mf.multiple || values().length === 0}>
+                                                                        <button
+                                                                            type="button"
+                                                                            class="btn btn-sm btn-secondary icon-link justify-content-center"
+                                                                            onClick={() => setCreatingValue(mf)}
+                                                                        >
+                                                                            <PlusSquareDotted viewBox="0 0 16 16" />
+                                                                            Add value
+                                                                        </button>
+                                                                    </Show>
+                                                                </div>
+                                                                <ul class="list-group list-group-flush">
+                                                                    <For each={values()}>
+                                                                        {(value) => (
+                                                                            <li class="list-group-item d-flex align-items-center">
+                                                                                <Switch fallback={
+                                                                                    <p
+                                                                                        class="flex-grow-1 m-0 overflow-hidden"
+                                                                                        style="text-overflow: ellipsis; white-space: nowrap;"
+                                                                                    >
+                                                                                        {value.value}
+                                                                                    </p>
+
+                                                                                }>
+                                                                                    <Match when={field()?.kind === FieldKind.Asset}>
+                                                                                        <Show when={imageFile(value.value)} fallback={
+                                                                                            <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
+                                                                                        }>
+                                                                                            <div class="flex-grow-1">
+                                                                                                <img
+                                                                                                    class=""
+                                                                                                    src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                                    alt={value.value}
+                                                                                                    style="max-width: 100%; max-height: 5rem;"
+                                                                                                />
+                                                                                            </div>
+                                                                                        </Show>
+                                                                                    </Match>
+                                                                                </Switch>
+                                                                                <Show when={value.locale}>
+                                                                                    <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
+                                                                                </Show>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="btn icon-link p-1 ms-2"
+                                                                                    onClick={() => setEditingValue({ modelField: mf, value })}
+                                                                                >
+                                                                                    <PencilSquare viewBox="0 0 16 16" />
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="btn text-danger icon-link p-1 ms-2"
+                                                                                    onClick={() => setDeletingValue(value)}
+                                                                                >
+                                                                                    <XLg viewBox="0 0 16 16" />
+                                                                                </button>
+                                                                            </li>
+                                                                        )}
+                                                                    </For>
+                                                                </ul>
+                                                            </div>
+                                                        </>
+                                                    );
+                                                }}
+                                            </For>
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </Match>
                     </Switch>
                 </div>
+
+                <Show when={editingValue()}>
+                    {(value) => (
+                        <ContentValueModal
+                            close={() => setEditingValue(undefined)}
+                            create={(updatedValue) => saveValue(value().value.id, updatedValue)}
+                            modelField={value().modelField}
+                            initial={{ ...value().value, locale: value().value.locale ?? undefined }}
+                        />
+                    )}
+                </Show>
+
+                <Show when={creatingValue()}>
+                    {(modelField) => (
+                        <ContentValueModal
+                            close={() => setCreatingValue(undefined)}
+                            create={(value) => createValue(value)}
+                            modelField={modelField()}
+                        />
+                    )}
+                </Show>
+
+                <Show when={deletingContent()}>
+                    <DeleteConfirmModal
+                        message={<p>Are you sure about deleting the content <strong>{content()?.content.name}</strong>?</p>}
+                        close={() => setDeletingContent(false)}
+                        confirm={deleteContent}
+                    />
+                </Show>
+
+                <Show when={deletingValue()}>
+                    {(value) => {
+                        const modelField = model()?.fields.find((mf) => mf.id === value().modelFieldId);
+
+                        return (
+                            <DeleteConfirmModal
+                                message={<p>Are you sure about deleting the value for field <strong>{modelField?.name ?? '-'}</strong>?</p>}
+                                close={() => setDeletingValue(undefined)}
+                                confirm={() => deleteValue(value())}
+                            />
+                        )
+                    }}
+                </Show>
             </Suspense>
         </div>
     );
