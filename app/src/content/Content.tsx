@@ -631,9 +631,9 @@ export const Content = () => {
     const navigate = useNavigate();
 
     const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => contentCtx.fetchContent(id));
-    const model = createMemo(() => contentCtx.models().find((m) => m.id === content()?.content.modelId));
+    const model = () => contentCtx.models().find((m) => m.id === content()?.content.modelId);
 
-    const [contentDetails, setContentDetails] = createStore({ name: content()?.content.name ?? '' });
+    const [contentDetails, setContentDetails] = createStore({ name: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
 
     createEffect(() => setContentDetails({ name: content()?.content.name ?? '' }));
