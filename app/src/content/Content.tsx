@@ -488,11 +488,10 @@ export const CreateContent = () => {
 
                                 <hr />
 
-                                <h5 class="mb-4">Fields</h5>
+                                <h5 class="mb-4">Values</h5>
 
                                 <For each={model().fields}>
                                     {(mf) => {
-
                                         return (
                                             <>
                                                 <div class="card mb-4">
@@ -518,8 +517,8 @@ export const CreateContent = () => {
                                                                     <li class="list-group-item d-flex align-items-center">
                                                                         <Switch fallback={
                                                                             <p
-                                                                                class="flex-grow-1 m-0 overflow-hidden"
-                                                                                style="text-overflow: ellipsis; white-space: nowrap;"
+                                                                                class="flex-grow-1 m-0 overflow-hidden text-nowrap"
+                                                                                style="text-overflow: ellipsis"
                                                                             >
                                                                                 {value.value}
                                                                             </p>
@@ -577,12 +576,9 @@ export const CreateContent = () => {
                                         type="submit"
                                         style="max-width: 10rem;"
                                         class="btn btn-primary icon-link justify-content-center w-100"
-                                        disabled={inProgress()}>
-                                        <Show when={inProgress()}>
-                                            <div class="spinner-border" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </Show>
+                                        disabled={inProgress()}
+                                    >
+                                        <ProgressSpinner show={inProgress()} />
                                         <PlusLg viewBox="0 0 16 16" />
                                         Create
                                     </button>
@@ -655,6 +651,9 @@ export const Content = () => {
     const [dropdown, setDropdown] = createSignal(false);
     onCleanup(dropdownClickListener('content-detail-dropdown', () => setDropdown(false), () => !deletingContent()));
 
+    const [showStageDropdown, setShowStageDropdown] = createSignal(false);
+    onCleanup(dropdownClickListener('stage-detail-dropdown', () => setShowStageDropdown(false), () => inProgress() === undefined));
+
     const updateStage = () => {
         const c = content();
 
@@ -667,7 +666,9 @@ export const Content = () => {
 
         contentCtx.updateContentStage(c.content.id, stage)
             .then(() => {
-                alertCtx.success(stage === ContentStage.Published ? 'Content is published' : 'Content is marked as draft');
+                setShowStageDropdown(false);
+
+                alertCtx.success(stage === ContentStage.Published ? `Content "${c.content.name}" is published` : `Content "${c.content.name}" is marked as draft`);
 
                 mutate({ ...c, content: { ...c.content, stage } });
             })
@@ -791,15 +792,15 @@ export const Content = () => {
     }
 
     const contentStyle = () => content()?.content.stage === ContentStage.Published ?
-        { button: 'btn-secondary', icon: BookmarkCheck } :
-        { button: 'btn-primary', icon: BookmarkCheckFill };
+        { color: 'primary', icon: BookmarkCheckFill } :
+        { color: 'secondary', icon: BookmarkCheck };
 
     return (
         <div class="container py-4 px-md-4">
             <Suspense fallback={
                 <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
             }>
-                <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center mb-5">
                     <div class="flex-grow-1">
                         <h2 class="m-0">{content()?.content.name ?? '-'}</h2>
                         <small>Content</small>
@@ -808,32 +809,48 @@ export const Content = () => {
                         <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
                             <ThreeDotsVertical viewBox="0 0 16 16" />
                         </button>
-                        <Show when={dropdown()}>
-                            <ul id="content-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
-                                <li>
-                                    <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
-                                        <Trash viewBox="0 0 16 16" />
-                                        Delete
-                                    </button>
-                                </li>
-                            </ul>
-                        </Show>
+                        <ul id="content-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() }} style="right: 0;">
+                            <li>
+                                <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
+                                    <Trash viewBox="0 0 16 16" />
+                                    Delete
+                                </button>
+                            </li>
+                        </ul>
                     </div>
-                    <button class={`btn icon-link ${contentStyle().button}`} onClick={updateStage} disabled={inProgress() !== undefined}>
-                        <Show when={inProgress() === Action.UpdateStage}>
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                        </Show>
-                        <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
-                        <Switch>
-                            <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
-                            <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
-                        </Switch>
-                    </button>
+                    <div class="dropdown">
+                        <div class="btn-group">
+                            <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled={true}>
+                                <ProgressSpinner show={inProgress() === Action.UpdateStage} />
+                                <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
+                                <Switch>
+                                    <Match when={content()?.content.stage === ContentStage.Draft}>Draft</Match>
+                                    <Match when={content()?.content.stage === ContentStage.Published}>Published</Match>
+                                </Switch>
+                            </button>
+                            <button
+                                type="button"
+                                class={`btn btn-outline-${contentStyle().color} dropdown-toggle dropdown-toggle-split`}
+                                on:click={(ev) => { ev.stopPropagation(); setShowStageDropdown(!showStageDropdown()); }}
+                                aria-expanded={showStageDropdown()}
+                            >
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                        </div>
+                        <ul id="stage-detail-dropdown" class="dropdown-menu mt-1 show shadow" classList={{ 'show': showStageDropdown() }} style="right: 0;">
+                            <li>
+                                <button class="dropdown-item py-2" onClick={updateStage} disabled={inProgress() !== undefined}>
+                                    <Switch>
+                                        <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
+                                        <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
+                                    </Switch>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div class="row">
+                <div class="row g-4">
                     <Switch>
                         <Match when={content.state === 'ready' && content() === undefined}>
                             <p class="text-secondary text-center">Could not find the content with id {params.id}.</p>
@@ -905,21 +922,21 @@ export const Content = () => {
                                                         </td>
                                                     </tr>
                                                     <tr>
+                                                        <td>Stage</td>
+                                                        <td class="text-end py-1">
+                                                            <Switch>
+                                                                <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
+                                                                <Match when={content().content.stage === ContentStage.Published}>Published</Match>
+                                                            </Switch>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
                                                         <td>Created By</td>
                                                         <td class="text-end py-1">
-                                                            <Show when={editingDetails()} fallback={
-                                                                <p class="icon-link m-0">
-                                                                    <ProfileIcon name={content().user?.name ?? '-'} />
-                                                                    {content().user?.name ?? '-'}
-                                                                </p>
-                                                            }>
-                                                                <input
-                                                                    type="text"
-                                                                    class="form-control float-end w-auto"
-                                                                    value={content().user?.name ?? '-'}
-                                                                    disabled={true}
-                                                                />
-                                                            </Show>
+                                                            <p class="icon-link m-0">
+                                                                <ProfileIcon name={content().user?.name ?? '-'} />
+                                                                {content().user?.name ?? '-'}
+                                                            </p>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -928,7 +945,7 @@ export const Content = () => {
                                     </div>
                                     <div class="offset-md-1 col-md-5">
                                         <div class="border rounded p-3">
-                                            <h5>Fields</h5>
+                                            <h5>Values</h5>
 
                                             <hr />
 
@@ -960,8 +977,8 @@ export const Content = () => {
                                                                             <li class="list-group-item d-flex align-items-center">
                                                                                 <Switch fallback={
                                                                                     <p
-                                                                                        class="flex-grow-1 m-0 overflow-hidden"
-                                                                                        style="text-overflow: ellipsis; white-space: nowrap;"
+                                                                                        class="flex-grow-1 m-0 overflow-hidden text-nowrap"
+                                                                                        style="text-overflow: ellipsis"
                                                                                     >
                                                                                         {value.value}
                                                                                     </p>

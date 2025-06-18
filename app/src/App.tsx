@@ -187,10 +187,13 @@ const App: Component = () => {
                         <Route path="/create" component={CreateModel} />
                     </Route>
 
-                    <Route path="/contents" component={ContentRoot}>
-                        <Route path="/" component={Contents} />
-                        <Route path="/by-model/:key" component={ContentsByModel} />
-                        <Route path="/by-model/:namespace/:key" component={ContentsByModel} />
+                    <Route path="/contents" component={(props) => (<>{props.children}</>)}>
+                        <Route path="/" component={ContentRoot}>
+                            <Route path="/" component={Contents} />
+                            <Route path="/by-model/:key" component={ContentsByModel} />
+                            <Route path="/by-model/:namespace/:key" component={ContentsByModel} />
+                        </Route>
+
                         <Route path="/view/:id" component={Content} />
                         <Route path="/create/:key" component={CreateContent} />
                         <Route path="/create/:namespace/:key" component={CreateContent} />
