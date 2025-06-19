@@ -7,6 +7,7 @@ export default function(props: {
     close: () => void,
     confirm: () => Promise<void> | void,
     message: JSX.Element,
+    confirmText?: string,
 }): JSX.Element {
     const alertCtx = useContext(AlertContext)!;
 
@@ -52,7 +53,7 @@ export default function(props: {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Delete Confirm</h5>
+                            <h5 class="modal-title">{props.confirmText ?? 'Uninstall'} Confirm</h5>
                         </div>
                         <div class="modal-body">
                             {props.message}
@@ -65,7 +66,7 @@ export default function(props: {
                             <button type="button" class="btn btn-outline-secondary" onClick={close} disabled={inProgress()}>Cancel</button>
                             <button type="button" class="btn btn-danger icon-link" onClick={confirm} disabled={inProgress()}>
                                 <ProgressSpinner show={inProgress()} />
-                                Delete
+                                {props.confirmText ?? 'Delete'}
                             </button>
                         </div>
                     </div>

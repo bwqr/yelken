@@ -8,6 +8,7 @@ import { AlertContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import ProgressSpinner from "../components/ProgressSpinner";
 import type { Theme } from "../lib/admin/models";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 interface Manifest {
     id: string,
@@ -236,7 +237,6 @@ export const InstallTheme = () => {
 export const Themes = () => {
     enum Action {
         Activate,
-        Uninstall,
     }
 
     const alertCtx = useContext(AlertContext)!;
@@ -244,9 +244,10 @@ export const Themes = () => {
     const adminCtx = useContext(AdminContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
-    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
+    const [uninstalling, setUninstalling] = createSignal(undefined as Theme | undefined);
 
-    onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => inProgress() === undefined));
+    const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
+    onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => !uninstalling()));
 
     const [themes, { mutate }] = createResource(() => adminCtx.fetchThemes());
 
@@ -268,23 +269,16 @@ export const Themes = () => {
             .finally(() => setInProgress(undefined));
     };
 
-    const uninstallTheme = (theme: Theme) => {
-        if (inProgress() !== undefined) {
-            return;
-        }
-
-        setInProgress(Action.Uninstall);
-
-        adminCtx.uninstallTheme(theme.id)
+    const uninstallTheme = async (theme: Theme) => {
+        return adminCtx.uninstallTheme(theme.id)
             .then(() => {
                 setItem(undefined);
+                setUninstalling(undefined);
 
                 alertCtx.success(`Theme "${theme.name}" is uninstalled successfully`);
 
                 mutate(themes()?.filter((t) => t.id !== theme.id) ?? [])
-            })
-            .catch((e) => alertCtx.fail(e.message))
-            .finally(() => setInProgress(undefined));
+            });
     }
 
     return (
@@ -357,9 +351,8 @@ export const Themes = () => {
                                                                         <button
                                                                             class="dropdown-item icon-link text-danger"
                                                                             disabled={inProgress() !== undefined || theme.id === contentCtx.options().theme}
-                                                                            on:click={(ev) => { ev.stopPropagation(); uninstallTheme(theme); }}
+                                                                            on:click={() => setUninstalling(theme)}
                                                                         >
-                                                                            <ProgressSpinner show={inProgress() === Action.Uninstall} />
                                                                             Uninstall
                                                                         </button>
                                                                     </li>
@@ -377,6 +370,16 @@ export const Themes = () => {
                     )}
                 </Match>
             </Switch>
+            <Show when={uninstalling()}>
+                {(theme) => (
+                    <DeleteConfirmModal
+                        message={<p>Are you sure about uninstalling the theme <strong>{theme().name} ({theme().id})</strong>?</p>}
+                        close={() => setUninstalling(undefined)}
+                        confirm={() => uninstallTheme(theme())}
+                        confirmText="Uninstall"
+                    />
+                )}
+            </Show>
         </div>
     );
 };
