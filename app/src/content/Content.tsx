@@ -317,37 +317,41 @@ export const ContentsByModel = () => {
                 <Match when={contents.error}>
                     <p class="text-danger-emphasis text-center">Error while fetching contents: <strong>{contents.error.message}</strong></p>
                 </Match>
-                <Match when={contents()?.items.length === 0}>
+                <Match when={contents() && contents()!.currentPage === 1 && contents()!.items.length === 0}>
                     <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
                 </Match>
                 <Match when={contents()}>
                     {(contents) => (
                         <div class="row">
                             <div class="offset-md-2 col-md-8">
-                                <table class="table table-hover mb-4 border shadow-sm">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th scope="col">#</th>
-                                            <th scope="col">Name</th>
-                                            <th scope="col">Stage</th>
-                                            <th scope="col">Created At</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <For each={contents().items}>
-                                            {(content) => (
-                                                <tr>
-                                                    <td></td>
-                                                    <td>{content.id}</td>
-                                                    <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
-                                                    <td>{content.stage}</td>
-                                                    <td>{content.createdAt.toDateString()}</td>
-                                                </tr>
-                                            )}
-                                        </For>
-                                    </tbody>
-                                </table>
+                                <Show when={contents().items.length > 0} fallback={
+                                    <p class="text-secondary text-center mb-4">There is no content to display for <strong>page {searchParams.page}</strong>.</p>
+                                }>
+                                    <table class="table table-hover mb-4 border shadow-sm">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th scope="col">#</th>
+                                                <th scope="col">Name</th>
+                                                <th scope="col">Stage</th>
+                                                <th scope="col">Created At</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <For each={contents().items}>
+                                                {(content) => (
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>{content.id}</td>
+                                                        <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
+                                                        <td>{content.stage}</td>
+                                                        <td>{content.createdAt.toDateString()}</td>
+                                                    </tr>
+                                                )}
+                                            </For>
+                                        </tbody>
+                                    </table>
+                                </Show>
 
                                 <Pagination
                                     totalPages={contents().totalPages}
@@ -893,7 +897,7 @@ export const Content = () => {
                                         <table class="table table-borderless w-100 m-0">
                                             <tbody>
                                                 <tr>
-                                                    <td>Name</td>
+                                                    <td style="width: 25%">Name</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={content().content.name}>
                                                             <input

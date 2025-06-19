@@ -726,7 +726,7 @@ export const Model = () => {
                                 <table class="table table-borderless w-100 m-0">
                                     <tbody>
                                         <tr>
-                                            <td>Name</td>
+                                            <td style="width: 25%">Name</td>
                                             <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                 <Show when={editingDetails()} fallback={model().name}>
                                                     <input

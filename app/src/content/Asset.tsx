@@ -148,6 +148,8 @@ export const UploadAsset = () => {
         const file = ev.target.files?.item(0);
 
         setAsset(undefined);
+        setDetail(undefined);
+        setAnalysisError(undefined);
 
         if (!file) {
             return;
@@ -513,7 +515,7 @@ export const Asset = () => {
                                                             <input
                                                                 id="assetName"
                                                                 type="text"
-                                                                class="form-control float-end"
+                                                                class="form-control float-end w-auto"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                                                 name="name"
                                                                 value={assetDetails.name}
