@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::{Backend, Connection, PooledConnection};
 
-const DEFAULT_PER_PAGE: i64 = 10;
+const DEFAULT_PER_PAGE: i64 = 20;
 
 fn offset(page: i64, per_page: i64) -> i64 {
     max(page - 1, 0) * per_page

@@ -20,6 +20,7 @@ export interface ContentStore {
 
     fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>>;
     fetchAsset(id: number): Promise<Asset | undefined>;
+    updateAsset(id: number, name: string): Promise<void>;
     deleteAsset(id: number): Promise<void>;
 
     fetchContents(modelId: number, pagination?: PaginationRequest): Promise<Pagination<Content>>;
@@ -128,6 +129,10 @@ export class ContentService implements ContentStore {
 
     async fetchAsset(id: number): Promise<Asset | undefined> {
         return Api.get<Asset>(`/content/asset/${id}`).catch(Api.handleNotFound);
+    }
+
+    async updateAsset(id: number, name: string): Promise<void> {
+        return Api.put(`/content/asset/${id}`, { name });
     }
 
     async deleteAsset(id: number): Promise<void> {

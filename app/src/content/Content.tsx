@@ -1,13 +1,13 @@
 import { A, Navigate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { ContentContext } from "../lib/content/context";
-import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
 import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
-import { BookmarkCheck, BookmarkCheckFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, QuestionSquare, ThreeDotsVertical, Trash, XLg } from "../Icons";
+import { BookmarkCheck, BookmarkCheckFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, FileEarmarkFill, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
@@ -121,7 +121,7 @@ const ContentValueModal = (props: {
                                                     <Show when={store.value}>
                                                         <div class="mb-2" style="height: 6rem">
                                                             <Show when={imageFile(store.value)} fallback={
-                                                                <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
+                                                                <FileEarmarkFill class="d-block m-auto w-auto h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                                             }>
                                                                 <img
                                                                     class="d-block m-auto w-auto"
@@ -315,49 +315,48 @@ export const ContentsByModel = () => {
                     <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
                 </Match>
                 <Match when={contents.error}>
-                    <p class="text-danger">Error while fetching contents: <strong>{contents.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">Error while fetching contents: <strong>{contents.error.message}</strong></p>
+                </Match>
+                <Match when={contents()?.items.length === 0}>
+                    <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
                 </Match>
                 <Match when={contents()}>
                     {(contents) => (
-                        <Show when={contents().items.length > 0} fallback={
-                            <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
-                        }>
-                            <div class="row">
-                                <div class="offset-md-2 col-md-8">
-                                    <table class="table table-hover mb-4 border shadow-sm">
-                                        <thead>
-                                            <tr>
-                                                <th></th>
-                                                <th scope="col">#</th>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Stage</th>
-                                                <th scope="col">Created At</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <For each={contents().items}>
-                                                {(content) => (
-                                                    <tr>
-                                                        <td></td>
-                                                        <td>{content.id}</td>
-                                                        <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
-                                                        <td>{content.stage}</td>
-                                                        <td>{content.createdAt.toDateString()}</td>
-                                                    </tr>
-                                                )}
-                                            </For>
-                                        </tbody>
-                                    </table>
+                        <div class="row">
+                            <div class="offset-md-2 col-md-8">
+                                <table class="table table-hover mb-4 border shadow-sm">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th scope="col">#</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Stage</th>
+                                            <th scope="col">Created At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <For each={contents().items}>
+                                            {(content) => (
+                                                <tr>
+                                                    <td></td>
+                                                    <td>{content.id}</td>
+                                                    <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
+                                                    <td>{content.stage}</td>
+                                                    <td>{content.createdAt.toDateString()}</td>
+                                                </tr>
+                                            )}
+                                        </For>
+                                    </tbody>
+                                </table>
 
-                                    <Pagination
-                                        totalPages={contents().totalPages}
-                                        page={contents().currentPage}
-                                        perPage={pagination().perPage}
-                                        pageChange={(page) => setSearchParams({ page: page.toString() })}
-                                    />
-                                </div>
+                                <Pagination
+                                    totalPages={contents().totalPages}
+                                    page={contents().currentPage}
+                                    perPage={pagination().perPage}
+                                    pageChange={(page) => setSearchParams({ page: page.toString() })}
+                                />
                             </div>
-                        </Show>
+                        </div>
                     )}
                 </Match>
             </Switch>
@@ -453,146 +452,144 @@ export const CreateContent = () => {
                 <Show when={model()} fallback={
                     <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
                 }>
-                    {(model) => {
-                        return (
-                            <form class="offset-md-3 col-md-6" onSubmit={onSubmit}>
-                                <div class="border rounded p-3 mb-4">
-                                    <div class="mb-4">
-                                        <label for="contentName" class="form-label">Name</label>
-                                        <input
-                                            type="text"
-                                            id="contentName"
-                                            class="form-control"
-                                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
-                                            name="contentName"
-                                            value={name()}
-                                            onInput={(ev) => setName(ev.target.value)}
-                                        />
-                                        <Show when={validationErrors().has(ValidationError.Name)}>
-                                            <small class="invalid-feedback">Please enter a name.</small>
-                                        </Show>
-                                    </div>
-
-                                    <div class="mb-4">
-                                        <label for="modelName" class="form-label">Model</label>
-                                        <input
-                                            type="text"
-                                            id="modelName"
-                                            class="form-control"
-                                            name="modelName"
-                                            value={model().title()}
-                                            disabled
-                                        />
-                                    </div>
+                    {(model) => (
+                        <form class="offset-md-3 col-md-6" onSubmit={onSubmit}>
+                            <div class="border rounded p-3 mb-4">
+                                <div class="mb-4">
+                                    <label for="contentName" class="form-label">Name</label>
+                                    <input
+                                        type="text"
+                                        id="contentName"
+                                        class="form-control"
+                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                        name="contentName"
+                                        value={name()}
+                                        onInput={(ev) => setName(ev.target.value)}
+                                    />
+                                    <Show when={validationErrors().has(ValidationError.Name)}>
+                                        <small class="invalid-feedback">Please enter a name.</small>
+                                    </Show>
                                 </div>
 
-                                <hr />
+                                <div class="mb-4">
+                                    <label for="modelName" class="form-label">Model</label>
+                                    <input
+                                        type="text"
+                                        id="modelName"
+                                        class="form-control"
+                                        name="modelName"
+                                        value={model().title()}
+                                        disabled
+                                    />
+                                </div>
+                            </div>
 
-                                <h5 class="mb-4">Values</h5>
+                            <hr />
 
-                                <For each={model().fields}>
-                                    {(mf) => {
-                                        return (
-                                            <>
-                                                <div class="card mb-4">
-                                                    <div class="card-header d-flex align-items-center">
-                                                        <h5 class="flex-grow-1 m-0">{mf.name}</h5>
-                                                        <Show when={(mf.localized && (values[mf.id]?.length ?? 0) < locales.length) || mf.multiple || (values[mf.id]?.length ?? 0) === 0}>
-                                                            <button
-                                                                type="button"
-                                                                class="btn btn-sm btn-secondary icon-link justify-content-center"
-                                                                onClick={() => setShowContentValueModal({ modelField: mf })}
-                                                            >
-                                                                <PlusSquareDotted viewBox="0 0 16 16" />
-                                                                Add value
-                                                            </button>
-                                                        </Show>
-                                                    </div>
-                                                    <ul class="list-group list-group-flush">
-                                                        <For each={values[mf.id]}>
-                                                            {(value) => {
-                                                                const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+                            <h5 class="mb-4">Values</h5>
 
-                                                                return (
-                                                                    <li class="list-group-item d-flex align-items-center">
-                                                                        <Switch fallback={
-                                                                            <p
-                                                                                class="flex-grow-1 m-0 overflow-hidden text-nowrap"
-                                                                                style="text-overflow: ellipsis"
-                                                                            >
-                                                                                {value.value}
-                                                                            </p>
-
-                                                                        }>
-                                                                            <Match when={field()?.kind === FieldKind.Asset}>
-                                                                                <Show when={imageFile(value.value)} fallback={
-                                                                                    <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
-                                                                                }>
-                                                                                    <div class="flex-grow-1">
-                                                                                        <img
-                                                                                            class=""
-                                                                                            src={`${config.API_URL}/assets/content/${value.value}`}
-                                                                                            alt={value.value}
-                                                                                            style="max-width: 100%; max-height: 5rem;"
-                                                                                        />
-                                                                                    </div>
-                                                                                </Show>
-                                                                            </Match>
-                                                                        </Switch>
-                                                                        <Show when={value.locale}>
-                                                                            <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
-                                                                        </Show>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="btn icon-link p-1 ms-2"
-                                                                            onClick={() => setShowContentValueModal({ modelField: mf, initial: value })}
-                                                                        >
-                                                                            <PencilSquare viewBox="0 0 16 16" />
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="btn text-danger icon-link p-1 ms-2"
-                                                                            onClick={() => setValues(mf.id, values[mf.id].filter((v) => v !== value))}
-                                                                        >
-                                                                            <XLg viewBox="0 0 16 16" />
-                                                                        </button>
-                                                                    </li>
-                                                                )
-                                                            }}
-                                                        </For>
-                                                    </ul>
+                            <For each={model().fields}>
+                                {(mf) => {
+                                    return (
+                                        <>
+                                            <div class="card mb-4">
+                                                <div class="card-header d-flex align-items-center">
+                                                    <h5 class="flex-grow-1 m-0">{mf.name}</h5>
+                                                    <Show when={(mf.localized && (values[mf.id]?.length ?? 0) < locales.length) || mf.multiple || (values[mf.id]?.length ?? 0) === 0}>
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-sm btn-secondary icon-link justify-content-center"
+                                                            onClick={() => setShowContentValueModal({ modelField: mf })}
+                                                        >
+                                                            <PlusSquareDotted viewBox="0 0 16 16" />
+                                                            Add value
+                                                        </button>
+                                                    </Show>
                                                 </div>
-                                            </>
-                                        );
-                                    }}
-                                </For>
+                                                <ul class="list-group list-group-flush">
+                                                    <For each={values[mf.id]}>
+                                                        {(value) => {
+                                                            const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
 
-                                <Show when={serverError()}>
-                                    <small class="text-danger mb-2">{serverError()}</small>
-                                </Show>
+                                                            return (
+                                                                <li class="list-group-item d-flex align-items-center">
+                                                                    <Switch fallback={
+                                                                        <p
+                                                                            class="flex-grow-1 m-0 overflow-hidden text-nowrap"
+                                                                            style="text-overflow: ellipsis"
+                                                                        >
+                                                                            {value.value}
+                                                                        </p>
 
-                                <div class="d-flex justify-content-center">
-                                    <button
-                                        type="submit"
-                                        style="max-width: 10rem;"
-                                        class="btn btn-primary icon-link justify-content-center w-100"
-                                        disabled={inProgress()}
-                                    >
-                                        <ProgressSpinner show={inProgress()} />
-                                        <PlusLg viewBox="0 0 16 16" />
-                                        Create
-                                    </button>
-                                </div>
-                            </form>
-                        );
-                    }}
+                                                                    }>
+                                                                        <Match when={field()?.kind === FieldKind.Asset}>
+                                                                            <Show when={imageFile(value.value)} fallback={
+                                                                                <FileEarmarkFill class="d-block m-auto w-auto h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
+                                                                            }>
+                                                                                <div class="flex-grow-1">
+                                                                                    <img
+                                                                                        class=""
+                                                                                        src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                        alt={value.value}
+                                                                                        style="max-width: 100%; max-height: 5rem;"
+                                                                                    />
+                                                                                </div>
+                                                                            </Show>
+                                                                        </Match>
+                                                                    </Switch>
+                                                                    <Show when={value.locale}>
+                                                                        <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
+                                                                    </Show>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn icon-link p-1 ms-2"
+                                                                        onClick={() => setShowContentValueModal({ modelField: mf, initial: value })}
+                                                                    >
+                                                                        <PencilSquare viewBox="0 0 16 16" />
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn text-danger icon-link p-1 ms-2"
+                                                                        onClick={() => setValues(mf.id, values[mf.id].filter((v) => v !== value))}
+                                                                    >
+                                                                        <XLg viewBox="0 0 16 16" />
+                                                                    </button>
+                                                                </li>
+                                                            )
+                                                        }}
+                                                    </For>
+                                                </ul>
+                                            </div>
+                                        </>
+                                    );
+                                }}
+                            </For>
+
+                            <Show when={serverError()}>
+                                <small class="text-danger mb-2">{serverError()}</small>
+                            </Show>
+
+                            <div class="d-flex justify-content-center">
+                                <button
+                                    type="submit"
+                                    style="max-width: 10rem;"
+                                    class="btn btn-primary icon-link justify-content-center w-100"
+                                    disabled={inProgress()}
+                                >
+                                    <ProgressSpinner show={inProgress()} />
+                                    <PlusLg viewBox="0 0 16 16" />
+                                    Create
+                                </button>
+                            </div>
+                        </form>
+                    )}
                 </Show>
             </div>
 
             <Show when={showContentValueModal()}>
                 {(value) => (
                     <ContentValueModal
-                        initial={value().initial ? { ...value().initial as CreateContentValue } : undefined}
+                        initial={value().initial ? { ...value().initial! } : undefined}
                         modelField={value().modelField}
                         create={(newValue) => {
                             const initialValue = value().initial;
@@ -797,285 +794,287 @@ export const Content = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <Suspense fallback={
-                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
-            }>
-                <div class="d-flex align-items-center mb-5">
-                    <div class="flex-grow-1">
-                        <h2 class="m-0">{content()?.content.name ?? '-'}</h2>
-                        <small>Content</small>
-                    </div>
-                    <div class="dropdown mx-2">
-                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                            <ThreeDotsVertical viewBox="0 0 16 16" />
-                        </button>
-                        <ul id="content-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() }} style="right: 0;">
-                            <li>
-                                <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
-                                    <Trash viewBox="0 0 16 16" />
-                                    Delete
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="dropdown">
-                        <div class="btn-group">
-                            <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled={true}>
-                                <ProgressSpinner show={inProgress() === Action.UpdateStage} />
-                                <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
-                                <Switch>
-                                    <Match when={content()?.content.stage === ContentStage.Draft}>Draft</Match>
-                                    <Match when={content()?.content.stage === ContentStage.Published}>Published</Match>
-                                </Switch>
-                            </button>
-                            <button
-                                type="button"
-                                class={`btn btn-outline-${contentStyle().color} dropdown-toggle dropdown-toggle-split`}
-                                on:click={(ev) => { ev.stopPropagation(); setShowStageDropdown(!showStageDropdown()); }}
-                                aria-expanded={showStageDropdown()}
-                            >
-                                <span class="visually-hidden">Toggle Dropdown</span>
-                            </button>
-                        </div>
-                        <ul id="stage-detail-dropdown" class="dropdown-menu mt-1 show shadow" classList={{ 'show': showStageDropdown() }} style="right: 0;">
-                            <li>
-                                <button class="dropdown-item py-2" onClick={updateStage} disabled={inProgress() !== undefined}>
-                                    <Switch>
-                                        <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
-                                        <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
-                                    </Switch>
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <Switch>
-                        <Match when={content.state === 'ready' && content() === undefined}>
-                            <p class="text-secondary text-center">Could not find the content with id {params.id}.</p>
-                        </Match>
-                        <Match when={content()}>
-                            {(content) => (
-                                <>
-                                    <div class="offset-md-1 col-md-4">
-                                        <div class="border rounded p-3">
-                                            <div class="d-flex justify-content-center">
-                                                <h5 class="flex-grow-1 m-0">Details</h5>
-                                                <Show when={editingDetails()} fallback={
-                                                    <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
-                                                        <PencilSquare viewBox="0 0 16 16" />
-                                                        Edit
-                                                    </button>
-                                                }>
-                                                    <button
-                                                        type="button"
-                                                        class="btn text-danger icon-link py-0 px-1"
-                                                        onClick={() => setEditingDetails(false)}
-                                                    >
-                                                        Discard
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="btn icon-link py-0 px-1 ms-2"
-                                                        onClick={saveDetails}
-                                                        disabled={inProgress() === Action.UpdateDetails}
-                                                    >
-                                                        <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
-                                                        <FloppyFill viewBox="0 0 16 16" />
-                                                        Save
-                                                    </button>
-                                                </Show>
-                                            </div>
-
-                                            <hr />
-
-                                            <table class="table table-borderless w-100 m-0">
-                                                <tbody>
-                                                    <tr>
-                                                        <td>Name</td>
-                                                        <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                            <Show when={editingDetails()} fallback={content().content.name}>
-                                                                <input
-                                                                    id="modelName"
-                                                                    type="text"
-                                                                    class="form-control float-end w-auto"
-                                                                    classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
-                                                                    name="name"
-                                                                    value={contentDetails.name}
-                                                                    onInput={(ev) => setContentDetails('name', ev.target.value)}
-                                                                />
-                                                            </Show>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Model</td>
-                                                        <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                            <Show when={editingDetails()} fallback={model()?.title() ?? '-'}>
-                                                                <input
-                                                                    type="text"
-                                                                    class="form-control float-end w-auto"
-                                                                    value={model()?.title() ?? '-'}
-                                                                    disabled={true}
-                                                                />
-                                                            </Show>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Stage</td>
-                                                        <td class="text-end py-1">
-                                                            <Switch>
-                                                                <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
-                                                                <Match when={content().content.stage === ContentStage.Published}>Published</Match>
-                                                            </Switch>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Created By</td>
-                                                        <td class="text-end py-1">
-                                                            <p class="icon-link m-0">
-                                                                <ProfileIcon name={content().user?.name ?? '-'} />
-                                                                {content().user?.name ?? '-'}
-                                                            </p>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+            <Switch>
+                <Match when={content.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={content.error}>
+                    <p class="text-danger-emphasis text-center">Error while fetching content: <strong>{content.error.message}</strong></p>
+                </Match>
+                <Match when={content.state === 'ready' && content() === undefined}>
+                    <p class="text-secondary text-center">Could not find the content with id {params.id}.</p>
+                </Match>
+                <Match when={content()}>
+                    {(content) => (
+                        <>
+                            <div class="d-flex align-items-center mb-5">
+                                <div class="flex-grow-1">
+                                    <h2 class="m-0">{content().content.name}</h2>
+                                    <small>Content</small>
+                                </div>
+                                <div class="dropdown mx-2">
+                                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                                        <ThreeDotsVertical viewBox="0 0 16 16" />
+                                    </button>
+                                    <ul id="content-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() }} style="right: 0;">
+                                        <li>
+                                            <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
+                                                <Trash viewBox="0 0 16 16" />
+                                                Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="dropdown">
+                                    <div class="btn-group">
+                                        <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled={true}>
+                                            <ProgressSpinner show={inProgress() === Action.UpdateStage} />
+                                            <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
+                                            <Switch>
+                                                <Match when={content()?.content.stage === ContentStage.Draft}>Draft</Match>
+                                                <Match when={content()?.content.stage === ContentStage.Published}>Published</Match>
+                                            </Switch>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class={`btn btn-outline-${contentStyle().color} dropdown-toggle dropdown-toggle-split`}
+                                            on:click={(ev) => { ev.stopPropagation(); setShowStageDropdown(!showStageDropdown()); }}
+                                            aria-expanded={showStageDropdown()}
+                                        >
+                                            <span class="visually-hidden">Toggle Dropdown</span>
+                                        </button>
                                     </div>
-                                    <div class="offset-md-1 col-md-5">
-                                        <div class="border rounded p-3">
-                                            <h5>Values</h5>
+                                    <ul id="stage-detail-dropdown" class="dropdown-menu mt-1 show shadow" classList={{ 'show': showStageDropdown() }} style="right: 0;">
+                                        <li>
+                                            <button class="dropdown-item py-2" onClick={updateStage} disabled={inProgress() !== undefined}>
+                                                <Switch>
+                                                    <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
+                                                    <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
+                                                </Switch>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
 
-                                            <hr />
+                            <div class="row g-4">
+                                <div class="offset-md-1 col-md-4">
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex justify-content-center">
+                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <Show when={editingDetails()} fallback={
+                                                <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
+                                                    <PencilSquare viewBox="0 0 16 16" />
+                                                    Edit
+                                                </button>
+                                            }>
+                                                <button
+                                                    type="button"
+                                                    class="btn text-danger icon-link py-0 px-1"
+                                                    onClick={() => setEditingDetails(false)}
+                                                >
+                                                    Discard
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn icon-link py-0 px-1 ms-2"
+                                                    onClick={saveDetails}
+                                                    disabled={inProgress() === Action.UpdateDetails}
+                                                >
+                                                    <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
+                                                    <FloppyFill viewBox="0 0 16 16" />
+                                                    Save
+                                                </button>
+                                            </Show>
+                                        </div>
 
-                                            <For each={model()?.fields ?? []}>
-                                                {(mf) => {
-                                                    const locales = contentCtx.activeLocales();
-                                                    const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
-                                                    const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
+                                        <hr />
 
-                                                    return (
-                                                        <>
-                                                            <div class="card mb-4">
-                                                                <div class="card-header d-flex align-items-center">
-                                                                    <h5 class="flex-grow-1 m-0">{mf.name}</h5>
-                                                                    <Show when={(mf.localized && values().length < locales.length) || mf.multiple || values().length === 0}>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="btn btn-sm btn-secondary icon-link justify-content-center"
-                                                                            onClick={() => setCreatingValue(mf)}
-                                                                        >
-                                                                            <PlusSquareDotted viewBox="0 0 16 16" />
-                                                                            Add value
-                                                                        </button>
-                                                                    </Show>
-                                                                </div>
-                                                                <ul class="list-group list-group-flush">
-                                                                    <For each={values()}>
-                                                                        {(value) => (
-                                                                            <li class="list-group-item d-flex align-items-center">
-                                                                                <Switch fallback={
-                                                                                    <p
-                                                                                        class="flex-grow-1 m-0 overflow-hidden text-nowrap"
-                                                                                        style="text-overflow: ellipsis"
-                                                                                    >
-                                                                                        {value.value}
-                                                                                    </p>
+                                        <table class="table table-borderless w-100 m-0">
+                                            <tbody>
+                                                <tr>
+                                                    <td>Name</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={content().content.name}>
+                                                            <input
+                                                                id="modelName"
+                                                                type="text"
+                                                                class="form-control float-end w-auto"
+                                                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                                                name="name"
+                                                                value={contentDetails.name}
+                                                                onInput={(ev) => setContentDetails('name', ev.target.value)}
+                                                            />
+                                                        </Show>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Model</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={model()?.title() ?? '-'}>
+                                                            <input
+                                                                type="text"
+                                                                class="form-control float-end w-auto"
+                                                                value={model()?.title() ?? '-'}
+                                                                disabled={true}
+                                                            />
+                                                        </Show>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Stage</td>
+                                                    <td class="text-end py-1">
+                                                        <Switch>
+                                                            <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
+                                                            <Match when={content().content.stage === ContentStage.Published}>Published</Match>
+                                                        </Switch>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Created By</td>
+                                                    <td class="text-end py-1">
+                                                        <p class="icon-link m-0">
+                                                            <ProfileIcon name={content().user?.name ?? '-'} />
+                                                            {content().user?.name ?? '-'}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="offset-md-1 col-md-5">
+                                    <div class="border rounded p-3">
+                                        <h5>Values</h5>
 
-                                                                                }>
-                                                                                    <Match when={field()?.kind === FieldKind.Asset}>
-                                                                                        <Show when={imageFile(value.value)} fallback={
-                                                                                            <QuestionSquare class="d-block m-auto w-auto h-100 text-secondary" viewBox="0 0 16 16" />
-                                                                                        }>
-                                                                                            <div class="flex-grow-1">
-                                                                                                <img
-                                                                                                    class=""
-                                                                                                    src={`${config.API_URL}/assets/content/${value.value}`}
-                                                                                                    alt={value.value}
-                                                                                                    style="max-width: 100%; max-height: 5rem;"
-                                                                                                />
-                                                                                            </div>
-                                                                                        </Show>
-                                                                                    </Match>
-                                                                                </Switch>
-                                                                                <Show when={value.locale}>
-                                                                                    <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
-                                                                                </Show>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="btn icon-link p-1 ms-2"
-                                                                                    onClick={() => setEditingValue({ modelField: mf, value })}
-                                                                                >
-                                                                                    <PencilSquare viewBox="0 0 16 16" />
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    class="btn text-danger icon-link p-1 ms-2"
-                                                                                    onClick={() => setDeletingValue(value)}
-                                                                                >
-                                                                                    <XLg viewBox="0 0 16 16" />
-                                                                                </button>
-                                                                            </li>
-                                                                        )}
-                                                                    </For>
-                                                                </ul>
+                                        <hr />
+
+                                        <For each={model()?.fields ?? []}>
+                                            {(mf) => {
+                                                const locales = contentCtx.activeLocales();
+                                                const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
+                                                const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
+
+                                                return (
+                                                    <>
+                                                        <div class="card mb-4">
+                                                            <div class="card-header d-flex align-items-center">
+                                                                <h5 class="flex-grow-1 m-0">{mf.name}</h5>
+                                                                <Show when={(mf.localized && values().length < locales.length) || mf.multiple || values().length === 0}>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="btn btn-sm btn-secondary icon-link justify-content-center"
+                                                                        onClick={() => setCreatingValue(mf)}
+                                                                    >
+                                                                        <PlusSquareDotted viewBox="0 0 16 16" />
+                                                                        Add value
+                                                                    </button>
+                                                                </Show>
                                                             </div>
-                                                        </>
-                                                    );
-                                                }}
-                                            </For>
-                                        </div>
+                                                            <ul class="list-group list-group-flush">
+                                                                <For each={values()}>
+                                                                    {(value) => (
+                                                                        <li class="list-group-item d-flex align-items-center">
+                                                                            <Switch fallback={
+                                                                                <p
+                                                                                    class="flex-grow-1 m-0 overflow-hidden text-nowrap"
+                                                                                    style="text-overflow: ellipsis"
+                                                                                >
+                                                                                    {value.value}
+                                                                                </p>
+
+                                                                            }>
+                                                                                <Match when={field()?.kind === FieldKind.Asset}>
+                                                                                    <Show when={imageFile(value.value)} fallback={
+                                                                                        <FileEarmarkFill class="d-block m-auto w-auto h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
+                                                                                    }>
+                                                                                        <div class="flex-grow-1">
+                                                                                            <img
+                                                                                                class=""
+                                                                                                src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                                alt={value.value}
+                                                                                                style="max-width: 100%; max-height: 5rem;"
+                                                                                            />
+                                                                                        </div>
+                                                                                    </Show>
+                                                                                </Match>
+                                                                            </Switch>
+                                                                            <Show when={value.locale}>
+                                                                                <small class="ms-2"> ({locales.find((l) => l.key === value.locale)?.name})</small>
+                                                                            </Show>
+                                                                            <button
+                                                                                type="button"
+                                                                                class="btn icon-link p-1 ms-2"
+                                                                                onClick={() => setEditingValue({ modelField: mf, value })}
+                                                                            >
+                                                                                <PencilSquare viewBox="0 0 16 16" />
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                class="btn text-danger icon-link p-1 ms-2"
+                                                                                onClick={() => setDeletingValue(value)}
+                                                                            >
+                                                                                <XLg viewBox="0 0 16 16" />
+                                                                            </button>
+                                                                        </li>
+                                                                    )}
+                                                                </For>
+                                                            </ul>
+                                                        </div>
+                                                    </>
+                                                );
+                                            }}
+                                        </For>
                                     </div>
-                                </>
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
-
-                <Show when={editingValue()}>
-                    {(value) => (
-                        <ContentValueModal
-                            close={() => setEditingValue(undefined)}
-                            create={(updatedValue) => saveValue(value().value.id, updatedValue)}
-                            modelField={value().modelField}
-                            initial={{ ...value().value, locale: value().value.locale ?? undefined }}
-                        />
+                                </div>
+                            </div>
+                        </>
                     )}
-                </Show>
+                </Match>
+            </Switch>
 
-                <Show when={creatingValue()}>
-                    {(modelField) => (
-                        <ContentValueModal
-                            close={() => setCreatingValue(undefined)}
-                            create={(value) => createValue(value)}
-                            modelField={modelField()}
-                        />
-                    )}
-                </Show>
-
-                <Show when={deletingContent()}>
-                    <DeleteConfirmModal
-                        message={<p>Are you sure about deleting the content <strong>{content()?.content.name}</strong>?</p>}
-                        close={() => setDeletingContent(false)}
-                        confirm={deleteContent}
+            <Show when={editingValue()}>
+                {(value) => (
+                    <ContentValueModal
+                        close={() => setEditingValue(undefined)}
+                        create={(updatedValue) => saveValue(value().value.id, updatedValue)}
+                        modelField={value().modelField}
+                        initial={{ ...value().value, locale: value().value.locale ?? undefined }}
                     />
-                </Show>
+                )}
+            </Show>
 
-                <Show when={deletingValue()}>
-                    {(value) => {
-                        const modelField = model()?.fields.find((mf) => mf.id === value().modelFieldId);
+            <Show when={creatingValue()}>
+                {(modelField) => (
+                    <ContentValueModal
+                        close={() => setCreatingValue(undefined)}
+                        create={(value) => createValue(value)}
+                        modelField={modelField()}
+                    />
+                )}
+            </Show>
 
-                        return (
-                            <DeleteConfirmModal
-                                message={<p>Are you sure about deleting the value for field <strong>{modelField?.name ?? '-'}</strong>?</p>}
-                                close={() => setDeletingValue(undefined)}
-                                confirm={() => deleteValue(value())}
-                            />
-                        )
-                    }}
-                </Show>
-            </Suspense>
+            <Show when={deletingContent()}>
+                <DeleteConfirmModal
+                    message={<p>Are you sure about deleting the content <strong>{content()?.content.name}</strong>?</p>}
+                    close={() => setDeletingContent(false)}
+                    confirm={deleteContent}
+                />
+            </Show>
+
+            <Show when={deletingValue()}>
+                {(value) => {
+                    const modelField = model()?.fields.find((mf) => mf.id === value().modelFieldId);
+
+                    return (
+                        <DeleteConfirmModal
+                            message={<p>Are you sure about deleting the value for field <strong>{modelField?.name ?? '-'}</strong>?</p>}
+                            close={() => setDeletingValue(undefined)}
+                            confirm={() => deleteValue(value())}
+                        />
+                    )
+                }}
+            </Show>
         </div>
     );
 };

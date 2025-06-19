@@ -8,8 +8,12 @@ interface Links {
 
 export const Pagination = (props: { totalPages: number, page: number, perPage?: number, pageChange: (page: number) => void, }) => {
     const links: () => Links = () => {
+        if (props.totalPages === 0) {
+            return { pages: [1] };
+        }
+
         const minPage = Math.max(1, props.page - 3);
-        const maxPage = Math.min(props.totalPages, props.page + 3);
+        const maxPage = Math.max(minPage, Math.min(props.totalPages, props.page + 3));
 
         const links = new Array(maxPage - minPage + 1).keys().map((page) => page + minPage);
 

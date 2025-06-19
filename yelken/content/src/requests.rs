@@ -76,3 +76,8 @@ pub struct UpdateModelField {
 pub struct UpdateContent {
     pub name: String,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateAsset {
+    pub name: String,
+}

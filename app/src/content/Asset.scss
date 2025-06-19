@@ -1,0 +1,50 @@
+.asset-masonry {
+  li {
+    width: 20%;
+
+    a {
+      min-width: 5rem;
+      max-height: 25vh;
+    }
+
+    img, svg {
+      min-height: 100%;
+      width: 100%;
+      object-fit: cover;
+    }
+
+    small {
+      text-shadow: #000 2px 2px 7px;
+    }
+  }
+
+  @media (max-width: 960px) {
+    li {
+      width: 25%;
+
+      a {
+        max-height: 40vh;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    li {
+      width: 33%;
+
+      a {
+        max-height: 30vh;
+      }
+    }
+  }
+
+  @media (max-width: 480px) {
+    li {
+      width: 50%;
+
+      a {
+        max-height: 40vh;
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
-import { createMemo, createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
 import { ContentContext } from "../lib/content/context";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
-import { QuestionSquare, ThreeDotsVertical, Trash, Upload } from "../Icons";
+import { FileEarmarkFill, FloppyFill, PencilSquare, ThreeDotsVertical, Trash, Upload } from "../Icons";
 import { AlertContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
@@ -10,6 +10,9 @@ import { type Asset as AssetModel } from '../lib/content/models';
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { createStore } from "solid-js/store";
+import ProgressSpinner from "../components/ProgressSpinner";
+import './Asset.scss';
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) => void, }) => {
     const contentCtx = useContext(ContentContext)!;
@@ -26,37 +29,55 @@ export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) 
                             <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Pick an Asset</h1>
                         </div>
                         <div class="modal-body">
-                            <Suspense fallback={<p>Loading...</p>}>
-                                <Switch>
-                                    <Match when={assets.error}>
-                                        <span>Error: {assets.error.message}</span>
-                                    </Match>
-                                    <Match when={assets()}>
-                                        {(assets) => (
-                                            <>
-                                                <div class="row g-2 mb-4">
+                            <Switch>
+                                <Match when={assets.loading}>
+                                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                                </Match>
+                                <Match when={assets.error}>
+                                    <p class="text-danger-emphasis text-center">Error while fetching assets: <strong>{assets.error.message}</strong></p>
+                                </Match>
+                                <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
+                                    <p class="text-secondary text-center">There is no asset to display yet.</p>
+                                </Match>
+                                <Match when={assets()}>
+                                    {(assets) => (
+                                        <>
+                                            <Show when={assets().items.length > 0} fallback={
+                                                <p class="text-secondary text-center mb-4">There is no asset to display for <strong>page {pagination.page}</strong>.</p>
+                                            }>
+                                                <ul class="mb-5 list-unstyled d-flex flex-wrap asset-masonry">
                                                     <For each={assets().items}>
                                                         {(asset) => (
-                                                            <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word; cursor: pointer;" onClick={() => props.pick(asset)}>
-                                                                <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-75 m-auto p-2 text-secondary" viewBox="0 0 16 16" />}>
-                                                                    <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-2" alt={asset.name} />
-                                                                </Show>
-                                                                <p class="card-text text-center">{asset.name}</p>
-                                                            </div>
+                                                            <li class="p-1 flex-grow-1 d-flex justify-content-center">
+                                                                <A href="" class="position-relative h-100 d-flex" on:click={(ev) => { ev.preventDefault(); props.pick(asset); }}>
+                                                                    <Show when={asset.filetype?.startsWith('image')} fallback={
+                                                                        <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
+                                                                    }>
+                                                                        <img
+                                                                            src={`${config.API_URL}/assets/content/${asset.filename}`}
+                                                                            alt={asset.name}
+                                                                            class="rounded"
+                                                                        />
+                                                                    </Show>
+                                                                    <small class="text-white position-absolute text-center w-100 start-0 bottom-0">{asset.name}</small>
+                                                                </A>
+                                                            </li>
                                                         )}
                                                     </For>
-                                                </div>
-                                                <Pagination
-                                                    totalPages={assets().totalPages}
-                                                    page={assets().currentPage}
-                                                    perPage={pagination.perPage}
-                                                    pageChange={(page) => setPagination('page', page)}
-                                                />
-                                            </>
-                                        )}
-                                    </Match>
-                                </Switch>
-                            </Suspense>
+                                                    <li style="flex-grow: 10"></li>
+                                                </ul>
+                                            </Show>
+
+                                            <Pagination
+                                                totalPages={assets().totalPages}
+                                                page={assets().currentPage}
+                                                perPage={pagination.perPage}
+                                                pageChange={(page) => setPagination('page', page)}
+                                            />
+                                        </>
+                                    )}
+                                </Match>
+                            </Switch>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-danger" onClick={props.close}>Cancel</button>
@@ -169,7 +190,8 @@ export const UploadAsset = () => {
 
         Api.request<unknown, AssetModel>('/content/assets', 'POST', { formdata })
             .then((asset) => {
-                alertCtx.success('Asset is created successfully');
+                alertCtx.success(`Asset "${asset.name}" is created successfully`);
+
                 navigate(`/assets/view/${asset.id}`, { replace: true });
             })
             .catch((e) => {
@@ -189,68 +211,68 @@ export const UploadAsset = () => {
             </div>
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
-                    <div class="mb-4">
-                        <label for="assetFile" class="form-label">Choose an asset file</label>
-                        <input
-                            id="assetFile"
-                            type="file"
-                            class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Asset) }}
-                            disabled={inProgress() !== undefined}
-                            onChange={assetChanged}
-                        />
-                        <Show when={validationErrors().has(ValidationError.Asset)}>
-                            <small class="invalid-feedback">Please choose an asset file.</small>
-                        </Show>
-                    </div>
-
-                    <Show when={inProgress() === Action.Analyze}>
-                        <div class="d-flex justify-contents-center mb-4">
-                            <div class="spinner-border me-2" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <span>Asset is being analyzed.</span>
-                        </div>
-                    </Show>
-                    <Show when={analysisError()}>
-                        {(error) => (<small class="text-danger mb-4">Analysis Error: {error()}</small>)}
-                    </Show>
-                    <Show when={detail()}>
-                        {(detail) => (
-                            <table class="table mb-4 w-100 caption-top">
-                                <caption>Asset Details</caption>
-                                <tbody>
-                                    <tr>
-                                        <td>Type</td>
-                                        <td>{detail().type}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Size</td>
-                                        <td>{Math.ceil(detail().size / 1024)} KB</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        )}
-                    </Show>
-
-                    <div class="mb-4">
-                        <img ref={imageEl} class="d-block m-auto" style="max-width: 100%; max-height: 200px" />
-                    </div>
-
-                    <Show when={serverError()}>
-                        <small class="text-danger mb-4">{serverError()}</small>
-                    </Show>
-
-                    <div class="d-flex justify-content-center">
-                        <button type="submit" class="btn btn-primary icon-link justify-content-center mw-100" style="width: 250px;" disabled={inProgress() !== undefined}>
-                            <Show when={inProgress() !== undefined}>
-                                <div class="spinner-border" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
+                    <div class="border rounded p-3">
+                        <div class="mb-4">
+                            <label for="assetFile" class="form-label">Choose an asset file</label>
+                            <input
+                                id="assetFile"
+                                type="file"
+                                class="form-control"
+                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Asset) }}
+                                disabled={inProgress() !== undefined}
+                                onChange={assetChanged}
+                            />
+                            <Show when={validationErrors().has(ValidationError.Asset)}>
+                                <small class="invalid-feedback">Please choose an asset file.</small>
                             </Show>
-                            <Upload viewBox="0 0 16 16" />
-                            Upload
-                        </button>
+                        </div>
+
+                        <Show when={inProgress() === Action.Analyze}>
+                            <div class="d-flex justify-content-center mb-4">
+                                <ProgressSpinner show={true} />
+                                <span class="ms-2">Asset is being analyzed.</span>
+                            </div>
+                        </Show>
+                        <Show when={analysisError()}>
+                            {(error) => (<small class="text-danger mb-4">Analysis Error: {error()}</small>)}
+                        </Show>
+                        <Show when={detail()}>
+                            {(detail) => (
+                                <table class="table mb-4 w-100 caption-top" style="table-layout: fixed;">
+                                    <caption class="p-0">Asset Details</caption>
+                                    <tbody>
+                                        <tr>
+                                            <td style="width: 25%">Type</td>
+                                            <td>{detail().type}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Size</td>
+                                            <td>{Math.ceil(detail().size / 1024)} KB</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            )}
+                        </Show>
+
+                        <div classList={{ 'mb-4': detail() !== undefined }}>
+                            <img ref={imageEl} class="d-block m-auto" style="max-width: 100%; max-height: 200px" />
+
+                            <Show when={detail()?.type.startsWith('image') === false}>
+                                <FileEarmarkFill class="w-100 text-secondary-emphasis" style="max-width: 100%; height: 200px" viewBox="0 0 16 16" />
+                            </Show>
+                        </div>
+
+                        <Show when={serverError()}>
+                            <small class="text-danger mb-2">{serverError()}</small>
+                        </Show>
+
+                        <div class="d-flex justify-content-center">
+                            <button type="submit" class="btn btn-primary icon-link justify-content-center mw-100" style="width: 10rem;" disabled={inProgress() !== undefined}>
+                                <ProgressSpinner show={inProgress() === Action.Upload} />
+                                <Upload viewBox="0 0 16 16" />
+                                Upload
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -277,54 +299,67 @@ export const Assets = () => {
                     Upload Asset
                 </A>
             </div>
-            <Suspense>
-                <Switch>
-                    <Match when={assets.error}>
-                        <span>Error: {assets.error.message}</span>
-                    </Match>
-                    <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
-                        <span>No asset exists yet</span>
-                    </Match>
-                    <Match when={assets()}>
-                        {(assets) => (
-                            <>
-                                <Show when={assets().items.length > 0} fallback={<span>No assets</span>}>
-                                    <div class="row g-2 mb-4">
-                                        <For each={assets().items}>
-                                            {(asset) => (
-                                                <div class="col-md-2 col-sm-6 border-start border-end text-center d-flex flex-column" style="word-break: break-word;">
-                                                    <Show when={asset.filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-75 m-auto p-2 text-secondary" viewBox="0 0 16 16" />}>
-                                                        <A href={`/assets/view/${asset.id}`} class="flex-grow-1">
-                                                            <img src={`${config.API_URL}/assets/content/${asset.filename}`} class="card-img p-2" alt={asset.name} />
-                                                        </A>
+            <Switch>
+                <Match when={assets.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={assets.error}>
+                    <p class="text-danger-emphasis text-center">Error while fetching assets: <strong>{assets.error.message}</strong></p>
+                </Match>
+                <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
+                    <p class="text-secondary text-center">There is no asset to display yet. You can upload a new one by using <strong>Upload Asset</strong> button.</p>
+                </Match>
+                <Match when={assets()}>
+                    {(assets) => (
+                        <>
+                            <Show when={assets().items.length > 0} fallback={
+                                <p class="text-secondary text-center mb-4">There is no asset to display for <strong>page {searchParams.page}</strong>.</p>
+                            }>
+                                <ul class="mb-5 list-unstyled d-flex flex-wrap asset-masonry">
+                                    <For each={assets().items}>
+                                        {(asset) => (
+                                            <li class="p-1 flex-grow-1 d-flex justify-content-center">
+                                                <A href={`/assets/view/${asset.id}`} class="position-relative h-100 d-flex">
+                                                    <Show when={asset.filetype?.startsWith('image')} fallback={
+                                                        <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
+                                                    }>
+                                                        <img
+                                                            src={`${config.API_URL}/assets/content/${asset.filename}`}
+                                                            alt={asset.name}
+                                                            class="rounded"
+                                                        />
                                                     </Show>
-                                                    <A href={`/assets/view/${asset.id}`} class="text-center">
-                                                        {asset.name}
-                                                    </A>
-                                                </div>
-                                            )}
-                                        </For>
-                                    </div>
-                                </Show>
+                                                    <small class="text-white position-absolute text-center w-100 start-0 bottom-0">{asset.name}</small>
+                                                </A>
+                                            </li>
+                                        )}
+                                    </For>
+                                    <li style="flex-grow: 10"></li>
+                                </ul>
+                            </Show>
 
-                                <Pagination
-                                    totalPages={assets().totalPages}
-                                    page={assets().currentPage}
-                                    perPage={pagination().perPage}
-                                    pageChange={(page) => setSearchParams({ page: page.toString() })}
-                                />
-                            </>
-                        )}
-                    </Match>
-                </Switch>
-            </Suspense>
+                            <Pagination
+                                totalPages={assets().totalPages}
+                                page={assets().currentPage}
+                                perPage={pagination().perPage}
+                                pageChange={(page) => setSearchParams({ page: page.toString() })}
+                            />
+                        </>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 };
 
 export const Asset = () => {
     enum Action {
+        UpdateDetails,
         Delete,
+    }
+
+    enum ValidationError {
+        Name,
     }
 
     const alertCtx = useContext(AlertContext)!;
@@ -333,104 +368,196 @@ export const Asset = () => {
 
     const params = useParams();
 
-    const [asset] = createResource(() => parseInt(params.id), (id) => contentCtx.fetchAsset(id));
+    const [asset, { mutate }] = createResource(() => parseInt(params.id), (id) => contentCtx.fetchAsset(id));
+
+    const [assetDetails, setAssetDetails] = createStore({ name: '' });
+    const [editingDetails, setEditingDetails] = createSignal(false);
+
+    createEffect(() => setAssetDetails({ name: asset()?.name ?? '' }));
+
+    const [deletingAsset, setDeletingAsset] = createSignal(false);
 
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
+    const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
+
     const [dropdown, setDropdown] = createSignal(false);
+    onCleanup(dropdownClickListener('asset-detail-dropdown', () => setDropdown(false), () => !deletingAsset()));
 
-    onCleanup(dropdownClickListener('asset-detail-dropdown', () => setDropdown(false), () => inProgress() === undefined));
-
-    const deleteAsset = () => {
+    const saveDetails = () => {
         const a = asset();
 
         if (inProgress() !== undefined || !a) {
             return;
         }
 
-        setInProgress(Action.Delete);
+        const errors = new Set<ValidationError>();
 
-        contentCtx.deleteAsset(a.id)
+        if (assetDetails.name.trim().length === 0) {
+            errors.add(ValidationError.Name);
+        }
+
+        setValidationErrors(errors);
+
+        if (errors.size > 0) {
+            return;
+        }
+
+        setInProgress(Action.UpdateDetails);
+
+        contentCtx.updateAsset(
+            a.id,
+            assetDetails.name.trim(),
+        )
             .then(() => {
-                alertCtx.success('Asset is deleted successfully');
-                navigate(-1);
+                setEditingDetails(false);
+
+                alertCtx.success(`Asset "${assetDetails.name}" is updated successfully`);
+
+                mutate({ ...a, name: assetDetails.name.trim() });
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
+    };
+
+    const deleteAsset = () => {
+        const a = asset();
+
+        if (!a) {
+            return;
+        }
+
+        return contentCtx.deleteAsset(a.id)
+            .then(() => {
+                setDeletingAsset(false);
+
+                alertCtx.success(`Asset "${a.name}" is deleted successfully`);
+
+                navigate('/assets', { replace: true });
+            });
     }
 
     return (
         <div class="container py-4 px-md-4">
-            <Suspense fallback={<p>Loading...</p>}>
-                <div class="d-flex align-items-center mb-5">
-                    <div class="flex-grow-1">
-                        <h2 class="m-0">{asset()?.name ?? '-'}</h2>
-                        <small>Asset</small>
-                    </div>
-                    <div class="dropdown mx-2">
-                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                            <ThreeDotsVertical viewBox="0 0 16 16" />
-                        </button>
-                        <Show when={dropdown()}>
-                            <ul id="role-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
-                                <li>
-                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteAsset}>
-                                        <Show when={inProgress() === Action.Delete}>
-                                            <div class="spinner-border" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </Show>
-                                        <Trash viewBox="0 0 16 16" />
-                                        Delete
+            <Switch>
+                <Match when={asset.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={asset.error}>
+                    <p class="text-danger-emphasis text-center">Error while fetching asset: <strong>{asset.error.message}</strong></p>
+                </Match>
+                <Match when={asset.state === 'ready' && asset() === undefined}>
+                    <p class="text-secondary text-center">Could not find the asset with id {params.id}.</p>
+                </Match>
+                <Match when={asset()}>
+                    {(asset) => (
+                        <>
+                            <div class="d-flex align-items-center mb-5">
+                                <div class="flex-grow-1">
+                                    <h2 class="m-0">{asset().name}</h2>
+                                    <small>Asset</small>
+                                </div>
+                                <div class="dropdown mx-2">
+                                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                                        <ThreeDotsVertical viewBox="0 0 16 16" />
                                     </button>
-                                </li>
-                            </ul>
-                        </Show>
-                    </div>
-                </div>
-                <div class="row m-0">
-                    <Switch>
-                        <Match when={asset.state === 'ready' && asset() === undefined}>
-                            <span>Could not find the asset with id {params.id}.</span>
-                        </Match>
-                        <Match when={asset()}>
-                            {(asset) => (
-                                <>
-                                    <div class="col-md-6">
-                                        <Show when={asset().filetype?.startsWith('image')} fallback={<QuestionSquare class="h-100 w-100 text-secondary" style="max-height: 40vh" viewBox="0 0 16 16" />}>
-                                            <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto mw-100" style="max-height: 40vh" alt={asset().name} />
-                                        </Show>
-                                    </div>
-                                    <div class="offset-md-1 col-md-5 px-4">
-                                        <h5>Details</h5>
+                                    <ul id="asset-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() }} style="right: 0;">
+                                        <li>
+                                            <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingAsset(true)}>
+                                                <Trash viewBox="0 0 16 16" />
+                                                Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row g-4">
+                                <div class="offset-md-1 col-md-4">
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex justify-content-center">
+                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <Show when={editingDetails()} fallback={
+                                                <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
+                                                    <PencilSquare viewBox="0 0 16 16" />
+                                                    Edit
+                                                </button>
+                                            }>
+                                                <button
+                                                    type="button"
+                                                    class="btn text-danger icon-link py-0 px-1"
+                                                    onClick={() => setEditingDetails(false)}
+                                                >
+                                                    Discard
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn icon-link py-0 px-1 ms-2"
+                                                    onClick={saveDetails}
+                                                    disabled={inProgress() === Action.UpdateDetails}
+                                                >
+                                                    <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
+                                                    <FloppyFill viewBox="0 0 16 16" />
+                                                    Save
+                                                </button>
+                                            </Show>
+                                        </div>
 
                                         <hr />
 
-                                        <table>
+                                        <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td class="p-2">Name</td>
-                                                    <td class="text-end">{asset().name}</td>
+                                                    <td style="width: 25%">Name</td>
+                                                    <td class="text-end text-truncate" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={asset().name}>
+                                                            <input
+                                                                id="assetName"
+                                                                type="text"
+                                                                class="form-control float-end"
+                                                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                                                name="name"
+                                                                value={assetDetails.name}
+                                                                onInput={(ev) => setAssetDetails('name', ev.target.value)}
+                                                            />
+                                                        </Show>
+                                                    </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="p-2">Type</td>
-                                                    <td class="text-end">{asset().filetype}</td>
+                                                    <td>Type</td>
+                                                    <td class="text-end text-truncate">
+                                                        {asset().filetype}
+                                                    </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="p-2">Link</td>
-                                                    <td class="text-end">
+                                                    <td>Link</td>
+                                                    <td class="text-end text-truncate">
                                                         <a target="_blank" href={`${config.API_URL}/assets/content/${asset().filename}`}>{asset().filename}</a>
                                                     </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
-                                </>
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
-            </Suspense>
-        </div>
+                                </div>
+                                <div class="offset-md-1 col-md-5">
+                                    <Show when={asset().filetype?.startsWith('image')} fallback={
+                                        <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
+                                    }>
+                                        <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto mw-100 rounded img-thumbnail" style="max-height: 80vh" alt={asset().name} />
+                                    </Show>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </Match>
+            </Switch>
+
+            <Show when={deletingAsset()}>
+                <DeleteConfirmModal
+                    message={<p>Are you sure about deleting the asset <strong>{asset()?.name}</strong>?</p>}
+                    close={() => setDeletingAsset(false)}
+                    confirm={deleteAsset}
+                />
+            </Show>
+        </div >
     );
 }

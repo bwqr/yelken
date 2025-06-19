@@ -18,6 +18,8 @@ use futures::StreamExt;
 use opendal::Operator;
 use rand::{distr::Alphanumeric, rng, Rng};
 
+use crate::requests::UpdateAsset;
+
 pub async fn fetch_assets(
     State(state): State<AppState>,
     Query(page): Query<PaginationRequest>,
@@ -126,7 +128,7 @@ async fn store_and_insert_assert(
 
         let mut filename = filename
             .chars()
-            .filter(|ch| ch.is_ascii_alphanumeric())
+            .filter(|ch| ch.is_ascii_alphanumeric() || *ch == '-' || *ch == '_' || *ch == '.')
             .take(96)
             .collect::<String>()
             + "_"
@@ -173,6 +175,24 @@ async fn store_and_insert_assert(
     Ok(asset)
 }
 
+pub async fn update_asset(
+    State(state): State<AppState>,
+    Path(asset_id): Path<i32>,
+    Json(req): Json<UpdateAsset>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(assets::table)
+        .filter(assets::id.eq(asset_id))
+        .set(assets::name.eq(req.name))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("asset_not_found"));
+    }
+
+    Ok(())
+}
+
 pub async fn delete_asset(
     State(state): State<AppState>,
     Path(asset_id): Path<i32>,
@@ -180,7 +200,9 @@ pub async fn delete_asset(
     let asset = assets::table
         .filter(assets::id.eq(asset_id))
         .first::<Asset>(&mut state.pool.get().await?)
-        .await?;
+        .await
+        .optional()?
+        .ok_or_else(|| HttpError::not_found("asset_not_found"))?;
 
     state
         .storage

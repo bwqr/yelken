@@ -37,6 +37,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/model-field/{id}", put(model::update_model_field))
         .route("/model-field/{id}", delete(model::delete_model_field))
         .route("/assets", post(asset::create_asset))
+        .route("/asset/{id}", put(asset::update_asset))
         .route("/asset/{id}", delete(asset::delete_asset))
         .route("/content", post(content::create_content))
         .route("/content/{id}", post(content::create_content_value))
