@@ -570,7 +570,9 @@ export const CreateContent = () => {
                             </For>
 
                             <Show when={serverError()}>
-                                <small class="text-danger mb-2">{serverError()}</small>
+                                <div class="mb-2">
+                                    <small class="text-danger">{serverError()}</small>
+                                </div>
                             </Show>
 
                             <div class="d-flex justify-content-center">
@@ -705,7 +707,7 @@ export const Content = () => {
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Model "${contentDetails.name}" is updated successfully`);
+                alertCtx.success(`Content "${contentDetails.name}" is updated successfully`);
 
                 mutate({ ...c, content: { ...c.content, name: contentDetails.name.trim() } })
             })

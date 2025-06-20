@@ -39,6 +39,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/role/role/{role_id}", get(role::fetch_role))
         .route("/role/role/{role_id}", delete(role::delete_role))
         .route("/locale", post(locale::create_locale))
+        .route("/locale/{locale_key}", put(locale::update_locale))
         .route(
             "/locale/{locale_key}/state",
             put(locale::update_locale_state),

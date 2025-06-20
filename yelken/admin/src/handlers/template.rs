@@ -2,7 +2,9 @@ use axum::{
     extract::{Query, State},
     Extension, Json,
 };
-use base::{config::Options, responses::HttpError, runtime::IntoSendFuture, AppState};
+use base::{
+    config::Options, responses::HttpError, runtime::IntoSendFuture, utils::ResourceKind, AppState,
+};
 use opendal::ErrorKind;
 use ui::Render;
 
@@ -20,7 +22,7 @@ pub async fn fetch_templates(
     for location in options.template_locations() {
         let Ok(entries) = state
             .storage
-            .list_with(&location.path)
+            .list_with(&location)
             .recursive(true)
             .into_send_future()
             .await
@@ -29,7 +31,7 @@ pub async fn fetch_templates(
             continue;
         };
 
-        let prefix = format!("{}/", location.path);
+        let prefix = format!("{}/", location);
 
         templates.extend(entries.into_iter().filter_map(|entry| {
             if !entry.path().ends_with(".html") {
@@ -38,7 +40,6 @@ pub async fn fetch_templates(
 
             entry.path().strip_prefix(&prefix).map(|p| Template {
                 path: p.to_string(),
-                kind: location.kind,
             })
         }));
     }
@@ -48,20 +49,13 @@ pub async fn fetch_templates(
 
 pub async fn fetch_template(
     State(state): State<AppState>,
-    Extension(options): Extension<Options>,
     Query(req): Query<FilterTemplate>,
 ) -> Result<Json<TemplateDetail>, HttpError> {
-    let Some(location) = options
-        .template_locations()
-        .into_iter()
-        .find(|l| l.kind == req.kind)
-    else {
-        return Err(HttpError::not_found("unknown_kind"));
-    };
+    let location = base::utils::location(req.kind, ResourceKind::Template);
 
     let buf = match state
         .storage
-        .read(&format!("{}/{}", location.path, req.path.0))
+        .read(&format!("{}/{}", location, req.path.0))
         .into_send_future()
         .await
     {
@@ -84,7 +78,6 @@ pub async fn fetch_template(
 
     Ok(Json(TemplateDetail {
         path: req.path.0,
-        kind: req.kind,
         template,
     }))
 }

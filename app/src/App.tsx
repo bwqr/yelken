@@ -16,7 +16,7 @@ import { CreateTemplate, Template, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
 import { Check, Exclamation, XCircle } from './Icons';
 import { InstallTheme, Themes } from './admin/Theme';
-import { CreateLocale, Locale, Locales } from './admin/Locale';
+import { CreateLocale, Locale, LocaleResource, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
@@ -220,6 +220,8 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Locales} />
+                        <Route path="/resource/:key/:kind" component={LocaleResource} />
+                        <Route path="/resource/:key/:kind/:namespace" component={LocaleResource} />
                         <Route path="/view/:key" component={Locale} />
                         <Route path="/create" component={CreateLocale} />
                     </Route>

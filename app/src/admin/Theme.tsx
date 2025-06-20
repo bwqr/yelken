@@ -210,7 +210,7 @@ export const InstallTheme = () => {
                         </Show>
 
                         <Show when={serverError()}>
-                            <div class="mt-2">
+                            <div class="mb-2">
                                 <small class="text-danger">{serverError()}</small>
                             </div>
                         </Show>
@@ -247,6 +247,7 @@ export const Themes = () => {
     const [uninstalling, setUninstalling] = createSignal(undefined as Theme | undefined);
 
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
+
     onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => !uninstalling()));
 
     const [themes, { mutate }] = createResource(() => adminCtx.fetchThemes());

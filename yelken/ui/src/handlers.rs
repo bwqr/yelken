@@ -135,31 +135,29 @@ pub async fn serve_page(
         })
         .collect();
 
-    pages
-        .into_iter()
-        .for_each(|(key, path, template, locale)| {
-            let Ok(locale) = locale.map(|l| l.parse::<LanguageIdentifier>()).transpose() else {
-                log::warn!("invalid language identifier is found in page {key}");
-                return;
-            };
+    pages.into_iter().for_each(|(key, path, template, locale)| {
+        let Ok(locale) = locale.map(|l| l.parse::<LanguageIdentifier>()).transpose() else {
+            log::warn!("invalid language identifier is found in page {key}");
+            return;
+        };
 
-            let localized_path = match &locale {
-                Some(locale) => {
-                    if locale.matches(&default_locale, true, true) {
-                        path.to_string()
-                    } else if path == "/" {
-                        format!("/{locale}")
-                    } else {
-                        format!("/{locale}{path}")
-                    }
+        let localized_path = match &locale {
+            Some(locale) => {
+                if locale.matches(&default_locale, true, true) {
+                    path.to_string()
+                } else if path == "/" {
+                    format!("/{locale}")
+                } else {
+                    format!("/{locale}{path}")
                 }
-                _ => path.to_string(),
-            };
-
-            if let Err(e) = router.insert(localized_path, (key.clone(), template, locale)) {
-                log::warn!("Failed to add path {path} of page {key} due to {e:?}");
             }
-        });
+            _ => path.to_string(),
+        };
+
+        if let Err(e) = router.insert(localized_path, (key.clone(), template, locale)) {
+            log::warn!("Failed to add path {path} of page {key} due to {e:?}");
+        }
+    });
 
     let Ok(Match {
         params,
@@ -245,6 +243,9 @@ pub async fn serve_page(
                 .unwrap());
         }
     }
+
+    // If page has a locale, overwrite the current locale
+    let current_locale = page_locale.as_ref().unwrap_or(current_locale);
 
     let template = template.clone();
     let ctx = RenderContext::new(

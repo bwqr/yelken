@@ -16,6 +16,7 @@ pub mod runtime;
 pub mod schema;
 pub mod services;
 pub mod test;
+pub mod utils;
 
 #[derive(Clone)]
 pub struct AppState(Arc<Inner>);

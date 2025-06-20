@@ -195,7 +195,9 @@ const ModelFieldModal = (props: {
                                 </label>
                             </div>
                             <Show when={serverError()}>
-                                <small class="text-danger mb-2">{serverError()}</small>
+                                <div class="mb-2">
+                                    <small class="text-danger">{serverError()}</small>
+                                </div>
                             </Show>
                         </div>
                         <div class="modal-footer">
@@ -435,7 +437,9 @@ export const CreateModel = () => {
                     </For>
 
                     <Show when={serverError()}>
-                        <small class="text-danger mb-2">{serverError()}</small>
+                        <div class="mb-2">
+                            <small class="text-danger">{serverError()}</small>
+                        </div>
                     </Show>
                     <div class="d-flex justify-content-center">
                         <button
@@ -503,7 +507,7 @@ export const Models = () => {
                                     <th></th>
                                     <th scope="col">#</th>
                                     <th scope="col">Namespace</th>
-                                    <th scope="col">Title</th>
+                                    <th scope="col">Name</th>
                                     <th scope="col">Created At</th>
                                 </tr>
                             </thead>
@@ -548,7 +552,7 @@ export const Model = () => {
 
     const model = createMemo(() => contentCtx.models().find(ModelModel.searchWithParams(params.namespace, params.key)));
 
-    const [modelDetails, setModelDetails] = createStore({ name: model()?.name ?? '', desc: model()?.desc ?? '' });
+    const [modelDetails, setModelDetails] = createStore({ name: '', desc: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
 
     createEffect(() => setModelDetails({ name: model()?.name ?? '', desc: model()?.desc ?? '' }));
@@ -664,181 +668,181 @@ export const Model = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-5">
-                <div class="flex-grow-1">
-                    <h2 class="m-0">{model()?.name ?? '-'}</h2>
-                    <small>Model</small>
-                </div>
-                <div class="dropdown mx-2">
-                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                        <ThreeDotsVertical viewBox="0 0 16 16" />
-                    </button>
-                    <Show when={dropdown()}>
-                        <ul id="model-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
-                            <li>
-                                <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingModel(true)}>
-                                    <Trash viewBox="0 0 16 16" />
-                                    Delete
-                                </button>
-                            </li>
-                        </ul>
-                    </Show>
-                </div>
-            </div>
-
             <Show when={model()} fallback={
                 <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
             }>
                 {(model) => (
-                    <div class="row g-4">
-                        <div class="offset-md-1 col-md-4">
-                            <div class="border rounded p-3">
-                                <div class="d-flex justify-content-center">
-                                    <h5 class="flex-grow-1 m-0">Details</h5>
-                                    <Show when={editingDetails()} fallback={
-                                        <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
-                                            <PencilSquare viewBox="0 0 16 16" />
-                                            Edit
+                    <>
+                        <div class="d-flex align-items-center mb-5">
+                            <div class="flex-grow-1">
+                                <h2 class="m-0">{model().name}</h2>
+                                <small>Model</small>
+                            </div>
+                            <div class="dropdown mx-2">
+                                <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                                    <ThreeDotsVertical viewBox="0 0 16 16" />
+                                </button>
+                                <ul id="model-detail-dropdown" class="dropdown-menu mt-1 shadow" style="right: 0;" classList={{ 'show': dropdown() }}>
+                                    <li>
+                                        <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingModel(true)}>
+                                            <Trash viewBox="0 0 16 16" />
+                                            Delete
                                         </button>
-                                    }>
-                                        <button
-                                            type="button"
-                                            class="btn text-danger icon-link py-0 px-1"
-                                            onClick={() => setEditingDetails(false)}
-                                        >
-                                            Discard
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="btn icon-link py-0 px-1 ms-2"
-                                            onClick={saveDetails}
-                                            disabled={inProgress() === Action.UpdateDetails}
-                                        >
-                                            <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
-                                            <FloppyFill viewBox="0 0 16 16" />
-                                            Save
-                                        </button>
-                                    </Show>
-                                </div>
-
-                                <hr />
-
-                                <table class="table table-borderless w-100 m-0">
-                                    <tbody>
-                                        <tr>
-                                            <td style="width: 25%">Name</td>
-                                            <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                <Show when={editingDetails()} fallback={model().name}>
-                                                    <input
-                                                        id="modelName"
-                                                        type="text"
-                                                        class="form-control float-end w-auto"
-                                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
-                                                        name="name"
-                                                        value={modelDetails.name}
-                                                        onInput={(ev) => setModelDetails('name', ev.target.value)}
-                                                    />
-                                                </Show>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>Key</td>
-                                            <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                <Show when={editingDetails()} fallback={model().key}>
-                                                    <input
-                                                        id="modelKey"
-                                                        type="text"
-                                                        class="form-control float-end w-auto"
-                                                        name="key"
-                                                        value={model().key}
-                                                        disabled={true}
-                                                    />
-                                                </Show>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>Description</td>
-                                            <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                <Show when={editingDetails()} fallback={model().desc ?? '-'}>
-                                                    <textarea
-                                                        id="modelDesc"
-                                                        class="form-control"
-                                                        rows="3"
-                                                        value={modelDetails.desc}
-                                                        onInput={(ev) => setModelDetails('desc', ev.target.value)}
-                                                    ></textarea>
-                                                </Show>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
 
-                        <div class="offset-md-1 col-md-5">
-                            <div class="border rounded p-3">
-                                <div class="d-flex justify-content-center">
-                                    <h5 class="flex-grow-1 m-0">Fields</h5>
-                                    <button type="button" class="btn icon-link py-0 px-1" onClick={() => setCreatingField(true)}>
-                                        <PlusSquareDotted viewBox="0 0 16 16" />
-                                        Add field
-                                    </button>
+                        <div class="row g-4">
+                            <div class="offset-md-1 col-md-4">
+                                <div class="border rounded p-3">
+                                    <div class="d-flex justify-content-center">
+                                        <h5 class="flex-grow-1 m-0">Details</h5>
+                                        <Show when={editingDetails()} fallback={
+                                            <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
+                                                <PencilSquare viewBox="0 0 16 16" />
+                                                Edit
+                                            </button>
+                                        }>
+                                            <button
+                                                type="button"
+                                                class="btn text-danger icon-link py-0 px-1"
+                                                onClick={() => setEditingDetails(false)}
+                                            >
+                                                Discard
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="btn icon-link py-0 px-1 ms-2"
+                                                onClick={saveDetails}
+                                                disabled={inProgress() === Action.UpdateDetails}
+                                            >
+                                                <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
+                                                <FloppyFill viewBox="0 0 16 16" />
+                                                Save
+                                            </button>
+                                        </Show>
+                                    </div>
+
+                                    <hr />
+
+                                    <table class="table table-borderless w-100 m-0">
+                                        <tbody>
+                                            <tr>
+                                                <td style="width: 25%">Name</td>
+                                                <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                    <Show when={editingDetails()} fallback={model().name}>
+                                                        <input
+                                                            id="modelName"
+                                                            type="text"
+                                                            class="form-control float-end w-auto"
+                                                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                                            name="name"
+                                                            value={modelDetails.name}
+                                                            onInput={(ev) => setModelDetails('name', ev.target.value)}
+                                                        />
+                                                    </Show>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Key</td>
+                                                <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                    <Show when={editingDetails()} fallback={model().key}>
+                                                        <input
+                                                            id="modelKey"
+                                                            type="text"
+                                                            class="form-control float-end w-auto"
+                                                            name="key"
+                                                            value={model().key}
+                                                            disabled={true}
+                                                        />
+                                                    </Show>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Description</td>
+                                                <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                    <Show when={editingDetails()} fallback={model().desc ?? '-'}>
+                                                        <textarea
+                                                            id="modelDesc"
+                                                            class="form-control"
+                                                            rows="3"
+                                                            value={modelDetails.desc}
+                                                            onInput={(ev) => setModelDetails('desc', ev.target.value)}
+                                                        ></textarea>
+                                                    </Show>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
+                            </div>
 
-                                <hr />
+                            <div class="offset-md-1 col-md-5">
+                                <div class="border rounded p-3">
+                                    <div class="d-flex justify-content-center">
+                                        <h5 class="flex-grow-1 m-0">Fields</h5>
+                                        <button type="button" class="btn icon-link py-0 px-1" onClick={() => setCreatingField(true)}>
+                                            <PlusSquareDotted viewBox="0 0 16 16" />
+                                            Add field
+                                        </button>
+                                    </div>
 
-                                <For each={model().fields}>
-                                    {(mf) => {
-                                        const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+                                    <hr />
 
-                                        return (
-                                            <div class="card mb-4">
-                                                <div class="card-header d-flex">
-                                                    <h5 class="flex-grow-1 m-0">{mf.name} (<small>{mf.key}</small>)</h5>
-                                                    <button
-                                                        type="button"
-                                                        class="btn icon-link p-1 ms-2"
-                                                        onClick={() => setEditingField(mf)}
-                                                    >
-                                                        <PencilSquare viewBox="0 0 16 16" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        class="btn text-danger icon-link p-1 ms-2"
-                                                        onClick={() => setDeletingField(mf)}
-                                                    >
-                                                        <XLg viewBox="0 0 16 16" />
-                                                    </button>
+                                    <For each={model().fields}>
+                                        {(mf) => {
+                                            const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+
+                                            return (
+                                                <div class="card mb-4">
+                                                    <div class="card-header d-flex">
+                                                        <h5 class="flex-grow-1 m-0">{mf.name} (<small>{mf.key}</small>)</h5>
+                                                        <button
+                                                            type="button"
+                                                            class="btn icon-link p-1 ms-2"
+                                                            onClick={() => setEditingField(mf)}
+                                                        >
+                                                            <PencilSquare viewBox="0 0 16 16" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            class="btn text-danger icon-link p-1 ms-2"
+                                                            onClick={() => setDeletingField(mf)}
+                                                        >
+                                                            <XLg viewBox="0 0 16 16" />
+                                                        </button>
+                                                    </div>
+                                                    <ul class="list-group list-group-flush">
+                                                        <li class="list-group-item">{field()?.name}</li>
+
+                                                        {(() => {
+                                                            const features = [];
+                                                            if (mf.localized) {
+                                                                features.push('Localized');
+                                                            }
+
+                                                            if (mf.required) {
+                                                                features.push('Required');
+                                                            }
+
+                                                            if (mf.multiple) {
+                                                                features.push('Multiple');
+                                                            }
+
+                                                            const text = features.join(' - ');
+
+                                                            return text.length === 0 ? (<></>) : (<li class="list-group-item">{features.join(' - ')}</li>);
+                                                        })()}
+                                                    </ul>
                                                 </div>
-                                                <ul class="list-group list-group-flush">
-                                                    <li class="list-group-item">{field()?.name}</li>
-
-                                                    {(() => {
-                                                        const features = [];
-                                                        if (mf.localized) {
-                                                            features.push('Localized');
-                                                        }
-
-                                                        if (mf.required) {
-                                                            features.push('Required');
-                                                        }
-
-                                                        if (mf.multiple) {
-                                                            features.push('Multiple');
-                                                        }
-
-                                                        const text = features.join(' - ');
-
-                                                        return text.length === 0 ? (<></>) : (<li class="list-group-item">{features.join(' - ')}</li>);
-                                                    })()}
-                                                </ul>
-                                            </div>
-                                        );
-                                    }}
-                                </For>
+                                            );
+                                        }}
+                                    </For>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </Show>
             <Show when={editingField()}>

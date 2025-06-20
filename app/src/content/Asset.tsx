@@ -265,7 +265,9 @@ export const UploadAsset = () => {
                         </div>
 
                         <Show when={serverError()}>
-                            <small class="text-danger mb-2">{serverError()}</small>
+                            <div class="mb-2">
+                                <small class="text-danger">{serverError()}</small>
+                            </div>
                         </Show>
 
                         <div class="d-flex justify-content-center">

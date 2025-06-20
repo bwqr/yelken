@@ -3,13 +3,13 @@ use std::{collections::HashMap, ffi::OsStr, io::Read};
 use axum::{
     extract::{Multipart, Path, State},
     http::StatusCode,
-    Extension,
+    Extension, Json,
 };
 use base::{
     config::Options,
     db::{BatchQuery, Pool, PooledConnection},
     middlewares::auth::AuthUser,
-    models::{ContentStage, Field},
+    models::{ContentStage, Field, Theme},
     responses::HttpError,
     runtime::{spawn_blocking, IntoSendFuture},
     schema::{content_values, contents, fields, model_fields, models, pages, themes},
@@ -130,7 +130,7 @@ pub async fn install_theme(
     State(state): State<AppState>,
     user: AuthUser,
     mut multipart: Multipart,
-) -> Result<(), HttpError> {
+) -> Result<Json<Theme>, HttpError> {
     let field = multipart
         .next_field()
         .await
@@ -176,7 +176,7 @@ pub async fn install_theme(
         );
     }
 
-    result
+    result.map(Json)
 }
 
 async fn install(
@@ -186,7 +186,7 @@ async fn install(
     reader: impl Read + Send + 'static,
     tmp_dir: String,
     user_id: i32,
-) -> Result<(), HttpError> {
+) -> Result<Theme, HttpError> {
     let (manifest, files) = {
         let tmp_storage = tmp_storage.clone();
         let extract_dir = tmp_dir.clone();
@@ -198,7 +198,8 @@ async fn install(
 
     let theme_id = manifest.id.clone();
 
-    pool.get()
+    let theme = pool
+        .get()
         .await?
         .transaction(move |conn| {
             async move { create_theme(conn, manifest, user_id).await }.scope_boxed()
@@ -229,7 +230,7 @@ async fn install(
             .map_err(|_| HttpError::internal_server_error("io_error"))?;
     }
 
-    Ok(())
+    Ok(theme)
 }
 
 fn extract_archive(
@@ -313,14 +314,14 @@ async fn create_theme(
     conn: &mut PooledConnection,
     manifest: ThemeManifest,
     user_id: i32,
-) -> Result<(), HttpError> {
-    diesel::insert_into(themes::table)
+) -> Result<Theme, HttpError> {
+    let theme = diesel::insert_into(themes::table)
         .values((
             themes::id.eq(&manifest.id),
             themes::name.eq(&manifest.name),
             themes::version.eq(&manifest.version),
         ))
-        .execute(conn)
+        .get_result::<Theme>(conn)
         .await
         .map_err(|e| {
             if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) = &e {
@@ -385,7 +386,7 @@ async fn create_theme(
 
     for model in manifest.models {
         let model_id = models
-            .get(&model.name)
+            .get(&model.key)
             .ok_or(HttpError::internal_server_error("unreachable"))?
             .id;
 
@@ -431,7 +432,7 @@ async fn create_theme(
                 .map(|mf| (mf.key.clone(), mf)),
         );
 
-        for content in manifest.contents.iter().filter(|c| c.model == model.name) {
+        for content in manifest.contents.iter().filter(|c| c.model == model.key) {
             let values = content
                 .values
                 .iter()
@@ -481,5 +482,5 @@ async fn create_theme(
         }
     }
 
-    Ok(())
+    Ok(theme)
 }

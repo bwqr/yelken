@@ -1,4 +1,4 @@
-use base::{config::LocationKind, services::SafePath};
+use base::{services::SafePath, utils::LocationKind};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -40,19 +40,14 @@ pub struct UpdateLocaleState {
 
 #[derive(Deserialize)]
 pub struct FilterLocaleResource {
+    #[serde(flatten)]
     pub kind: LocationKind,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateLocaleResource {
-    pub theme_scoped: bool,
     pub resource: String,
-}
-
-#[derive(Deserialize)]
-pub struct DeleteLocaleResource {
-    pub theme_scoped: bool,
 }
 
 #[derive(Deserialize)]
@@ -84,4 +79,9 @@ pub struct UpdateTheme {
 #[derive(Deserialize)]
 pub struct UpdateDefaultLocale {
     pub locale: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateLocale {
+    pub name: String,
 }

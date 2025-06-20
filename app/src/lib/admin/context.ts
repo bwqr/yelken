@@ -1,6 +1,6 @@
 import { createContext, type Context } from "solid-js";
 import { Api, HttpError } from "../api";
-import { LocationKind, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
+import { LocationKind, LocationKind2, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
 
 export interface AdminStore {
     fetchPages(): Promise<Page[]>
@@ -29,9 +29,10 @@ export interface AdminStore {
     setThemeActive(themeId: string): Promise<void>;
     uninstallTheme(themeId: string): Promise<void>;
 
-    fetchLocaleResource(key: string, kind: LocationKind): Promise<LocaleResource | undefined>;
-    updateLocaleResource(key: string, kind: LocationKind, resource: string): Promise<void>;
-    createLocale(name: string, key: string): Promise<void>;
+    fetchLocaleResource(key: string, location: LocationKind2): Promise<LocaleResource | undefined>;
+    updateLocaleResource(key: string, location: LocationKind2, resource: string): Promise<void>;
+    createLocale(req: { name: string, key: string }): Promise<void>;
+    updateLocale(key: string, req: { name: string }): Promise<void>;
     deleteLocale(key: string): Promise<void>;
     updateLocaleState(key: string, disabled: boolean): Promise<void>;
     setLocaleDefault(key: string): Promise<void>;
@@ -133,8 +134,10 @@ export class AdminService implements AdminStore {
         return Api.delete(`/admin/theme/theme/${themeId}`);
     }
 
-    async fetchLocaleResource(key: string, kind: LocationKind): Promise<LocaleResource | undefined> {
-        return Api.get<LocaleResource>(`/admin/locale/${key}/resource?kind=${kind}`)
+    async fetchLocaleResource(key: string, location: LocationKind2): Promise<LocaleResource | undefined> {
+        const searchParams = LocationKind2.toSearchParams(location);
+
+        return Api.get<LocaleResource>(`/admin/locale/${key}/resource?${searchParams.toString()}`)
             .catch((e) => {
                 if ((e instanceof HttpError) && e.error === 'resource_not_found') {
                     return undefined;
@@ -144,12 +147,18 @@ export class AdminService implements AdminStore {
             });
     }
 
-    async updateLocaleResource(key: string, kind: LocationKind, resource: string): Promise<void> {
-        return Api.put(`/admin/locale/${key}/resource`, { resource, themeScoped: kind !== LocationKind.Global });
+    async updateLocaleResource(key: string, location: LocationKind2, resource: string): Promise<void> {
+        const searchParams = LocationKind2.toSearchParams(location);
+
+        return Api.put(`/admin/locale/${key}/resource?${searchParams.toString()}`, { resource });
     }
 
-    async createLocale(name: string, key: string): Promise<void> {
-        return Api.post('/admin/locale', { name, key });
+    async createLocale(req: { name: string, key: string }): Promise<void> {
+        return Api.post('/admin/locale', req);
+    }
+
+    async updateLocale(key: string, req: { name: string; }): Promise<void> {
+        return Api.put(`/admin/locale/${key}`, req);
     }
 
     async deleteLocale(key: string): Promise<void> {

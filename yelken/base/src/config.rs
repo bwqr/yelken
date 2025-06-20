@@ -1,31 +1,21 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use arc_swap::ArcSwap;
-use serde::{Deserialize, Serialize};
 use unic_langid::LanguageIdentifier;
 use url::Url;
 
-use crate::{db::Connection, schema::locales};
+use crate::{
+    db::Connection,
+    schema::locales,
+    services::SafePath,
+    utils::{LocationKind, ResourceKind},
+};
 
 pub struct Config {
     pub env: String,
     pub site_url: Url,
     pub app_url: Url,
     pub reload_templates: bool,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum LocationKind {
-    Global,
-    Theme,
-    User,
-}
-
-#[derive(Debug)]
-pub struct Location {
-    pub path: String,
-    pub kind: LocationKind,
 }
 
 #[derive(Clone)]
@@ -44,41 +34,37 @@ impl Options {
         }))))
     }
 
-    pub fn locale_locations(&self) -> [Location; 3] {
-        let theme = self.theme();
+    pub fn locale_locations(&self) -> [String; 3] {
+        let namespace = SafePath::from_str(&*self.theme())
+            .inspect_err(|e| log::error!("Failed to parse theme as safe path, {e:?}"))
+            .unwrap_or_else(|_| SafePath::from_str("").unwrap());
 
         [
-            Location {
-                path: format!("themes/{}/locales", theme),
-                kind: LocationKind::Theme,
-            },
-            Location {
-                path: "locales/global".to_string(),
-                kind: LocationKind::Global,
-            },
-            Location {
-                path: format!("locales/themes/{}", theme),
-                kind: LocationKind::User,
-            },
+            crate::utils::location(LocationKind::Global, ResourceKind::Locale),
+            crate::utils::location(
+                LocationKind::Theme {
+                    namespace: namespace.clone(),
+                },
+                ResourceKind::Locale,
+            ),
+            crate::utils::location(LocationKind::User { namespace }, ResourceKind::Locale),
         ]
     }
 
-    pub fn template_locations(&self) -> [Location; 3] {
-        let theme = self.theme();
+    pub fn template_locations(&self) -> [String; 3] {
+        let namespace = SafePath::from_str(&*self.theme())
+            .inspect_err(|e| log::error!("Failed to parse theme as safe path, {e:?}"))
+            .unwrap_or_else(|_| SafePath::from_str("").unwrap());
 
         [
-            Location {
-                path: format!("themes/{}/templates", theme),
-                kind: LocationKind::Theme,
-            },
-            Location {
-                path: "templates/global".to_string(),
-                kind: LocationKind::Global,
-            },
-            Location {
-                path: format!("templates/themes/{}", theme),
-                kind: LocationKind::User,
-            },
+            crate::utils::location(LocationKind::Global, ResourceKind::Template),
+            crate::utils::location(
+                LocationKind::Theme {
+                    namespace: namespace.clone(),
+                },
+                ResourceKind::Template,
+            ),
+            crate::utils::location(LocationKind::User { namespace }, ResourceKind::Template),
         ]
     }
 

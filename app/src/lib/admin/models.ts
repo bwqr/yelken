@@ -4,6 +4,40 @@ export enum LocationKind {
     Theme = 'theme',
 }
 
+export type LocationKind2 = { kind: LocationKind.Global, namespace?: undefined } | { kind: LocationKind.Theme | LocationKind.User, namespace: string };
+
+export namespace LocationKind2 {
+    export function toSearchParams(location: LocationKind2): URLSearchParams {
+        const searchParams = new URLSearchParams();
+
+        searchParams.append('kind', location.kind);
+
+        if (location.namespace) {
+            searchParams.append('namespace', location.namespace);
+        }
+
+        return searchParams;
+    }
+
+    export function fromParams(locationKind: string | undefined, namespace: string | undefined): LocationKind2 | undefined {
+        const kind = Object.entries(LocationKind).find((k) => k[1] === locationKind)?.[1];
+
+        if (kind === undefined) {
+            return undefined
+        }
+
+        if (kind === LocationKind.Global) {
+            return { kind };
+        }
+
+        if (namespace === undefined) {
+            return undefined;
+        }
+
+        return { kind, namespace };
+    }
+}
+
 export enum Permission {
     Admin = 'admin',
     ContentRead = 'content.read',
@@ -45,7 +79,6 @@ export interface Theme {
 
 export interface LocaleResource {
     resource: string,
-    kind: LocationKind,
 }
 
 export interface Role {

@@ -19,6 +19,7 @@ use tower::Service;
 
 use crate::runtime::IntoSendFuture;
 
+#[derive(Clone)]
 pub struct SafePath<const DEPTH: usize>(pub String);
 
 impl<const DEPTH: usize> FromStr for SafePath<DEPTH> {
