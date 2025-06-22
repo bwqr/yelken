@@ -7,7 +7,7 @@ import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } fr
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
 import { AlertContext } from "../lib/context";
-import { BookmarkCheck, BookmarkCheckFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, FileEarmarkFill, ThreeDotsVertical, Trash, XLg } from "../Icons";
+import { Bookmark, CheckCircleFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, FileEarmarkFill, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
@@ -795,8 +795,8 @@ export const Content = () => {
     }
 
     const contentStyle = () => content()?.content.stage === ContentStage.Published ?
-        { color: 'primary', icon: BookmarkCheckFill } :
-        { color: 'secondary', icon: BookmarkCheck };
+        { color: 'success', icon: CheckCircleFill } :
+        { color: 'secondary', icon: Bookmark };
 
     return (
         <div class="container py-4 px-md-4">
@@ -835,7 +835,7 @@ export const Content = () => {
                                     <div class="btn-group">
                                         <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled={true}>
                                             <ProgressSpinner show={inProgress() === Action.UpdateStage} />
-                                            <Dynamic component={contentStyle().icon} viewBox="0 0 16 16" />
+                                            <Dynamic component={contentStyle().icon} viewBox="0 0 17 17" />
                                             <Switch>
                                                 <Match when={content()?.content.stage === ContentStage.Draft}>Draft</Match>
                                                 <Match when={content()?.content.stage === ContentStage.Published}>Published</Match>
@@ -930,10 +930,13 @@ export const Content = () => {
                                                 <tr>
                                                     <td>Stage</td>
                                                     <td class="text-end py-1">
-                                                        <Switch>
-                                                            <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
-                                                            <Match when={content().content.stage === ContentStage.Published}>Published</Match>
-                                                        </Switch>
+                                                        <p class="icon-link m-0">
+                                                            <Dynamic component={contentStyle().icon} class={`text-${contentStyle().color}`} viewBox="0 0 17 17" />
+                                                            <Switch>
+                                                                <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
+                                                                <Match when={content().content.stage === ContentStage.Published}>Published</Match>
+                                                            </Switch>
+                                                        </p>
                                                     </td>
                                                 </tr>
                                                 <tr>

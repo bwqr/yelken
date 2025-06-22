@@ -59,6 +59,7 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/locale/{locale_key}", delete(locale::delete_locale))
         .route("/template/templates", get(template::fetch_templates))
         .route("/template/template", get(template::fetch_template))
+        .route("/template", post(template::create_template))
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
         .route("/theme/themes", get(theme::fetch_themes))

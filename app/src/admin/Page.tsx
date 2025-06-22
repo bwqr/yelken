@@ -1,10 +1,11 @@
 import { createResource, createSignal, For, Match, Show, Suspense, Switch, useContext } from "solid-js";
 import { AdminContext } from "../lib/admin/context";
 import { Plus, PlusLg } from "../Icons";
-import { A, useNavigate } from "@solidjs/router";
+import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import { ContentContext } from "../lib/content/context";
 import { HttpError } from "../lib/api";
 import { AlertContext } from "../lib/context";
+import { createMemo } from "solid-js";
 
 interface PageGroup {
     name: string,
@@ -31,6 +32,7 @@ export const CreatePage = () => {
     const alertCtx = useContext(AlertContext)!;
     const contentCtx = useContext(ContentContext)!;
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [name, setName] = createSignal('');
     const [path, setPath] = createSignal('');
@@ -38,7 +40,16 @@ export const CreatePage = () => {
     const [locale, setLocale] = createSignal('');
     const [scope, setScope] = createSignal(Scope.Global);
 
-    const [templates] = createResource(() => adminCtx.fetchTemplates().then((templates) => unique(templates)));
+    const namespace = createMemo(() => {
+        if (searchParams.namespace) {
+            return searchParams.namespace as string
+        }
+
+        setSearchParams({ namespace: contentCtx.options().theme });
+
+        return undefined;
+    });
+    const [templates] = createResource(namespace, (namespace) => adminCtx.fetchTemplates(namespace).then((templates) => unique(templates)));
 
     const [inProgress, setInProgress] = createSignal(false);
 

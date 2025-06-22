@@ -14,7 +14,7 @@ use axum::{
 use futures::{future::BoxFuture, FutureExt};
 use mime_guess::mime;
 use opendal::{ErrorKind, Operator};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tower::Service;
 
 use crate::runtime::IntoSendFuture;
@@ -73,6 +73,15 @@ impl<'de, const DEPTH: usize> Deserialize<'de> for SafePath<DEPTH> {
     }
 }
 
+impl<const DEPTH: usize> Serialize for SafePath<DEPTH> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        <String as Serialize>::serialize(&self.0, serializer)
+    }
+}
+
 #[derive(Clone)]
 pub struct ServeStorageDir<F> {
     storage: Operator,
@@ -120,7 +129,9 @@ where
             path = p;
         }
 
-        let Ok(path) = SafePath::<7>::from_str(path).inspect_err(|e| log::warn!("Something has gone wrong {e:?}")) else {
+        let Ok(path) = SafePath::<7>::from_str(path)
+            .inspect_err(|e| log::warn!("Something has gone wrong {e:?}"))
+        else {
             return async move {
                 Ok(Response::builder()
                     .status(StatusCode::BAD_REQUEST)

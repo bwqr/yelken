@@ -23,7 +23,7 @@ use unic_langid::LanguageIdentifier;
 
 use crate::{
     requests::{
-        CreateLocale, FilterLocaleResource, UpdateLocale, UpdateLocaleResource, UpdateLocaleState,
+        CreateLocale, FilterNamespace, UpdateLocale, UpdateLocaleResource, UpdateLocaleState,
     },
     responses::LocaleResource,
 };
@@ -165,9 +165,9 @@ pub async fn delete_locale(
 pub async fn fetch_locale_resource(
     State(state): State<AppState>,
     Path(locale_key): Path<String>,
-    Query(query): Query<FilterLocaleResource>,
+    Query(query): Query<LocationKind>,
 ) -> Result<Json<LocaleResource>, HttpError> {
-    match &query.kind {
+    match &query {
         LocationKind::User { namespace } | LocationKind::Theme { namespace } => {
             let exists = diesel::dsl::select(diesel::dsl::exists(
                 themes::table.filter(themes::id.eq(&namespace.0)),
@@ -190,7 +190,7 @@ pub async fn fetch_locale_resource(
         .optional()?
         .ok_or_else(|| HttpError::not_found("locale_not_found"))?;
 
-    let location = base::utils::location(query.kind, ResourceKind::Locale);
+    let location = base::utils::location(&query, ResourceKind::Locale);
     let path = format!("{location}/{locale_key}.ftl");
 
     let buf = match state.storage.read(&path).into_send_future().await {
@@ -219,25 +219,23 @@ pub async fn update_locale_resource(
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
-    Query(query): Query<FilterLocaleResource>,
+    Query(query): Query<FilterNamespace>,
     Json(req): Json<UpdateLocaleResource>,
 ) -> Result<(), HttpError> {
-    match &query.kind {
-        LocationKind::Theme { .. } => {
-            return Err(HttpError::conflict("cannot_modify_theme_resource"))
-        }
-        LocationKind::User { namespace } => {
-            let exists = diesel::dsl::select(diesel::dsl::exists(
-                themes::table.filter(themes::id.eq(&namespace.0)),
-            ))
-            .get_result::<bool>(&mut state.pool.get().await?)
-            .await?;
+    let location = if let Some(namespace) = query.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
 
-            if !exists {
-                return Err(HttpError::conflict("namespace_not_found"));
-            }
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
         }
-        LocationKind::Global => {}
+
+        LocationKind::User { namespace }
+    } else {
+        LocationKind::Global
     };
 
     if let Err(e) = FluentResource::try_new(req.resource.clone()) {
@@ -254,7 +252,7 @@ pub async fn update_locale_resource(
         .optional()?
         .ok_or_else(|| HttpError::not_found("locale_not_found"))?;
 
-    let location = base::utils::location(query.kind, ResourceKind::Locale);
+    let location = base::utils::location(&location, ResourceKind::Locale);
     let path = format!("{location}/{locale_key}.ftl");
 
     state
@@ -281,24 +279,22 @@ pub async fn delete_locale_resource(
     Extension(options): Extension<Options>,
     Extension(l10n): Extension<L10n>,
     Path(locale_key): Path<String>,
-    Query(query): Query<FilterLocaleResource>,
+    Query(query): Query<FilterNamespace>,
 ) -> Result<(), HttpError> {
-    match &query.kind {
-        LocationKind::Theme { .. } => {
-            return Err(HttpError::conflict("cannot_modify_theme_resource"))
-        }
-        LocationKind::User { namespace } => {
-            let exists = diesel::dsl::select(diesel::dsl::exists(
-                themes::table.filter(themes::id.eq(&namespace.0)),
-            ))
-            .get_result::<bool>(&mut state.pool.get().await?)
-            .await?;
+    let location = if let Some(namespace) = query.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
 
-            if !exists {
-                return Err(HttpError::conflict("namespace_not_found"));
-            }
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
         }
-        LocationKind::Global => {}
+
+        LocationKind::User { namespace }
+    } else {
+        LocationKind::Global
     };
 
     let locale_key = locales::table
@@ -309,7 +305,7 @@ pub async fn delete_locale_resource(
         .optional()?
         .ok_or_else(|| HttpError::not_found("locale_not_found"))?;
 
-    let location = base::utils::location(query.kind, ResourceKind::Locale);
+    let location = base::utils::location(&location, ResourceKind::Locale);
     let path = format!("{location}/{locale_key}.ftl");
 
     state

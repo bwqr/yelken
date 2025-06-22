@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::services::SafePath;
 
@@ -7,7 +7,7 @@ pub enum ResourceKind {
     Template,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(tag = "kind")]
 #[serde(rename_all = "snake_case")]
 pub enum LocationKind {
@@ -16,7 +16,7 @@ pub enum LocationKind {
     User { namespace: SafePath<1> },
 }
 
-pub fn location(location: LocationKind, resource: ResourceKind) -> String {
+pub fn location(location: &LocationKind, resource: ResourceKind) -> String {
     let dir = match resource {
         ResourceKind::Locale => "locales",
         ResourceKind::Template => "templates",

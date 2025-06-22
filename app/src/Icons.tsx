@@ -2,11 +2,11 @@ import ArrowBarDown from 'bootstrap-icons/icons/arrow-bar-down.svg';
 import ArrowBarUp from 'bootstrap-icons/icons/arrow-bar-up.svg';
 import ArrowRight from 'bootstrap-icons/icons/arrow-right.svg';
 import Braces from 'bootstrap-icons/icons/braces.svg';
-import BookmarkCheck from 'bootstrap-icons/icons/bookmark-check.svg';
-import BookmarkCheckFill from 'bootstrap-icons/icons/bookmark-check-fill.svg';
+import Bookmark from 'bootstrap-icons/icons/bookmark.svg';
 import BoxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg';
 import CardText from 'bootstrap-icons/icons/card-text.svg';
 import Check from 'bootstrap-icons/icons/check-square.svg';
+import CheckCircleFill from 'bootstrap-icons/icons/check-circle-fill.svg';
 import Columns from 'bootstrap-icons/icons/columns.svg';
 import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
 import Exclamation from 'bootstrap-icons/icons/exclamation-diamond.svg';
@@ -35,11 +35,11 @@ export {
     ArrowBarUp,
     ArrowRight,
     Braces,
-    BookmarkCheck,
-    BookmarkCheckFill,
+    Bookmark,
     BoxArrowRight,
     CardText,
     Check,
+    CheckCircleFill,
     Columns,
     Dashboard,
     Exclamation,

@@ -6,7 +6,7 @@ import { AlertContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
-import { LocationKind, LocationKind2 } from "../lib/admin/models";
+import { LocationKind, Location } from "../lib/admin/models";
 import ProgressSpinner from "../components/ProgressSpinner";
 import type { Locale as LocaleModel } from "../lib/content/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
@@ -62,9 +62,9 @@ export const CreateLocale = () => {
         adminCtx.createLocale(req)
             .then(() => contentCtx.loadLocales())
             .then(() => {
-                alertCtx.success(`Locale "${req.name}" is successfully created`);
+                alertCtx.success(`Locale "${req.name}" is created successfully`);
 
-                navigate('/locales', { replace: true });
+                navigate(`/locales/view/${req.key}`, { replace: true });
             })
             .catch((e) => {
                 if (e instanceof HttpError) {
@@ -151,7 +151,7 @@ export const LocaleResource = () => {
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
 
-    const location = createMemo(() => LocationKind2.fromParams(params.kind, params.namespace));
+    const location = createMemo(() => Location.fromParams(params.kind, params.namespace));
     const locale = createMemo(() => contentCtx.locales().find((l) => l.key === params.key));
 
     const [resource] = createResource(
@@ -200,7 +200,7 @@ export const LocaleResource = () => {
 
         setInProgress(true);
 
-        adminCtx.updateLocaleResource(lc.key, lt, e.getValue())
+        adminCtx.updateLocaleResource(lc.key, e.getValue(), lt.namespace)
             .then(() => alertCtx.success(`Translations of "${lc.name}" locale is updated successfully`))
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(false));
@@ -216,7 +216,7 @@ export const LocaleResource = () => {
                     <p class="text-secondary text-center">Unknown kind <strong>{params.kind}</strong> found in path or the namespace missing.</p>
                 </Match>
                 <Match when={editor.loading || resource.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Editor ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
                 </Match>
                 <Match when={editor.error || resource.error}>
                     <p class="text-danger-emphasis text-center">Error while setting up editor: <strong>{editor.error?.message} {resource.error?.message}</strong></p>

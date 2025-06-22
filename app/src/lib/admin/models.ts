@@ -4,10 +4,10 @@ export enum LocationKind {
     Theme = 'theme',
 }
 
-export type LocationKind2 = { kind: LocationKind.Global, namespace?: undefined } | { kind: LocationKind.Theme | LocationKind.User, namespace: string };
+export type Location = { kind: LocationKind.Global, namespace?: undefined } | { kind: LocationKind.Theme | LocationKind.User, namespace: string };
 
-export namespace LocationKind2 {
-    export function toSearchParams(location: LocationKind2): URLSearchParams {
+export namespace Location {
+    export function toSearchParams(location: Location): URLSearchParams {
         const searchParams = new URLSearchParams();
 
         searchParams.append('kind', location.kind);
@@ -19,7 +19,7 @@ export namespace LocationKind2 {
         return searchParams;
     }
 
-    export function fromParams(locationKind: string | undefined, namespace: string | undefined): LocationKind2 | undefined {
+    export function fromParams(locationKind: string | undefined, namespace: string | undefined): Location | undefined {
         const kind = Object.entries(LocationKind).find((k) => k[1] === locationKind)?.[1];
 
         if (kind === undefined) {
@@ -35,6 +35,10 @@ export namespace LocationKind2 {
         }
 
         return { kind, namespace };
+    }
+
+    export function urlPath(location: Location): string {
+        return location.kind === LocationKind.Global ? `${location.kind}` : `${location.kind}/${location.namespace}`;
     }
 }
 
@@ -63,10 +67,11 @@ export interface Page {
 
 export interface Template {
     path: string,
-    kind: LocationKind,
+    location: Location,
 }
 
-export interface TemplateDetail extends Template {
+export interface TemplateDetail {
+    path: string,
     template: string,
 }
 

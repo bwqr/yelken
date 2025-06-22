@@ -1,4 +1,4 @@
-use base::{services::SafePath, utils::LocationKind};
+use base::services::SafePath;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -39,9 +39,13 @@ pub struct UpdateLocaleState {
 }
 
 #[derive(Deserialize)]
-pub struct FilterLocaleResource {
-    #[serde(flatten)]
-    pub kind: LocationKind,
+pub struct FilterNamespace {
+    pub namespace: Option<SafePath<1>>,
+}
+
+#[derive(Deserialize)]
+pub struct FilterPath {
+    pub path: SafePath<3>,
 }
 
 #[derive(Deserialize)]
@@ -51,24 +55,10 @@ pub struct UpdateLocaleResource {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UpdateTemplate {
-    pub theme_scoped: bool,
+    pub namespace: Option<SafePath<1>>,
     pub path: SafePath<3>,
     pub template: String,
-}
-
-#[derive(Deserialize)]
-pub struct FilterTemplate {
-    pub kind: LocationKind,
-    pub path: SafePath<3>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DeleteTemplate {
-    pub theme_scoped: bool,
-    pub path: SafePath<3>,
 }
 
 #[derive(Deserialize)]

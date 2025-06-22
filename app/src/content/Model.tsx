@@ -636,7 +636,7 @@ export const Model = () => {
             .then(() => {
                 setEditingField(undefined);
 
-                alertCtx.success(`Field "${updatedField.name}" is successfully updated`);
+                alertCtx.success(`Field "${updatedField.name}" is updated successfully`);
             });
     };
 
@@ -652,7 +652,7 @@ export const Model = () => {
             .then(() => {
                 setCreatingField(false);
 
-                alertCtx.success(`Field "${newField.name}" is successfully created`);
+                alertCtx.success(`Field "${newField.name}" is created successfully`);
             });
     };
 

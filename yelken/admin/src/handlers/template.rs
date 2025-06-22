@@ -3,35 +3,65 @@ use axum::{
     Extension, Json,
 };
 use base::{
-    config::Options, responses::HttpError, runtime::IntoSendFuture, utils::ResourceKind, AppState,
+    config::Options,
+    responses::HttpError,
+    runtime::IntoSendFuture,
+    schema::themes,
+    utils::{LocationKind, ResourceKind},
+    AppState,
 };
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use opendal::ErrorKind;
 use ui::Render;
 
 use crate::{
-    requests::{DeleteTemplate, FilterTemplate, UpdateTemplate},
+    requests::{FilterNamespace, FilterPath, UpdateTemplate},
     responses::{Template, TemplateDetail},
 };
 
 pub async fn fetch_templates(
     State(state): State<AppState>,
-    Extension(options): Extension<Options>,
+    Query(query): Query<FilterNamespace>,
 ) -> Result<Json<Vec<Template>>, HttpError> {
     let mut templates = vec![];
 
-    for location in options.template_locations() {
+    let locations: &[LocationKind] = if let Some(namespace) = query.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
+
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
+        }
+
+        &[
+            LocationKind::Global,
+            LocationKind::Theme {
+                namespace: namespace.clone(),
+            },
+            LocationKind::User { namespace },
+        ]
+    } else {
+        &[LocationKind::Global]
+    };
+
+    for location in locations {
+        let dir = base::utils::location(&location, ResourceKind::Template);
         let Ok(entries) = state
             .storage
-            .list_with(&location)
+            .list_with(&dir)
             .recursive(true)
             .into_send_future()
             .await
-            .inspect_err(|e| log::debug!("Failed to read directory {location:?} {e:?}"))
+            .inspect_err(|e| log::debug!("Failed to read directory {dir:?} {e:?}"))
         else {
             continue;
         };
 
-        let prefix = format!("{}/", location);
+        let prefix = format!("{}/", dir);
 
         templates.extend(entries.into_iter().filter_map(|entry| {
             if !entry.path().ends_with(".html") {
@@ -40,6 +70,7 @@ pub async fn fetch_templates(
 
             entry.path().strip_prefix(&prefix).map(|p| Template {
                 path: p.to_string(),
+                location: location.clone(),
             })
         }));
     }
@@ -49,16 +80,28 @@ pub async fn fetch_templates(
 
 pub async fn fetch_template(
     State(state): State<AppState>,
-    Query(req): Query<FilterTemplate>,
+    Query(location): Query<LocationKind>,
+    Query(query): Query<FilterPath>,
 ) -> Result<Json<TemplateDetail>, HttpError> {
-    let location = base::utils::location(req.kind, ResourceKind::Template);
+    match &location {
+        LocationKind::User { namespace } | LocationKind::Theme { namespace } => {
+            let exists = diesel::dsl::select(diesel::dsl::exists(
+                themes::table.filter(themes::id.eq(&namespace.0)),
+            ))
+            .get_result::<bool>(&mut state.pool.get().await?)
+            .await?;
 
-    let buf = match state
-        .storage
-        .read(&format!("{}/{}", location, req.path.0))
-        .into_send_future()
-        .await
-    {
+            if !exists {
+                return Err(HttpError::conflict("namespace_not_found"));
+            }
+        }
+        LocationKind::Global => {}
+    };
+
+    let location = base::utils::location(&location, ResourceKind::Template);
+    let path = format!("{location}/{}", query.path.0);
+
+    let buf = match state.storage.read(&path).into_send_future().await {
         Ok(buf) => buf,
         Err(e) if e.kind() == ErrorKind::NotFound => {
             return Err(HttpError::not_found("template_not_found"))
@@ -77,9 +120,69 @@ pub async fn fetch_template(
     };
 
     Ok(Json(TemplateDetail {
-        path: req.path.0,
+        path: query.path.0,
         template,
     }))
+}
+
+pub async fn create_template(
+    State(state): State<AppState>,
+    Extension(options): Extension<Options>,
+    Extension(render): Extension<Render>,
+    Json(req): Json<UpdateTemplate>,
+) -> Result<(), HttpError> {
+    let (reload, location) = if let Some(namespace) = req.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
+
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
+        }
+
+        (
+            namespace.0 == &*options.theme(),
+            LocationKind::User { namespace },
+        )
+    } else {
+        (true, LocationKind::Global)
+    };
+
+    let location = base::utils::location(&location, ResourceKind::Template);
+    let path = format!("{location}/{}", req.path.0);
+
+    async {
+        state
+            .storage
+            .writer_with(&path)
+            .if_not_exists(true)
+            .await?
+            .write(req.template)
+            .await
+    }
+    .into_send_future()
+    .await
+    .map_err(|e| {
+        if e.kind() == ErrorKind::ConditionNotMatch {
+            return HttpError::not_found("template_already_exists");
+        }
+
+        HttpError::internal_server_error("failed_writing_template")
+    })?;
+
+    // TODO handle invalid template case before writing the received template
+
+    if reload {
+        render
+            .reload(&state.storage, &options.template_locations())
+            .await
+            .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
+            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+    }
+
+    Ok(())
 }
 
 pub async fn update_template(
@@ -88,14 +191,27 @@ pub async fn update_template(
     Extension(render): Extension<Render>,
     Json(req): Json<UpdateTemplate>,
 ) -> Result<(), HttpError> {
-    let mut path = if req.theme_scoped {
-        ["templates", "themes", &options.theme()].join("/")
+    let (reload, location) = if let Some(namespace) = req.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
+
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
+        }
+
+        (
+            namespace.0 == &*options.theme(),
+            LocationKind::User { namespace },
+        )
     } else {
-        ["templates", "global"].join("/")
+        (true, LocationKind::Global)
     };
 
-    path.push('/');
-    path.push_str(&req.path.0);
+    let location = base::utils::location(&location, ResourceKind::Template);
+    let path = format!("{location}/{}", req.path.0);
 
     state
         .storage
@@ -106,11 +222,14 @@ pub async fn update_template(
         .map_err(|_| HttpError::internal_server_error("failed_writing_template"))?;
 
     // TODO handle invalid template case before writing the received template
-    render
-        .reload(&state.storage, &options.template_locations())
-        .await
-        .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
-        .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+
+    if reload {
+        render
+            .reload(&state.storage, &options.template_locations())
+            .await
+            .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
+            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+    }
 
     Ok(())
 }
@@ -119,16 +238,30 @@ pub async fn delete_template(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
-    Query(req): Query<DeleteTemplate>,
+    Query(namespace): Query<FilterNamespace>,
+    Query(query): Query<FilterPath>,
 ) -> Result<(), HttpError> {
-    let mut path = if req.theme_scoped {
-        ["templates", "themes", &options.theme()].join("/")
+    let (reload, location) = if let Some(namespace) = namespace.namespace {
+        let exists = diesel::dsl::select(diesel::dsl::exists(
+            themes::table.filter(themes::id.eq(&namespace.0)),
+        ))
+        .get_result::<bool>(&mut state.pool.get().await?)
+        .await?;
+
+        if !exists {
+            return Err(HttpError::conflict("namespace_not_found"));
+        }
+
+        (
+            namespace.0 == &*options.theme(),
+            LocationKind::User { namespace },
+        )
     } else {
-        ["templates", "global"].join("/")
+        (true, LocationKind::Global)
     };
 
-    path.push('/');
-    path.push_str(&req.path.0);
+    let location = base::utils::location(&location, ResourceKind::Template);
+    let path = format!("{location}/{}", query.path.0);
 
     state
         .storage
@@ -138,11 +271,13 @@ pub async fn delete_template(
         .inspect_err(|e| log::error!("Failed to remove template at path {path}, {e:?}"))
         .map_err(|_| HttpError::internal_server_error("failed_deleting_resource"))?;
 
-    render
-        .reload(&state.storage, &options.template_locations())
-        .await
-        .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
-        .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+    if reload {
+        render
+            .reload(&state.storage, &options.template_locations())
+            .await
+            .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
+            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+    }
 
     Ok(())
 }

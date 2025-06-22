@@ -40,14 +40,14 @@ impl Options {
             .unwrap_or_else(|_| SafePath::from_str("").unwrap());
 
         [
-            crate::utils::location(LocationKind::Global, ResourceKind::Locale),
             crate::utils::location(
-                LocationKind::Theme {
+                &LocationKind::Theme {
                     namespace: namespace.clone(),
                 },
                 ResourceKind::Locale,
             ),
-            crate::utils::location(LocationKind::User { namespace }, ResourceKind::Locale),
+            crate::utils::location(&LocationKind::Global, ResourceKind::Locale),
+            crate::utils::location(&LocationKind::User { namespace }, ResourceKind::Locale),
         ]
     }
 
@@ -57,14 +57,14 @@ impl Options {
             .unwrap_or_else(|_| SafePath::from_str("").unwrap());
 
         [
-            crate::utils::location(LocationKind::Global, ResourceKind::Template),
             crate::utils::location(
-                LocationKind::Theme {
+                &LocationKind::Theme {
                     namespace: namespace.clone(),
                 },
                 ResourceKind::Template,
             ),
-            crate::utils::location(LocationKind::User { namespace }, ResourceKind::Template),
+            crate::utils::location(&LocationKind::Global, ResourceKind::Template),
+            crate::utils::location(&LocationKind::User { namespace }, ResourceKind::Template),
         ]
     }
 

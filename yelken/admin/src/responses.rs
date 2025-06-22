@@ -1,6 +1,7 @@
 use base::{
     middlewares::permission::Permission,
     models::{Role, UserState},
+    utils::LocationKind,
 };
 use serde::Serialize;
 
@@ -15,6 +16,7 @@ pub struct CreatedUser {
 #[derive(serde::Serialize)]
 pub struct Template {
     pub path: String,
+    pub location: LocationKind,
 }
 
 #[derive(serde::Serialize)]

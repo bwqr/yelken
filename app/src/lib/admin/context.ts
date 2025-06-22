@@ -1,6 +1,6 @@
 import { createContext, type Context } from "solid-js";
 import { Api, HttpError } from "../api";
-import { LocationKind, LocationKind2, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
+import { Location, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
 
 export interface AdminStore {
     fetchPages(): Promise<Page[]>
@@ -20,17 +20,18 @@ export interface AdminStore {
     updateRolePermission(id: number, permissions: Permission[]): Promise<void>;
     deleteRole(id: number): Promise<void>;
 
-    fetchTemplates(): Promise<Template[]>
-    fetchTemplate(path: string, kind: LocationKind): Promise<TemplateDetail | undefined>
-    updateTemplate(path: string, kind: LocationKind, template: string): Promise<void>;
-    deleteTemplate(path: string, kind: LocationKind): Promise<void>;
+    fetchTemplates(namespace?: string): Promise<Template[]>
+    fetchTemplate(path: string, kind: Location): Promise<TemplateDetail | undefined>
+    createTemplate(path: string, template: string, namespace?: string): Promise<void>;
+    updateTemplate(path: string, template: string, namespace?: string): Promise<void>;
+    deleteTemplate(path: string, namespace?: string): Promise<void>;
 
     fetchThemes(): Promise<Theme[]>,
     setThemeActive(themeId: string): Promise<void>;
     uninstallTheme(themeId: string): Promise<void>;
 
-    fetchLocaleResource(key: string, location: LocationKind2): Promise<LocaleResource | undefined>;
-    updateLocaleResource(key: string, location: LocationKind2, resource: string): Promise<void>;
+    fetchLocaleResource(key: string, location: Location): Promise<LocaleResource | undefined>;
+    updateLocaleResource(key: string, resource: string, namespace?: string): Promise<void>;
     createLocale(req: { name: string, key: string }): Promise<void>;
     updateLocale(key: string, req: { name: string }): Promise<void>;
     deleteLocale(key: string): Promise<void>;
@@ -99,12 +100,22 @@ export class AdminService implements AdminStore {
         return Api.delete(`/admin/role/role/${id}`);
     }
 
-    async fetchTemplates(): Promise<Template[]> {
-        return Api.get('/admin/template/templates');
+    async fetchTemplates(namespace?: string): Promise<Template[]> {
+        const searchParams = new URLSearchParams();
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.get(`/admin/template/templates?${searchParams.toString()}`);
     }
 
-    async fetchTemplate(path: string, kind: LocationKind): Promise<TemplateDetail | undefined> {
-        return Api.get<TemplateDetail>(`/admin/template/template?path=${encodeURIComponent(path)}&kind=${encodeURIComponent(kind)}`)
+    async fetchTemplate(path: string, kind: Location): Promise<TemplateDetail | undefined> {
+        const searchParams = Location.toSearchParams(kind);
+
+        searchParams.append('path', path);
+
+        return Api.get<TemplateDetail>(`/admin/template/template?${searchParams.toString()}`)
             .catch((e) => {
                 if ((e instanceof HttpError) && e.error === 'template_not_found') {
                     return undefined;
@@ -114,12 +125,40 @@ export class AdminService implements AdminStore {
             });
     }
 
-    async updateTemplate(path: string, kind: LocationKind, template: string): Promise<void> {
-        return Api.put(`/admin/template`, { path, themeScoped: kind !== LocationKind.Global, template });
+    async createTemplate(path: string, template: string, namespace?: string): Promise<void> {
+        const searchParams = new URLSearchParams();
+
+        searchParams.append('path', path);
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.post(`/admin/template?${searchParams.toString()}`, { path, namespace, template });
     }
 
-    async deleteTemplate(path: string, kind: LocationKind): Promise<void> {
-        return Api.delete(`/admin/template?path=${encodeURIComponent(path)}&themeScoped=${kind !== LocationKind.Global}`);
+    async updateTemplate(path: string, template: string, namespace?: string): Promise<void> {
+        const searchParams = new URLSearchParams();
+
+        searchParams.append('path', path);
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.put(`/admin/template?${searchParams.toString()}`, { path, namespace, template });
+    }
+
+    async deleteTemplate(path: string, namespace?: string): Promise<void> {
+        const searchParams = new URLSearchParams();
+
+        searchParams.append('path', path);
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.delete(`/admin/template?${searchParams.toString()}`);
     }
 
     async fetchThemes(): Promise<Theme[]> {
@@ -134,8 +173,8 @@ export class AdminService implements AdminStore {
         return Api.delete(`/admin/theme/theme/${themeId}`);
     }
 
-    async fetchLocaleResource(key: string, location: LocationKind2): Promise<LocaleResource | undefined> {
-        const searchParams = LocationKind2.toSearchParams(location);
+    async fetchLocaleResource(key: string, location: Location): Promise<LocaleResource | undefined> {
+        const searchParams = Location.toSearchParams(location);
 
         return Api.get<LocaleResource>(`/admin/locale/${key}/resource?${searchParams.toString()}`)
             .catch((e) => {
@@ -147,10 +186,10 @@ export class AdminService implements AdminStore {
             });
     }
 
-    async updateLocaleResource(key: string, location: LocationKind2, resource: string): Promise<void> {
-        const searchParams = LocationKind2.toSearchParams(location);
+    async updateLocaleResource(key: string, resource: string, namespace?: string): Promise<void> {
+        const searchParams = namespace ? new URLSearchParams({ namespace }).toString() : '';
 
-        return Api.put(`/admin/locale/${key}/resource?${searchParams.toString()}`, { resource });
+        return Api.put(`/admin/locale/${key}/resource?${searchParams}`, { resource });
     }
 
     async createLocale(req: { name: string, key: string }): Promise<void> {
