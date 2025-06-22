@@ -58,7 +58,9 @@ export enum UserState {
 export interface Page {
     id: number,
     namespace: string | null,
+    key: string,
     name: string,
+    desc: string | null,
     path: string,
     template: string,
     locale: string | null,

@@ -34,6 +34,13 @@ pub struct CreatePage {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePage {
+    pub name: String,
+    pub desc: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct UpdateLocaleState {
     pub disabled: bool,
 }
@@ -41,6 +48,11 @@ pub struct UpdateLocaleState {
 #[derive(Deserialize)]
 pub struct FilterNamespace {
     pub namespace: Option<SafePath<1>>,
+}
+
+#[derive(Deserialize)]
+pub struct FilterLocale {
+    pub locale: Option<String>,
 }
 
 #[derive(Deserialize)]

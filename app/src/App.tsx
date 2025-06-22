@@ -11,7 +11,7 @@ import { ContentContext, ContentService } from './lib/content/context';
 import { UserContext, UserService } from './lib/user/context';
 import { AlertContext, type AlertStore } from './lib/context';
 import { CreateModel, Model, Models } from './content/Model';
-import { CreatePage, Pages } from './admin/Page';
+import { CreatePage, Page, Pages } from './admin/Page';
 import { CreateTemplate, TemplateResource, Templates } from './admin/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
 import { Check, Exclamation, XCircle } from './Icons';
@@ -232,6 +232,8 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Pages} />
+                        <Route path="/view/:namespace/:key" component={Page} />
+                        <Route path="/view/:key" component={Page} />
                         <Route path="/create" component={CreatePage} />
                     </Route>
 

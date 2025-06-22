@@ -3,8 +3,11 @@ import { Api, HttpError } from "../api";
 import { Location, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
 
 export interface AdminStore {
-    fetchPages(): Promise<Page[]>
-    createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page>;
+    fetchPages(namespace?: string): Promise<Page[]>
+    fetchPage(key: string, namespace?: string): Promise<Page[]>;
+    createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page>;
+    updatePage(key: string, req: { name: string, desc: string | null }, namespace?: string): Promise<void>;
+    deletePage(key: string, locale: string | null, namespace?: string): Promise<void>;
 
     fetchUsers(): Promise<User[]>;
     fetchUser(username: string): Promise<UserDetail | undefined>;
@@ -42,12 +45,48 @@ export interface AdminStore {
 export const AdminContext: Context<AdminStore | undefined> = createContext();
 
 export class AdminService implements AdminStore {
-    async fetchPages(): Promise<Page[]> {
-        return Api.get('/admin/page/pages');
+    async fetchPages(namespace?: string): Promise<Page[]> {
+        const searchParams = new URLSearchParams();
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.get(`/admin/page/pages?${searchParams.toString()}`);
     }
 
-    async createPage(name: string, path: string, template: string, themeScoped: boolean, locale: string | null): Promise<Page> {
-        return Api.post('/admin/page', { name, path, template, themeScoped, locale });
+    async fetchPage(key: string, namespace?: string): Promise<Page[]> {
+        const searchParams = new URLSearchParams();
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.get(`/admin/page/page/${key}?${searchParams.toString()}`);
+    }
+
+    async createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page> {
+        return Api.post('/admin/page', req);
+    }
+
+    async updatePage(key: string, req: { name: string; desc: string | null; }, namespace?: string): Promise<void> {
+        const searchParams = namespace ? new URLSearchParams({ namespace }).toString() : '';
+
+        return Api.put(`/admin/page/page/${key}?${searchParams}`, req);
+    }
+
+    async deletePage(key: string, locale: string | null, namespace?: string): Promise<void> {
+        const searchParams = new URLSearchParams();
+
+        if (locale) {
+            searchParams.append('locale', locale);
+        }
+
+        if (namespace) {
+            searchParams.append('namespace', namespace);
+        }
+
+        return Api.delete(`/admin/page/page/${key}?${searchParams.toString()}`);
     }
 
     async fetchUsers(): Promise<User[]> {
@@ -126,27 +165,11 @@ export class AdminService implements AdminStore {
     }
 
     async createTemplate(path: string, template: string, namespace?: string): Promise<void> {
-        const searchParams = new URLSearchParams();
-
-        searchParams.append('path', path);
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.post(`/admin/template?${searchParams.toString()}`, { path, namespace, template });
+        return Api.post('/admin/template', { path, namespace, template });
     }
 
     async updateTemplate(path: string, template: string, namespace?: string): Promise<void> {
-        const searchParams = new URLSearchParams();
-
-        searchParams.append('path', path);
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.put(`/admin/template?${searchParams.toString()}`, { path, namespace, template });
+        return Api.put('/admin/template', { path, namespace, template });
     }
 
     async deleteTemplate(path: string, namespace?: string): Promise<void> {

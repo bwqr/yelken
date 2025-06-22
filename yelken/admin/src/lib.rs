@@ -19,7 +19,10 @@ mod responses;
 pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route("/page/pages", get(page::fetch_pages))
+        .route("/page/page/{key}", get(page::fetch_page))
         .route("/page", post(page::create_page))
+        .route("/page/page/{key}", put(page::update_page))
+        .route("/page/page/{key}", delete(page::delete_page))
         .route(
             "/permission/role/{role_id}",
             post(permission::update_role_permissions),
