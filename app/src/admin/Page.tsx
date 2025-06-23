@@ -338,7 +338,7 @@ export const Pages = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1">Pages</h1>
+                <h1 class="flex-grow-1 m-0">Pages</h1>
                 <A class="btn btn-outline-primary icon-link" href="/pages/create">
                     <PlusLg viewBox="0 0 16 16" />
                     Create Page
@@ -586,10 +586,6 @@ export const Page = () => {
 
                             <div class="row g-4">
                                 <div class="offset-md-1 col-md-4">
-                                </div>
-                            </div>
-                            <div class="row g-4">
-                                <div class="offset-md-1 col-md-4">
                                     <div class="border rounded p-3">
                                         <div class="d-flex justify-content-center">
                                             <h5 class="flex-grow-1 m-0">Details</h5>
@@ -628,7 +624,7 @@ export const Page = () => {
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().name}>
                                                             <input
-                                                                id="modelName"
+                                                                id="pageName"
                                                                 type="text"
                                                                 class="form-control float-end w-auto"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
@@ -644,7 +640,7 @@ export const Page = () => {
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().key}>
                                                             <input
-                                                                id="modelKey"
+                                                                id="pageKey"
                                                                 type="text"
                                                                 class="form-control float-end w-auto"
                                                                 name="key"
@@ -659,7 +655,7 @@ export const Page = () => {
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().desc ?? '-'}>
                                                             <textarea
-                                                                id="modelDesc"
+                                                                id="pageDesc"
                                                                 class="form-control"
                                                                 rows="3"
                                                                 value={pageDetails.desc}

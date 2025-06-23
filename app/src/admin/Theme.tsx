@@ -285,9 +285,7 @@ export const Themes = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <div class="flex-grow-1">
-                    <h1>Themes</h1>
-                </div>
+                <h1 class="flex-grow-1 m-0">Themes</h1>
                 <A class="btn btn-outline-primary icon-link" href="/themes/install">
                     <Upload viewBox="0 0 16 16" />
                     Install Theme

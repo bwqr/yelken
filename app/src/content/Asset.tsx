@@ -295,9 +295,7 @@ export const Assets = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <div class="flex-grow-1">
-                    <h1>Assets</h1>
-                </div>
+                <h1 class="flex-grow-1 m-0">Assets</h1>
                 <A class="btn btn-outline-primary icon-link" href="/assets/upload">
                     <Upload viewBox="0 0 16 16" />
                     Upload Asset

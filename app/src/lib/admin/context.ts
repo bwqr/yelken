@@ -18,10 +18,11 @@ export interface AdminStore {
     deleteUser(id: number): Promise<void>;
 
     fetchRoles(): Promise<Role[]>;
-    fetchRole(id: number): Promise<RoleDetail | undefined>;
-    createRole(key: string, name: string, desc: string | null): Promise<Role>;
+    fetchRole(key: string): Promise<RoleDetail | undefined>;
+    createRole(req: { name: string, key: string, desc: string | null }): Promise<Role>;
+    updateRole(key: string, req: { name: string, desc: string | null }): Promise<void>;
     updateRolePermission(id: number, permissions: Permission[]): Promise<void>;
-    deleteRole(id: number): Promise<void>;
+    deleteRole(key: string): Promise<void>;
 
     fetchTemplates(namespace?: string): Promise<Template[]>
     fetchTemplate(path: string, kind: Location): Promise<TemplateDetail | undefined>
@@ -122,21 +123,25 @@ export class AdminService implements AdminStore {
         return Api.get('/admin/role/roles');
     }
 
-    async fetchRole(id: number): Promise<RoleDetail | undefined> {
-        return Api.get<RoleDetail>(`/admin/role/role/${id}`)
+    async fetchRole(key: string): Promise<RoleDetail | undefined> {
+        return Api.get<RoleDetail>(`/admin/role/role/${key}`)
             .catch(Api.handleNotFound);
     }
 
-    async createRole(key: string, name: string, desc: string | null): Promise<Role> {
-        return Api.post('/admin/role', { key, name, desc });
+    async createRole(req: { name: string, key: string, desc: string | null }): Promise<Role> {
+        return Api.post('/admin/role', req);
+    }
+
+    async updateRole(key: string, req: { name: string; desc: string | null; }): Promise<void> {
+        return Api.put(`/admin/role/role/${key}`, req);
     }
 
     async updateRolePermission(id: number, permissions: Permission[]): Promise<void> {
         return Api.post(`/admin/permission/role/${id}`, permissions);
     }
 
-    async deleteRole(id: number): Promise<void> {
-        return Api.delete(`/admin/role/role/${id}`);
+    async deleteRole(key: string): Promise<void> {
+        return Api.delete(`/admin/role/role/${key}`);
     }
 
     async fetchTemplates(namespace?: string): Promise<Template[]> {

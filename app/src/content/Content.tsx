@@ -294,9 +294,7 @@ export const ContentsByModel = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <div class="flex-grow-1">
-                    <h1>Contents</h1>
-                </div>
+                <h1 class="flex-grow-1 m-0">Contents</h1>
                 <Show when={model()}>
                     {(m) => (
                         <A class="btn btn-outline-primary icon-link" href={`/contents/create/${m().urlPath()}`}>

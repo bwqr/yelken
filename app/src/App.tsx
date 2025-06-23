@@ -254,7 +254,7 @@ const App: Component = () => {
                         </AdminContext.Provider>
                     )}>
                         <Route path="/" component={Roles} />
-                        <Route path="/view/:id" component={Role} />
+                        <Route path="/view/:key" component={Role} />
                         <Route path="/create" component={CreateRole} />
                     </Route>
 

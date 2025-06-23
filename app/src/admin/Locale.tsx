@@ -78,9 +78,7 @@ export const CreateLocale = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-5">
-                <h2>Create Locale</h2>
-            </div>
+            <h2 class="mb-5">Create Locale</h2>
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
@@ -505,7 +503,6 @@ export const Locale = () => {
                                 confirm={() => deleteLocale(locale())}
                             />
                         </Show>
-
                     </>
                 )}
             </Show >
@@ -568,9 +565,7 @@ export const Locales = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <div class="flex-grow-1">
-                    <h1>Locales</h1>
-                </div>
+                <h1 class="flex-grow-1 m-0">Locales</h1>
                 <A class="btn btn-outline-primary icon-link" href="/locales/create">
                     <PlusLg viewBox="0 0 16 16" />
                     Create Locale

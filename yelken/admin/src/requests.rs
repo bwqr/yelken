@@ -34,8 +34,13 @@ pub struct CreatePage {
 }
 
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UpdatePage {
+    pub name: String,
+    pub desc: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateRole {
     pub name: String,
     pub desc: Option<String>,
 }

@@ -91,6 +91,8 @@ export interface LocaleResource {
 export interface Role {
     id: number,
     name: string,
+    key: string,
+    desc: string | null,
 }
 
 export interface RoleDetail extends Role {

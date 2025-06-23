@@ -23,7 +23,7 @@ create table themes(
 
 create table roles(
     id         integer primary key autoincrement,
-    key        varchar(128) not null,
+    key        varchar(128) not null unique,
     name       varchar(128) not null,
     "desc"     text         default null,
     created_at timestamp    not null default current_timestamp
@@ -62,7 +62,7 @@ create table locales(
 
 create table fields(
     id   integer primary key autoincrement,
-    key  varchar(128)   not null,
+    key  varchar(128)   not null unique,
     name varchar(128)   not null,
     kind varchar(16)    not null
 );

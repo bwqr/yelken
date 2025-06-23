@@ -17,7 +17,10 @@ use diesel::{
 };
 use diesel_async::RunQueryDsl;
 
-use crate::{requests::CreateRole, responses::RoleDetail};
+use crate::{
+    requests::{CreateRole, UpdateRole},
+    responses::RoleDetail,
+};
 
 pub async fn fetch_roles(State(state): State<AppState>) -> Result<Json<Vec<Role>>, HttpError> {
     roles::table
@@ -29,17 +32,17 @@ pub async fn fetch_roles(State(state): State<AppState>) -> Result<Json<Vec<Role>
 
 pub async fn fetch_role(
     State(state): State<AppState>,
-    Path(role_id): Path<i32>,
+    Path(role_key): Path<String>,
 ) -> Result<Json<RoleDetail>, HttpError> {
     let mut conn = state.pool.get().await?;
 
     let role = roles::table
-        .filter(roles::id.eq(role_id))
+        .filter(roles::key.eq(role_key))
         .first::<Role>(&mut conn)
         .await?;
 
     let perms = permissions::table
-        .filter(permissions::role_id.eq(role_id))
+        .filter(permissions::role_id.eq(role.id))
         .select(permissions::key)
         .load::<String>(&mut conn)
         .await?;
@@ -79,12 +82,30 @@ pub async fn create_role(
         })
 }
 
+pub async fn update_role(
+    State(state): State<AppState>,
+    Path(role_key): Path<String>,
+    Json(req): Json<UpdateRole>,
+) -> Result<(), HttpError> {
+    let effected_row: usize = diesel::update(roles::table)
+        .filter(roles::key.eq(role_key))
+        .set((roles::name.eq(req.name), roles::desc.eq(req.desc)))
+        .execute(&mut state.pool.get().await?)
+        .await?;
+
+    if effected_row == 0 {
+        return Err(HttpError::not_found("role_not_found"));
+    }
+
+    Ok(())
+}
+
 pub async fn delete_role(
     State(state): State<AppState>,
-    Path(role_id): Path<i32>,
+    Path(role_key): Path<String>,
 ) -> Result<(), HttpError> {
     let effected_row = diesel::delete(roles::table)
-        .filter(roles::id.eq(role_id))
+        .filter(roles::key.eq(role_key))
         .execute(&mut state.pool.get().await?)
         .await
         .map_err(|e| {
