@@ -122,9 +122,15 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
     let db_url = "/file.db";
 
     {
+        use diesel::RunQueryDsl;
+
         let mut conn = <SyncConnection as diesel::Connection>::establish(db_url).unwrap();
 
         setup::migrate(&mut conn).unwrap();
+
+        diesel::sql_query("PRAGMA foreign_keys = ON;")
+            .execute(&mut conn)
+            .unwrap();
 
         create_user(conn, &crypto, name, email, password);
 
@@ -135,6 +141,15 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
 
     let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
     let pool = deadpool::Pool::builder(db_config).build().unwrap();
+
+    {
+        use diesel_async::RunQueryDsl;
+
+        diesel::sql_query("PRAGMA foreign_keys = ON;")
+            .execute(&mut pool.get().await.unwrap())
+            .await
+            .unwrap();
+    }
 
     let site_url = base_url.parse().expect("Given base_url is not a valid url");
     let app_url = base_url.parse().expect("Given base_url is not a valid url");
