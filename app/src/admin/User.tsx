@@ -1,11 +1,14 @@
-import { createResource, createSignal, For, Match, onCleanup, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { AdminContext } from "../lib/admin/context";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import { ArrowRight, FloppyFill, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
+import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
 import { AlertContext } from "../lib/context";
 import { HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
-import { Permission, UserState } from "../lib/admin/models";
+import { Permission, UserState, type User as UserModel } from "../lib/admin/models";
+import ProgressSpinner from "../components/ProgressSpinner";
+import { createStore } from "solid-js/store";
+import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 export const CreateUser = () => {
     enum ValidationError {
@@ -39,20 +42,21 @@ export const CreateUser = () => {
         setServerError(undefined);
 
         const errors = new Set<ValidationError>();
+        const req = { name: name().trim(), email: email().trim(), password: password() };
 
-        if (name().trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
-        if (email().trim().length === 0) {
+        if (req.email.length === 0) {
             errors.add(ValidationError.Email);
         }
 
-        if (password().trim().length === 0) {
+        if (req.password.length === 0) {
             errors.add(ValidationError.Password);
         }
 
-        if (passwordConfirm() !== password()) {
+        if (passwordConfirm() !== req.password) {
             errors.add(ValidationError.PasswordMismatch);
         }
 
@@ -64,9 +68,10 @@ export const CreateUser = () => {
 
         setInProgress(true);
 
-        adminCtx.createUser(name(), email(), password())
+        adminCtx.createUser(req)
             .then((user) => {
-                alertCtx.success('User is created successfully');
+                alertCtx.success(`User "${req.name}" is created successfully`);
+
                 navigate(`/users/view/${user.username}`, { replace: true });
             })
             .catch((e) => {
@@ -81,93 +86,97 @@ export const CreateUser = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-5">
-                <h2>Create User</h2>
-            </div>
-            <div class="row m-0">
+            <h2 class="mb-5">Create User</h2>
+
+            <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
-                    <div class="form-floating mb-4">
-                        <input
-                            id="userName"
-                            type="text"
-                            name="name"
-                            placeholder="Name"
-                            class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
-                            value={name()}
-                            onChange={(ev) => setName(ev.target.value)}
-                        />
-                        <label for="userName" class="form-label">Name</label>
-                        <Show when={validationErrors().has(ValidationError.Name)}>
-                            <small class="invalid-feedback">Please specify a name for user.</small>
-                        </Show>
-                    </div>
-
-                    <div class="form-floating mb-4">
-                        <input
-                            id="userEmail"
-                            type="email"
-                            name="name"
-                            placeholder="Email"
-                            class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Email) }}
-                            value={email()}
-                            onChange={(ev) => setEmail(ev.target.value)}
-                        />
-                        <label for="userEmail" class="form-label">Email</label>
-                        <Show when={validationErrors().has(ValidationError.Email)}>
-                            <small class="invalid-feedback">Please specify a email for user.</small>
-                        </Show>
-                    </div>
-
-                    <div class="form-floating mb-4">
-                        <input
-                            id="userPassword"
-                            type="password"
-                            name="password"
-                            placeholder="Name"
-                            class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.Password) }}
-                            value={password()}
-                            onChange={(ev) => setPassword(ev.target.value)}
-                        />
-                        <label for="userPassword" class="form-label">Password</label>
-                        <Show when={validationErrors().has(ValidationError.Password)}>
-                            <small class="invalid-feedback">Please specify a password for user.</small>
-                        </Show>
-                    </div>
-
-                    <div class="form-floating mb-4">
-                        <input
-                            id="userPasswordConfirm"
-                            type="password"
-                            name="password"
-                            placeholder="Name"
-                            class="form-control"
-                            classList={{ 'is-invalid': validationErrors().has(ValidationError.PasswordMismatch) }}
-                            value={passwordConfirm()}
-                            onChange={(ev) => setPasswordConfirm(ev.target.value)}
-                        />
-                        <label for="userPasswordConfirm" class="form-label">Password Confirm</label>
-                        <Show when={validationErrors().has(ValidationError.PasswordMismatch)}>
-                            <small class="invalid-feedback">Does not match the password.</small>
-                        </Show>
-                    </div>
-
-                    <Show when={serverError()}>
-                        <small class="text-danger mb-3">{serverError()}</small>
-                    </Show>
-
-                    <div class="d-flex justify-content-center">
-                        <button type="submit" class="btn btn-primary icon-link justify-content-center mw-100" style="width: 250px;" disabled={inProgress()}>
-                            <Show when={inProgress()}>
-                                <div class="spinner-border" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
+                    <div class="border rounded p-3">
+                        <div class="mb-4">
+                            <label for="userName" class="form-label">Name</label>
+                            <input
+                                id="userName"
+                                type="text"
+                                name="name"
+                                placeholder="Name"
+                                class="form-control"
+                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                value={name()}
+                                onChange={(ev) => setName(ev.target.value)}
+                            />
+                            <Show when={validationErrors().has(ValidationError.Name)}>
+                                <small class="invalid-feedback">Please specify a name for user.</small>
                             </Show>
-                            <PlusLg viewBox="0 0 16 16" />
-                            Add
-                        </button>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userEmail" class="form-label">Email</label>
+                            <input
+                                id="userEmail"
+                                type="email"
+                                name="name"
+                                placeholder="Email"
+                                class="form-control"
+                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Email) }}
+                                value={email()}
+                                onChange={(ev) => setEmail(ev.target.value)}
+                            />
+                            <Show when={validationErrors().has(ValidationError.Email)}>
+                                <small class="invalid-feedback">Please specify a email for user.</small>
+                            </Show>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userPassword" class="form-label">Password</label>
+                            <input
+                                id="userPassword"
+                                type="password"
+                                name="password"
+                                placeholder="Name"
+                                class="form-control"
+                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Password) }}
+                                value={password()}
+                                onChange={(ev) => setPassword(ev.target.value)}
+                            />
+                            <Show when={validationErrors().has(ValidationError.Password)}>
+                                <small class="invalid-feedback">Please specify a password for user.</small>
+                            </Show>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="userPasswordConfirm" class="form-label">Password Confirm</label>
+                            <input
+                                id="userPasswordConfirm"
+                                type="password"
+                                name="password"
+                                placeholder="Name"
+                                class="form-control"
+                                classList={{ 'is-invalid': validationErrors().has(ValidationError.PasswordMismatch) }}
+                                value={passwordConfirm()}
+                                onChange={(ev) => setPasswordConfirm(ev.target.value)}
+                            />
+                            <Show when={validationErrors().has(ValidationError.PasswordMismatch)}>
+                                <small class="invalid-feedback">Does not match the password.</small>
+                            </Show>
+                        </div>
+
+                        <Show when={serverError()}>
+                            <div class="mb-2">
+                                <small class="text-danger">{serverError()}</small>
+                            </div>
+                        </Show>
+
+                        <div class="d-flex justify-content-center">
+                            <button
+                                type="submit"
+                                class="btn btn-primary icon-link justify-content-center w-100"
+                                style="max-width: 10rem;"
+                                disabled={inProgress()}
+                            >
+                                <ProgressSpinner show={inProgress()} />
+                                <PlusLg viewBox="0 0 16 16" />
+                                Add
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -177,8 +186,12 @@ export const CreateUser = () => {
 
 export const User = () => {
     enum Action {
-        Update,
-        Delete,
+        UpdateDetails,
+        UpdatePermissions,
+    }
+
+    enum ValidationError {
+        Name,
     }
 
     const adminCtx = useContext(AdminContext)!;
@@ -187,172 +200,317 @@ export const User = () => {
 
     const params = useParams();
 
-    const [permissions, setPermissions] = createSignal([] as Permission[]);
-    const [role, setRole] = createSignal(undefined as number | undefined);
-    const [userState, setUserState] = createSignal(undefined as UserState | undefined);
+    const [user, { mutate }] = createResource(() => params.username, (username) => adminCtx.fetchUser(username));
+    const [roles] = createResource(() => adminCtx.fetchRoles());
+
+    const [details, setDetails] = createStore({ name: '', state: UserState.Enabled, roleId: null as number | null });
+    const [editingDetails, setEditingDetails] = createSignal(false);
+
+    const [permissions, setPermissions] = createStore(
+        Object.values(Permission)
+            .reduce(
+                (perms, perm) => {
+                    perms[perm] = false;
+                    return perms;
+                },
+                {} as Record<Permission, boolean>
+            )
+    );
+    const [editingPermissions, setEditingPermissions] = createSignal(false);
+
+    createEffect(() => {
+        const u = user();
+
+        setDetails({ name: u?.name ?? '', state: u?.state ?? UserState.Enabled, roleId: u?.roleId ?? null })
+
+        setPermissions(
+            Object.values(Permission)
+                .reduce(
+                    (perms, perm) => {
+                        perms[perm] = u?.permissions.includes(perm) ?? false;
+
+                        return perms;
+                    },
+                    {} as Record<Permission, boolean>
+                )
+        );
+    })
 
     const [inProgress, setInProgress] = createSignal(undefined as Action | undefined);
 
+    const [deleting, setDeleting] = createSignal(false);
+
     const [dropdown, setDropdown] = createSignal(false);
+    onCleanup(dropdownClickListener('user-detail-dropdown', () => setDropdown(false), () => !deleting()));
 
-    onCleanup(dropdownClickListener('user-detail-dropdown', () => setDropdown(false), () => inProgress() === undefined));
+    const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
 
-    const [userAndRoles] = createResource(() => Promise.all([adminCtx.fetchUser(params.username), adminCtx.fetchRoles()]).then(([user, roles]) => {
-        setRole(user?.roleId ?? undefined);
-        setPermissions(user?.permissions ?? []);
-        setUserState(user?.state ?? undefined);
-
-        return { user, roles };
-    }));
-
-    const save = () => {
-        const user = userAndRoles()?.user;
-        const roleId = role() ?? null;
-        const state = userState()
-
-        if (inProgress() !== undefined || !user || state === undefined) {
-            return;
-        }
-
-        setInProgress(Action.Update);
-
-        Promise.all([adminCtx.updateUserPermission(user.id, permissions()), adminCtx.updateUserRole(user.id, roleId), adminCtx.updateUserState(user.id, state)])
-            .then(() => alertCtx.success(`User ${user.name} is updated successfully`))
-            .catch((e) => alertCtx.fail(e.message))
-            .finally(() => setInProgress(undefined));
-    };
-
-    const deleteUser = () => {
-        const u = userAndRoles()?.user;
+    const updateDetails = () => {
+        const u = user();
 
         if (inProgress() !== undefined || !u) {
             return;
         }
 
-        setInProgress(Action.Delete);
+        const errors = new Set<ValidationError>();
+        const req = { name: details.name.trim(), state: details.state, roleId: details.roleId };
 
-        adminCtx.deleteUser(u.id)
+        if (req.name.length === 0) {
+            errors.add(ValidationError.Name);
+        }
+
+        setValidationErrors(errors);
+
+        if (errors.size > 0) {
+            return;
+        }
+
+        setInProgress(Action.UpdateDetails);
+
+        adminCtx.updateUser(u.id, req)
             .then(() => {
-                alertCtx.success('User is deleted successfully');
-                navigate(-1);
+                setEditingDetails(false);
+
+                alertCtx.success(`User "${req.name}" is updated successfully`)
+
+                mutate({ ...u, name: req.name, state: req.state, roleId: req.roleId });
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
     };
 
+    const updatePermissions = () => {
+        const u = user();
+
+        if (inProgress() !== undefined || !u) {
+            return;
+        }
+
+        setInProgress(Action.UpdatePermissions);
+
+        const newPermissions = Object.entries(permissions).filter(([_, value]) => value).map(([perm, _]) => perm as Permission);
+
+        adminCtx.updateUserPermission(u.id, newPermissions)
+            .then(() => {
+                setEditingPermissions(false);
+
+                alertCtx.success(`Permissions of "${u.name}" user are updated successfully`)
+
+                mutate({ ...u, permissions: newPermissions });
+            })
+            .catch((e) => alertCtx.fail(e.message))
+            .finally(() => setInProgress(undefined));
+    };
+
+    const deleteUser = async (user: UserModel) => {
+        return adminCtx.deleteUser(user.id)
+            .then(() => {
+                setDeleting(false);
+
+                alertCtx.success(`User "${user.name}" is deleted successfully`);
+
+                navigate('/users', { replace: true });
+            });
+    };
+
     return (
         <div class="container py-4 px-md-4">
-            <Suspense fallback={<p>Loading...</p>}>
-                <div class="d-flex align-items-center mb-5">
-                    <div class="flex-grow-1">
-                        <h2 class="m-0">{userAndRoles()?.user?.name ?? '-'}</h2>
-                        <small>Role</small>
-                    </div>
-                    <div class="dropdown mx-2">
-                        <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
-                            <ThreeDotsVertical viewBox="0 0 16 16" />
-                        </button>
-                        <Show when={dropdown()}>
-                            <ul id="role-detail-dropdown" class="dropdown-menu mt-1 show shadow" style="right: 0;">
-                                <li>
-                                    <button class="dropdown-item text-danger icon-link py-2" onClick={deleteUser}>
-                                        <Show when={inProgress() === Action.Delete}>
-                                            <div class="spinner-border" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </Show>
-                                        <Trash viewBox="0 0 16 16" />
-                                        Delete
+            <Switch>
+                <Match when={user.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={user.error}>
+                    <p class="text-danger-emphasis text-center">Error while fetching user: <strong>{user.error.message}</strong></p>
+                </Match>
+                <Match when={user.state === 'ready' && user() === undefined}>
+                    <p class="text-secondary text-center">Could not find the user with username {params.username}.</p>
+                </Match>
+                <Match when={user()}>
+                    {(user) => (
+                        <>
+                            <div class="d-flex align-items-center mb-5">
+                                <div class="flex-grow-1">
+                                    <h2 class="m-0">{user().name}</h2>
+                                    <small>User</small>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                                        <ThreeDotsVertical viewBox="0 0 16 16" />
                                     </button>
-                                </li>
-                            </ul>
-                        </Show>
-                    </div>
-                    <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress() !== undefined}>
-                        <Show when={inProgress() === Action.Update}>
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                                    <ul id="locale-detail-dropdown" class="dropdown-menu mt-1 shadow" style="right: 0;" classList={{ 'show': dropdown() }}>
+                                        <li>
+                                            <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeleting(true)}>
+                                                <Trash viewBox="0 0 16 16" />
+                                                Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
-                        </Show>
-                        <FloppyFill viewBox="0 0 16 16" />
-                        Save
-                    </button>
-                </div>
-                <div class="row m-0">
-                    <Switch>
-                        <Match when={userAndRoles.state === 'ready' && userAndRoles()?.user === undefined}>
-                            <span>Could not find the user with id {params.id}.</span>
-                        </Match>
-                        <Match when={userAndRoles()}>
-                            {(userAndRoles) => (
-                                <>
-                                    <div class="offset-md-1 col-md-4 mb-5 mb-md-0">
-                                        <h5>Details</h5>
+
+                            <div class="row g-4">
+                                <div class="offset-md-1 col-md-4">
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex justify-content-center">
+                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <Show when={editingDetails()} fallback={
+                                                <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
+                                                    <PencilSquare viewBox="0 0 16 16" />
+                                                    Edit
+                                                </button>
+                                            }>
+                                                <button
+                                                    type="button"
+                                                    class="btn text-danger icon-link py-0 px-1"
+                                                    onClick={() => setEditingDetails(false)}
+                                                >
+                                                    Discard
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn icon-link py-0 px-1 ms-2"
+                                                    onClick={updateDetails}
+                                                    disabled={inProgress() === Action.UpdateDetails}
+                                                >
+                                                    <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
+                                                    <FloppyFill viewBox="0 0 16 16" />
+                                                    Save
+                                                </button>
+                                            </Show>
+                                        </div>
 
                                         <hr />
 
-                                        <table class="table table-borderless w-100">
+                                        <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td class="p-2">Name</td>
-                                                    <td class="text-end">{userAndRoles().user!.name}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="p-2">Email</td>
-                                                    <td class="text-end">{userAndRoles().user!.email}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="p-2">State</td>
-                                                    <td class="py-1">
-                                                        <select
-                                                            class="form-select float-end"
-                                                            style="width: unset;"
-                                                            value={userState()}
-                                                            onChange={(ev) => setUserState(ev.target.value as UserState)}
-                                                        >
-                                                            <For each={Object.entries(UserState)}>
-                                                                {([name, value]) => (<option value={value}>{name}</option>)}
-                                                            </For>
-                                                        </select>
+                                                    <td style="width: 25%">Name</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={user().name}>
+                                                            <input
+                                                                id="userName"
+                                                                type="text"
+                                                                class="form-control float-end w-auto"
+                                                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
+                                                                name="name"
+                                                                value={details.name}
+                                                                onInput={(ev) => setDetails('name', ev.target.value)}
+                                                            />
+                                                        </Show>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td class="p-2">Role</td>
-                                                    <td class="py-1">
-                                                        <select
-                                                            class="form-select float-end"
-                                                            style="width: unset;"
-                                                            value={role() ?? ''}
-                                                            onChange={(ev) => setRole(isNaN(parseInt(ev.target.value)) ? undefined : parseInt(ev.target.value))}
-                                                        >
-                                                            <option value="">-- No role --</option>
-                                                            <For each={userAndRoles().roles}>
-                                                                {(role) => (<option value={role.id}>{role.name}</option>)}
-                                                            </For>
-                                                        </select>
+                                                    <td>Email</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={user().email}>
+                                                            <input
+                                                                id="userEmail"
+                                                                type="email"
+                                                                class="form-control float-end w-auto"
+                                                                name="email"
+                                                                value={user().email}
+                                                                disabled={true}
+                                                            />
+                                                        </Show>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>State</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={user().state}>
+                                                            <select
+                                                                class="form-select float-end"
+                                                                style="width: unset;"
+                                                                value={details.state}
+                                                                onChange={(ev) => setDetails('state', ev.target.value as UserState)}
+                                                            >
+                                                                <For each={Object.entries(UserState)}>
+                                                                    {([name, value]) => (<option value={value}>{name}</option>)}
+                                                                </For>
+                                                            </select>
+                                                        </Show>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Role</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Switch>
+                                                            <Match when={roles.loading}>
+                                                                <p class="icon-link justify-content-end w-100 m-0"><ProgressSpinner show={true} /> Loading Roles ...</p>
+                                                            </Match>
+                                                            <Match when={roles.error}>
+                                                                <p class="text-danger-emphasis text-end m-0">Error while fetching roles: <strong>{roles.error.message}</strong></p>
+                                                            </Match>
+                                                            <Match when={roles()}>
+                                                                {(roles) => (
+                                                                    <Show when={editingDetails()} fallback={roles().find((r) => r.id === user().roleId)?.name ?? '-'}>
+                                                                        <select
+                                                                            class="form-select float-end"
+                                                                            style="width: unset;"
+                                                                            value={details.roleId ?? ''}
+                                                                            onChange={(ev) => setDetails('roleId', isNaN(parseInt(ev.target.value)) ? null : parseInt(ev.target.value))}
+                                                                        >
+                                                                            <option value="">-- No role --</option>
+                                                                            <For each={roles()}>
+                                                                                {(role) => (<option value={role.id}>{role.name}</option>)}
+                                                                            </For>
+                                                                        </select>
+                                                                    </Show>
+                                                                )}
+                                                            </Match>
+                                                        </Switch>
                                                     </td>
                                                 </tr>
                                             </tbody>
                                         </table>
                                     </div>
+                                </div>
 
-                                    <div class="offset-md-1 col-md-4">
-                                        <h5>Explicit Permissions</h5>
+                                <div class="offset-md-1 col-md-5">
+                                    <div class="border rounded p-3">
+                                        <div class="d-flex align-items-center">
+                                            <h5 class="flex-grow-1 m-0">Explicit Permissions</h5>
+                                            <Show when={editingPermissions()} fallback={
+                                                <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingPermissions(true)}>
+                                                    <PencilSquare viewBox="0 0 16 16" />
+                                                    Edit
+                                                </button>
+                                            }>
+                                                <button
+                                                    type="button"
+                                                    class="btn text-danger icon-link py-0 px-1"
+                                                    onClick={() => setEditingPermissions(false)}
+                                                >
+                                                    Discard
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="btn icon-link py-0 px-1 ms-2"
+                                                    onClick={updatePermissions}
+                                                    disabled={inProgress() === Action.UpdatePermissions}
+                                                >
+                                                    <ProgressSpinner show={inProgress() === Action.UpdatePermissions} small={true} />
+                                                    <FloppyFill viewBox="0 0 16 16" />
+                                                    Save
+                                                </button>
+                                            </Show>
+                                        </div>
 
                                         <hr />
 
-                                        <table class="w-100">
+                                        <table class="table w-100 m-0">
                                             <tbody>
                                                 <For each={Object.entries(Permission)}>
                                                     {([perm, value]) => (
                                                         <tr>
-                                                            <td class="p-2">{perm}</td>
-                                                            <td class="p-2 text-end">
+                                                            <td>{perm}</td>
+                                                            <td class="text-end">
                                                                 <input
                                                                     class="form-check-input"
                                                                     type="checkbox"
-                                                                    checked={permissions().includes(value)}
-                                                                    onChange={() => setPermissions(permissions().includes(value) ? permissions().filter((p) => p !== value) : [...permissions(), value])}
+                                                                    checked={editingPermissions() ? permissions[value] : user().permissions.includes(value)}
+                                                                    onChange={() => setPermissions(value, !permissions[value])}
+                                                                    disabled={!editingPermissions()}
                                                                 />
                                                             </td>
                                                         </tr>
@@ -361,18 +519,26 @@ export const User = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                </>
-                            )}
-                        </Match>
-                    </Switch>
-                </div>
-            </Suspense>
+                                </div>
+                            </div>
+                            <Show when={deleting()}>
+                                <DeleteConfirmModal
+                                    message={<p>Are you sure about deleting the user <strong>{user().name} ({user().username})</strong>?</p>}
+                                    close={() => setDeleting(false)}
+                                    confirm={() => deleteUser(user())}
+                                />
+                            </Show>
+                        </>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 };
 
 export const Users = () => {
     const adminCtx = useContext(AdminContext)!;
+
     const [usersAndRoles] = createResource(() => Promise.all([adminCtx.fetchUsers(), adminCtx.fetchRoles()]).then(([users, roles]) => ({ users, roles })));
 
     return (
@@ -385,50 +551,53 @@ export const Users = () => {
                 </A>
             </div>
 
-            <div class="row m-0">
-                <Suspense>
-                    <Switch>
-                        <Match when={usersAndRoles.error}>
-                            <span>Error: {usersAndRoles.error.message}</span>
-                        </Match>
-                        <Match when={usersAndRoles()}>
-                            {(usersAndRoles) => (
-                                <div class="offset-md-4 col-md-4">
-                                    <Show when={usersAndRoles().users.length > 0} fallback={<p class="m-0">No users exists yet.</p>}>
-                                        <table class="table table-hover border shadow-sm">
-                                            <thead>
+            <Switch>
+                <Match when={usersAndRoles.loading}>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                </Match>
+                <Match when={usersAndRoles.error}>
+                    <p class="text-danger-emphasis text-center">Error while fetching users: <strong>{usersAndRoles.error.message}</strong></p>
+                </Match>
+                <Match when={usersAndRoles()?.users.length === 0}>
+                    <p class="text-secondary text-center">There is no user to display yet. You can create a new one by using <strong>Create User</strong> button.</p>
+                </Match>
+                <Match when={usersAndRoles()}>
+                    {(usersAndRoles) => (
+                        <div class="row">
+                            <div class="offset-md-4 col-md-4">
+                                <table class="table table-hover border shadow-sm">
+                                    <thead>
+                                        <tr>
+                                            <th></th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Role</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <For each={usersAndRoles().users}>
+                                            {(user) => (
                                                 <tr>
-                                                    <th></th>
-                                                    <th scope="col">Name</th>
-                                                    <th scope="col">Role</th>
-                                                    <th></th>
+                                                    <td></td>
+                                                    <td>
+                                                        <A href={`/users/view/${user.username}`} class="icon-link">{user.name}</A>
+                                                    </td>
+                                                    <td>{usersAndRoles().roles.find((r) => r.id === user.roleId)?.name ?? '-'}</td>
+                                                    <td>
+                                                        <Show when={user.state === UserState.Disabled}>
+                                                            <span class="badge border rounded-pill border-danger text-danger ms-2">Disabled</span>
+                                                        </Show>
+                                                    </td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                <For each={usersAndRoles().users}>
-                                                    {(user) => (
-                                                        <tr>
-                                                            <td></td>
-                                                            <td>{user.name}</td>
-                                                            <td>{usersAndRoles().roles.find((r) => r.id === user.roleId)?.name ?? '-'}</td>
-                                                            <td class="text-end">
-                                                                <A href={`/users/view/${user.username}`} class="icon-link">
-                                                                    Details
-                                                                    <ArrowRight viewBox="0 0 16 16" />
-                                                                </A>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </For>
-                                            </tbody>
-                                        </table>
-                                    </Show>
-                                </div>
-                            )}
-                        </Match>
-                    </Switch>
-                </Suspense>
-            </div>
+                                            )}
+                                        </For>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </Match>
+            </Switch>
         </div>
     );
 };

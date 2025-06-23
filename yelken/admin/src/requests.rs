@@ -1,4 +1,4 @@
-use base::services::SafePath;
+use base::{models::UserState, services::SafePath};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -43,6 +43,14 @@ pub struct UpdatePage {
 pub struct UpdateRole {
     pub name: String,
     pub desc: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUser {
+    pub name: String,
+    pub state: UserState,
+    pub role_id: Option<i32>,
 }
 
 #[derive(Deserialize)]

@@ -20,7 +20,7 @@ use diesel_async::RunQueryDsl;
 use rand::{distr::Alphanumeric, rng, Rng};
 
 use crate::{
-    requests::CreateUser,
+    requests::{CreateUser, UpdateUser},
     responses::{self, CreatedUser, UserDetail},
 };
 
@@ -160,11 +160,11 @@ pub async fn create_user(
     }))
 }
 
-pub async fn update_user_role(
+pub async fn update_user(
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
     user: AuthUser,
-    Json(role_id): Json<Option<i32>>,
+    Json(req): Json<UpdateUser>,
 ) -> Result<(), HttpError> {
     if user_id == user.id {
         return Err(HttpError::conflict("self_update_not_possible"));
@@ -172,7 +172,11 @@ pub async fn update_user_role(
 
     let effected_row = diesel::update(users::table)
         .filter(users::id.eq(user_id))
-        .set(users::role_id.eq(role_id))
+        .set((
+            users::name.eq(req.name),
+            users::role_id.eq(req.role_id),
+            users::state.eq(req.state),
+        ))
         .execute(&mut state.pool.get().await?)
         .await
         .map_err(|e| {
@@ -182,29 +186,6 @@ pub async fn update_user_role(
 
             e.into()
         })?;
-
-    if effected_row == 0 {
-        return Err(HttpError::not_found("user_not_found"));
-    }
-
-    Ok(())
-}
-
-pub async fn update_user_state(
-    State(state): State<AppState>,
-    Path(user_id): Path<i32>,
-    user: AuthUser,
-    Json(user_state): Json<UserState>,
-) -> Result<(), HttpError> {
-    if user_id == user.id {
-        return Err(HttpError::conflict("self_update_not_possible"));
-    }
-
-    let effected_row = diesel::update(users::table)
-        .filter(users::id.eq(user_id))
-        .set(users::state.eq(user_state))
-        .execute(&mut state.pool.get().await?)
-        .await?;
 
     if effected_row == 0 {
         return Err(HttpError::not_found("user_not_found"));

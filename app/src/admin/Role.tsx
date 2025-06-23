@@ -197,7 +197,7 @@ export const Role = () => {
                     },
                     {} as Record<Permission, boolean>
                 )
-        )
+        );
     });
 
     const [deleting, setDeleting] = createSignal(false);
@@ -233,7 +233,7 @@ export const Role = () => {
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Role "${r.name}" is updated successfully`)
+                alertCtx.success(`Role "${req.name}" is updated successfully`)
 
                 mutate({ ...r, name: req.name, desc: req.desc });
             })

@@ -122,9 +122,8 @@ export const CreatePage = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-5">
-                <h2>Create Page</h2>
-            </div>
+            <h2 class="mb-5">Create Page</h2>
+
             <div class="row m-0">
                 <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
                     <div class="mb-4">

@@ -88,9 +88,8 @@ export const CreateTemplate = () => {
     };
     return (
         <div class="container py-4 px-md-4">
-            <div class="d-flex align-items-center mb-5">
-                <h2>Create Template</h2>
-            </div>
+            <h2 class="mb-5">Create Template</h2>
+
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">

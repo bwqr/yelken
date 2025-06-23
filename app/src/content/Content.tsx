@@ -448,7 +448,7 @@ export const CreateContent = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-4">Create Content</h2>
+            <h2 class="mb-5">Create Content</h2>
 
             <div class="row">
                 <Show when={model()} fallback={

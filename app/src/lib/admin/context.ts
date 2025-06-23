@@ -11,9 +11,8 @@ export interface AdminStore {
 
     fetchUsers(): Promise<User[]>;
     fetchUser(username: string): Promise<UserDetail | undefined>;
-    createUser(name: string, email: string, password: string): Promise<User>;
-    updateUserRole(id: number, roleId: number | null): Promise<void>;
-    updateUserState(id: number, userState: UserState): Promise<void>;
+    createUser(req: { name: string, email: string, password: string }): Promise<User>;
+    updateUser(id: number, req: { name: string, state: UserState, roleId: number | null }): Promise<void>;
     updateUserPermission(id: number, permissions: Permission[]): Promise<void>;
     deleteUser(id: number): Promise<void>;
 
@@ -99,16 +98,12 @@ export class AdminService implements AdminStore {
             .catch(Api.handleNotFound);
     }
 
-    async createUser(name: string, email: string, password: string): Promise<User> {
-        return Api.post('/admin/user', { name, email, password });
+    async createUser(req: { name: string, email: string, password: string }): Promise<User> {
+        return Api.post('/admin/user', req);
     }
 
-    async updateUserRole(id: number, roleId: number | null): Promise<void> {
-        return Api.put(`/admin/user/${id}/role`, roleId);
-    }
-
-    async updateUserState(id: number, userState: UserState): Promise<void> {
-        return Api.put(`/admin/user/${id}/state`, userState);
+    async updateUser(id: number, req: { name: string, state: UserState, roleId: number | null }): Promise<void> {
+        return Api.put(`/admin/user/${id}`, req);
     }
 
     async updateUserPermission(id: number, permissions: Permission[]): Promise<void> {
