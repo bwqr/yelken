@@ -1,5 +1,5 @@
 import { createContext, createResource, For, Match, Show, Suspense, Switch, useContext, type Component, type Context, type JSX, type Resource, type ResourceReturn } from 'solid-js';
-import { Router, Route } from "@solidjs/router";
+import { Router, Route, A } from "@solidjs/router";
 import { SideNav } from './Nav';
 import Dashboard from './Dashboard';
 import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './content/Content';
@@ -91,7 +91,7 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
         .then(([models, fields]) => new ContentService(models, fields));
 
     return (
-        <Suspense fallback={<p>Loading...</p>}>
+        <Suspense fallback={<p>Loading ...</p>}>
             <Switch>
                 <Match when={promises.error}>
                     <span>Error: {promises.error.message}</span>
@@ -202,7 +202,9 @@ const App: Component = () => {
                     <Route path="/profile" component={(_) => <p>Profile</p>} />
 
                     <Route path="/models" component={(props) => (
-                        <Suspense fallback={<p>Loading ...</p>}>
+                        <Suspense fallback={
+                            <p class="icon-link justify-content-center w-100">Loading ...</p>
+                        }>
                             <Show when={useContext(ServiceContext)!.contentCtx()()}>
                                 {(ctx) => (
                                     <ContentContext.Provider value={ctx()}>
@@ -219,7 +221,9 @@ const App: Component = () => {
                     </Route>
 
                     <Route path="/contents" component={(props) => (
-                        <Suspense fallback={<p>Loading ...</p>}>
+                        <Suspense fallback={
+                            <p class="icon-link justify-content-center w-100">Loading ...</p>
+                        }>
                             <Show when={useContext(ServiceContext)!.contentCtx()()}>
                                 {(ctx) => (
                                     <ContentContext.Provider value={ctx()}>
@@ -241,7 +245,9 @@ const App: Component = () => {
                     </Route>
 
                     <Route path="/assets" component={(props) => (
-                        <Suspense fallback={<p>Loading CMS ...</p>}>
+                        <Suspense fallback={
+                            <p class="icon-link justify-content-center w-100">Loading ...</p>
+                        }>
                             <Show when={useContext(ServiceContext)!.contentCtx()()}>
                                 {(ctx) => (
                                     <ContentContext.Provider value={ctx()}>
@@ -319,6 +325,12 @@ const App: Component = () => {
                         <Route path="/create" component={CreateUser} />
                     </Route>
                 </Route>
+                <Route path="*404" component={() => (
+                    <div class="d-flex justify-content-center align-items-center flex-column" style="height: 100vh">
+                        <h1>404</h1>
+                        <p>Page not found. Go to <A href="/">Home Page</A>.</p>
+                    </div>
+                )} />
             </Router>
 
             <Alerts alerts={alerts} removeAlert={removeAlert} />

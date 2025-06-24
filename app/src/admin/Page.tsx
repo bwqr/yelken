@@ -424,7 +424,7 @@ export const Pages = () => {
                             <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
                         </Match>
                         <Match when={globalPages.error}>
-                            <p class="text-danger-emphasis text-center">Error while fetching pages: <strong>{pages.error.message}</strong></p>
+                            <p class="text-danger-emphasis text-center">Error while fetching global pages: <strong>{globalPages.error.message}</strong></p>
                         </Match>
                         <Match when={globalPages()?.length === 0}>
                             <p class="text-secondary text-center">There is no <strong>global</strong> page to display.</p>
