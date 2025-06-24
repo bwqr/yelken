@@ -20,7 +20,17 @@ use tower::Service;
 use crate::runtime::IntoSendFuture;
 
 #[derive(Clone)]
-pub struct SafePath<const DEPTH: usize>(pub String);
+pub struct SafePath<const DEPTH: usize>(String);
+
+impl<const DEPTH: usize> SafePath<DEPTH> {
+    pub fn inner(&self) -> &str {
+        &self.0
+    }
+
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+}
 
 impl<const DEPTH: usize> FromStr for SafePath<DEPTH> {
     type Err = &'static str;
@@ -114,13 +124,7 @@ where
 
     fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
         if req.method() != Method::GET && req.method() != Method::HEAD {
-            return async move {
-                Ok(Response::builder()
-                    .status(StatusCode::METHOD_NOT_ALLOWED)
-                    .body(Body::empty())
-                    .unwrap())
-            }
-            .boxed();
+            return async move { Ok(response_from_status(StatusCode::METHOD_NOT_ALLOWED)) }.boxed();
         }
 
         let mut path = req.uri().path();
@@ -130,55 +134,97 @@ where
         }
 
         let Ok(path) = SafePath::<7>::from_str(path)
-            .inspect_err(|e| log::warn!("Something has gone wrong {e:?}"))
+            .inspect_err(|e| log::debug!("Could not construct SafePath from {path} path, {e:?}"))
         else {
-            return async move {
-                Ok(Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::empty())
-                    .unwrap())
-            }
-            .boxed();
+            return async move { Ok(response_from_status(StatusCode::NOT_FOUND)) }.boxed();
         };
 
-        let path = format!("{}/{}", (self.path)(), path.0);
+        let path = format!("{}/{}", (self.path)(), path.inner());
 
         let storage = self.storage.clone();
 
-        // TODO implement a more feature complete solution similar to ServeDir
+        let if_modified_since = req
+            .headers()
+            .get(header::IF_MODIFIED_SINCE)
+            .and_then(|lm| lm.to_str().ok())
+            .and_then(|lm| chrono::DateTime::parse_from_rfc2822(lm).ok());
+
+        let if_unmodified_since = req
+            .headers()
+            .get(header::IF_UNMODIFIED_SINCE)
+            .and_then(|lm| lm.to_str().ok())
+            .and_then(|lm| chrono::DateTime::parse_from_rfc2822(lm).ok());
+
+        let method = req.method().clone();
+
         async move {
-            match storage.read(&path).into_send_future().await {
-                Ok(bytes) => {
-                    let mime = mime_guess::from_path(&path)
-                        .first_raw()
-                        .map(HeaderValue::from_static)
-                        .unwrap_or_else(|| {
-                            HeaderValue::from_str(mime::APPLICATION_OCTET_STREAM.as_ref()).unwrap()
-                        });
+            let meta = match storage.stat(&path).into_send_future().await {
+                Ok(meta) => meta,
+                Err(e) => return Ok(response_from_opendal_error(e)),
+            };
 
-                    Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .header(header::CONTENT_TYPE, mime)
-                        .body(Body::from_stream(bytes))
-                        .unwrap())
+            let mut response = Response::builder();
+
+            if let Some(last_modified) = meta.last_modified() {
+                if if_modified_since
+                    .map(|since| since.timestamp() >= last_modified.timestamp())
+                    .unwrap_or(false)
+                    || if_unmodified_since
+                        .map(|since| since.timestamp() <= last_modified.timestamp())
+                        .unwrap_or(false)
+                {
+                    return Ok(response_from_status(StatusCode::NOT_MODIFIED));
                 }
-                Err(e) => {
-                    if e.kind() == ErrorKind::NotFound || e.kind() == ErrorKind::PermissionDenied {
-                        return Ok(Response::builder()
-                            .status(StatusCode::NOT_FOUND)
-                            .body(Body::empty())
-                            .unwrap());
-                    }
 
-                    log::warn!("Failed to read file from storage {path}");
-
-                    return Ok(Response::builder()
-                        .status(StatusCode::INTERNAL_SERVER_ERROR)
-                        .body(Body::empty())
-                        .unwrap());
-                }
+                response = response.header(header::LAST_MODIFIED, last_modified.to_rfc2822());
             }
+
+            let mime = mime_guess::from_path(&path)
+                .first_raw()
+                .map(HeaderValue::from_static)
+                .unwrap_or_else(|| {
+                    HeaderValue::from_str(mime::APPLICATION_OCTET_STREAM.as_ref()).unwrap()
+                });
+
+            response = response
+                .header(header::CONTENT_TYPE, mime)
+                .header(header::CONTENT_LENGTH, meta.content_length().to_string());
+
+            if method == Method::HEAD {
+                return Ok(response.status(StatusCode::OK).body(Body::empty()).unwrap());
+            }
+
+            let reader = match storage.reader(&path).into_send_future().await {
+                Ok(reader) => reader,
+                Err(e) => return Ok(response_from_opendal_error(e)),
+            };
+
+            // TODO implement support for ACCEPT_RANGES and RANGE header similar to tower-http's fs service.
+            let stream = match reader.into_bytes_stream(..).into_send_future().await {
+                Ok(stream) => stream,
+                Err(e) => return Ok(response_from_opendal_error(e)),
+            };
+
+            Ok(response
+                .status(StatusCode::OK)
+                .body(Body::from_stream(stream))
+                .unwrap())
         }
         .boxed()
     }
+}
+
+fn response_from_opendal_error(e: opendal::Error) -> Response<Body> {
+    if e.kind() == ErrorKind::NotFound || e.kind() == ErrorKind::PermissionDenied {
+        return response_from_status(StatusCode::NOT_FOUND);
+    }
+
+    response_from_status(StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+fn response_from_status(status: StatusCode) -> Response<Body> {
+    Response::builder()
+        .status(status)
+        .body(Body::empty())
+        .unwrap()
 }

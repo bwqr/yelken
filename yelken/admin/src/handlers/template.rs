@@ -28,7 +28,7 @@ pub async fn fetch_templates(
 
     let locations: &[LocationKind] = if let Some(namespace) = query.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;
@@ -86,7 +86,7 @@ pub async fn fetch_template(
     match &location {
         LocationKind::User { namespace } | LocationKind::Theme { namespace } => {
             let exists = diesel::dsl::select(diesel::dsl::exists(
-                themes::table.filter(themes::id.eq(&namespace.0)),
+                themes::table.filter(themes::id.eq(namespace.inner())),
             ))
             .get_result::<bool>(&mut state.pool.get().await?)
             .await?;
@@ -99,7 +99,7 @@ pub async fn fetch_template(
     };
 
     let location = base::utils::location(&location, ResourceKind::Template);
-    let path = format!("{location}/{}", query.path.0);
+    let path = format!("{location}/{}", query.path.inner());
 
     let buf = match state.storage.read(&path).into_send_future().await {
         Ok(buf) => buf,
@@ -120,7 +120,7 @@ pub async fn fetch_template(
     };
 
     Ok(Json(TemplateDetail {
-        path: query.path.0,
+        path: query.path.into_inner(),
         template,
     }))
 }
@@ -133,7 +133,7 @@ pub async fn create_template(
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;
@@ -143,7 +143,7 @@ pub async fn create_template(
         }
 
         (
-            namespace.0 == &*options.theme(),
+            namespace.inner() == &*options.theme(),
             LocationKind::User { namespace },
         )
     } else {
@@ -151,7 +151,7 @@ pub async fn create_template(
     };
 
     let location = base::utils::location(&location, ResourceKind::Template);
-    let path = format!("{location}/{}", req.path.0);
+    let path = format!("{location}/{}", req.path.inner());
 
     async {
         state
@@ -193,7 +193,7 @@ pub async fn update_template(
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;
@@ -203,7 +203,7 @@ pub async fn update_template(
         }
 
         (
-            namespace.0 == &*options.theme(),
+            namespace.inner() == &*options.theme(),
             LocationKind::User { namespace },
         )
     } else {
@@ -211,7 +211,7 @@ pub async fn update_template(
     };
 
     let location = base::utils::location(&location, ResourceKind::Template);
-    let path = format!("{location}/{}", req.path.0);
+    let path = format!("{location}/{}", req.path.inner());
 
     state
         .storage
@@ -243,7 +243,7 @@ pub async fn delete_template(
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = namespace.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;
@@ -253,7 +253,7 @@ pub async fn delete_template(
         }
 
         (
-            namespace.0 == &*options.theme(),
+            namespace.inner() == &*options.theme(),
             LocationKind::User { namespace },
         )
     } else {
@@ -261,7 +261,7 @@ pub async fn delete_template(
     };
 
     let location = base::utils::location(&location, ResourceKind::Template);
-    let path = format!("{location}/{}", query.path.0);
+    let path = format!("{location}/{}", query.path.inner());
 
     state
         .storage

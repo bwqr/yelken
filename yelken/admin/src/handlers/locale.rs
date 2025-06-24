@@ -170,7 +170,7 @@ pub async fn fetch_locale_resource(
     match &query {
         LocationKind::User { namespace } | LocationKind::Theme { namespace } => {
             let exists = diesel::dsl::select(diesel::dsl::exists(
-                themes::table.filter(themes::id.eq(&namespace.0)),
+                themes::table.filter(themes::id.eq(namespace.inner())),
             ))
             .get_result::<bool>(&mut state.pool.get().await?)
             .await?;
@@ -224,7 +224,7 @@ pub async fn update_locale_resource(
 ) -> Result<(), HttpError> {
     let location = if let Some(namespace) = query.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;
@@ -283,7 +283,7 @@ pub async fn delete_locale_resource(
 ) -> Result<(), HttpError> {
     let location = if let Some(namespace) = query.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
-            themes::table.filter(themes::id.eq(&namespace.0)),
+            themes::table.filter(themes::id.eq(namespace.inner())),
         ))
         .get_result::<bool>(&mut state.pool.get().await?)
         .await?;

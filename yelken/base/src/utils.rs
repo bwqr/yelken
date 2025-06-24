@@ -24,7 +24,7 @@ pub fn location(location: &LocationKind, resource: ResourceKind) -> String {
 
     match location {
         LocationKind::Global => format!("{dir}/global"),
-        LocationKind::Theme { namespace } => format!("themes/{}/{dir}", namespace.0),
-        LocationKind::User { namespace } => format!("{dir}/themes/{}", namespace.0),
+        LocationKind::Theme { namespace } => format!("themes/{}/{dir}", namespace.inner()),
+        LocationKind::User { namespace } => format!("{dir}/themes/{}", namespace.inner()),
     }
 }

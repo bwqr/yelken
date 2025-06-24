@@ -19,7 +19,7 @@ pub async fn fetch_pages(
 ) -> Result<Json<Vec<Page>>, HttpError> {
     if let Some(namespace) = req.namespace {
         pages::table
-            .filter(pages::namespace.eq(namespace.0))
+            .filter(pages::namespace.eq(namespace.into_inner()))
             .load::<Page>(&mut state.pool.get().await?)
     } else {
         pages::table
@@ -40,7 +40,7 @@ pub async fn fetch_page(
 
     if let Some(namespace) = req.namespace {
         query
-            .filter(pages::namespace.eq(namespace.0))
+            .filter(pages::namespace.eq(namespace.into_inner()))
             .load::<Page>(&mut state.pool.get().await?)
     } else {
         query
@@ -129,7 +129,7 @@ pub async fn update_page(
 
     let effected_row: usize = if let Some(namespace) = namespace.namespace {
         query
-            .filter(pages::namespace.eq(namespace.0))
+            .filter(pages::namespace.eq(namespace.into_inner()))
             .execute(&mut state.pool.get().await?)
     } else {
         query
@@ -156,7 +156,7 @@ pub async fn delete_page(
         .into_boxed();
 
     if let Some(namespace) = namespace.namespace {
-        query = query.filter(pages::namespace.eq(namespace.0))
+        query = query.filter(pages::namespace.eq(namespace.into_inner()))
     } else {
         query = query.filter(pages::namespace.is_null())
     };
