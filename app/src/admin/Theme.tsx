@@ -3,8 +3,7 @@ import { AdminContext } from "../lib/admin/context";
 import { A, useNavigate } from "@solidjs/router";
 import { ThreeDotsVertical, Upload } from "../Icons";
 import { dropdownClickListener } from "../lib/utils";
-import { ContentContext } from "../lib/content/context";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import ProgressSpinner from "../components/ProgressSpinner";
 import type { Theme } from "../lib/admin/models";
@@ -239,7 +238,7 @@ export const Themes = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const adminCtx = useContext(AdminContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
@@ -259,7 +258,7 @@ export const Themes = () => {
         setInProgress(Action.Activate);
 
         adminCtx.setThemeActive(theme.id)
-            .then(() => contentCtx.loadOptions())
+            .then(() => baseCtx.loadOptions())
             .then(() => {
                 setItem(undefined);
 
@@ -324,7 +323,7 @@ export const Themes = () => {
                                                     <td>{theme.version}</td>
                                                     <td>{theme.name}</td>
                                                     <td class="text-center">
-                                                        <Show when={theme.id === contentCtx.options().theme}>
+                                                        <Show when={theme.id === baseCtx.options().theme}>
                                                             <span class="badge rounded-pill border border-success text-success ms-2">Active</span>
                                                         </Show>
                                                     </td>
@@ -337,18 +336,18 @@ export const Themes = () => {
                                                                 <li>
                                                                     <button
                                                                         class="dropdown-item icon-link"
-                                                                        disabled={inProgress() !== undefined || theme.id === contentCtx.options().theme}
+                                                                        disabled={inProgress() !== undefined || theme.id === baseCtx.options().theme}
                                                                         on:click={(ev) => { ev.stopPropagation(); setThemeActive(theme); }}
                                                                     >
                                                                         <ProgressSpinner show={inProgress() === Action.Activate} />
                                                                         Activate
                                                                     </button>
                                                                 </li>
-                                                                <Show when={theme.id !== contentCtx.options().theme}>
+                                                                <Show when={theme.id !== baseCtx.options().theme}>
                                                                     <li>
                                                                         <button
                                                                             class="dropdown-item icon-link text-danger"
-                                                                            disabled={inProgress() !== undefined || theme.id === contentCtx.options().theme}
+                                                                            disabled={inProgress() !== undefined || theme.id === baseCtx.options().theme}
                                                                             on:click={() => setUninstalling(theme)}
                                                                         >
                                                                             Uninstall

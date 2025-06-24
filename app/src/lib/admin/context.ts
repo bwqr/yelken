@@ -1,6 +1,7 @@
 import { createContext, type Context } from "solid-js";
 import { Api, HttpError } from "../api";
-import { Location, Permission, UserState, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
+import { Location, Permission, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
+import type { UserState } from "../user/models";
 
 export interface AdminStore {
     fetchPages(namespace?: string): Promise<Page[]>

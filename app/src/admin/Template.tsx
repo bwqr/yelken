@@ -4,10 +4,9 @@ import { Location } from "../lib/admin/models";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { LocationKind } from "../lib/admin/models";
 import { FloppyFill, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
-import { ContentContext } from "../lib/content/context";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { HttpError } from "../lib/api";
 
@@ -27,7 +26,7 @@ export const CreateTemplate = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const navigate = useNavigate();
 
     const [path, setPath] = createSignal('');
@@ -136,7 +135,7 @@ export const CreateTemplate = () => {
                                             <option value="">Global</option>
                                             <For each={themes()}>
                                                 {(theme) => (
-                                                    <option value={theme.id}>{theme.name}{contentCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>
+                                                    <option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>
                                                 )}
                                             </For>
                                         </select>
@@ -173,7 +172,7 @@ export const CreateTemplate = () => {
 export const Templates = () => {
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
@@ -250,7 +249,7 @@ export const Templates = () => {
                                     >
                                         <option value="">Global</option>
                                         <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{contentCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                            {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                         </For>
                                     </select>
                                 </div>

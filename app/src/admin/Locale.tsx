@@ -1,14 +1,13 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
-import { ContentContext } from "../lib/content/context";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
 import { LocationKind, Location } from "../lib/admin/models";
 import ProgressSpinner from "../components/ProgressSpinner";
-import type { Locale as LocaleModel } from "../lib/content/models";
+import type { Locale as LocaleModel } from "../lib/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { createStore } from "solid-js/store";
 
@@ -19,7 +18,7 @@ export const CreateLocale = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const adminCtx = useContext(AdminContext)!;
     const navigate = useNavigate();
 
@@ -60,7 +59,7 @@ export const CreateLocale = () => {
         setInProgress(true);
 
         adminCtx.createLocale(req)
-            .then(() => contentCtx.loadLocales())
+            .then(() => baseCtx.loadLocales())
             .then(() => {
                 alertCtx.success(`Locale "${req.name}" is created successfully`);
 
@@ -146,11 +145,11 @@ export const LocaleResource = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const params = useParams();
 
     const location = createMemo(() => Location.fromParams(params.kind, params.namespace));
-    const locale = createMemo(() => contentCtx.locales().find((l) => l.key === params.key));
+    const locale = createMemo(() => baseCtx.locales().find((l) => l.key === params.key));
 
     const [resource] = createResource(
         () => {
@@ -270,11 +269,11 @@ export const Locale = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const navigate = useNavigate();
     const params = useParams();
 
-    const locale = createMemo(() => contentCtx.locales().find((l) => l.key === params.key));
+    const locale = createMemo(() => baseCtx.locales().find((l) => l.key === params.key));
     const [themes] = createResource(() => adminCtx.fetchThemes());
 
     const [localeDetails, setLocaleDetails] = createStore({ name: '' });
@@ -317,7 +316,7 @@ export const Locale = () => {
             l.key,
             req
         )
-            .then(() => contentCtx.loadLocales())
+            .then(() => baseCtx.loadLocales())
             .then(() => {
                 setEditingDetails(false);
 
@@ -329,7 +328,7 @@ export const Locale = () => {
 
     const deleteLocale = async (locale: LocaleModel) => {
         return adminCtx.deleteLocale(locale.key)
-            .then(() => contentCtx.loadLocales())
+            .then(() => baseCtx.loadLocales())
             .then(() => {
                 setDeletingLocale(false);
 
@@ -467,7 +466,7 @@ export const Locale = () => {
                                                             {(theme) => (
                                                                 <tr>
                                                                     <td>
-                                                                        <Show when={contentCtx.options().theme === theme.id} fallback={theme.id}>
+                                                                        <Show when={baseCtx.options().theme === theme.id} fallback={theme.id}>
                                                                             <strong>
                                                                                 {theme.id}
                                                                                 &nbsp
@@ -516,9 +515,9 @@ export const Locales = () => {
         SetDefault,
     }
 
-    const contentCtx = useContext(ContentContext)!;
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
+    const baseCtx = useContext(BaseContext)!
 
     const [item, setItem] = createSignal(undefined as string | undefined);
 
@@ -534,7 +533,7 @@ export const Locales = () => {
         setInProgress(Action.UpdateState);
 
         adminCtx.updateLocaleState(locale.key, disabled)
-            .then(() => contentCtx.loadLocales())
+            .then(() => baseCtx.loadLocales())
             .then(() => {
                 setItem(undefined);
 
@@ -552,7 +551,7 @@ export const Locales = () => {
         setInProgress(Action.SetDefault);
 
         adminCtx.setLocaleDefault(locale.key)
-            .then(() => contentCtx.loadOptions())
+            .then(() => baseCtx.loadOptions())
             .then(() => {
                 setItem(undefined);
 
@@ -572,7 +571,7 @@ export const Locales = () => {
                 </A>
             </div>
 
-            <Show when={contentCtx.locales().length > 0} fallback={
+            <Show when={baseCtx.locales().length > 0} fallback={
                 <p class="text-secondary text-center">There is no locale to display yet. You can create a new one by using <strong>Create Locale</strong> button.</p>
             }>
                 <div class="row">
@@ -588,7 +587,7 @@ export const Locales = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <For each={contentCtx.locales()}>
+                                <For each={baseCtx.locales()}>
                                     {(locale) => (
                                         <tr>
                                             <td></td>
@@ -599,7 +598,7 @@ export const Locales = () => {
                                             </td>
                                             <td>{locale.key}</td>
                                             <td class="text-center">
-                                                <Show when={locale.key === contentCtx.options().defaultLocale}>
+                                                <Show when={locale.key === baseCtx.options().defaultLocale}>
                                                     <span class="badge border rounded-pill border-success text-success ms-2">Default</span>
                                                 </Show>
                                                 <Show when={locale.disabled}>
@@ -615,14 +614,14 @@ export const Locales = () => {
                                                         <li>
                                                             <button
                                                                 class="dropdown-item icon-link"
-                                                                disabled={inProgress() === Action.SetDefault || locale.key === contentCtx.options().defaultLocale || locale.disabled}
+                                                                disabled={inProgress() === Action.SetDefault || locale.key === baseCtx.options().defaultLocale || locale.disabled}
                                                                 on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale); }}
                                                             >
                                                                 <ProgressSpinner show={inProgress() === Action.SetDefault} />
                                                                 Set as Default
                                                             </button>
                                                         </li>
-                                                        <Show when={locale.key !== contentCtx.options().defaultLocale}>
+                                                        <Show when={locale.key !== baseCtx.options().defaultLocale}>
                                                             <li>
                                                                 <button
                                                                     class="dropdown-item icon-link"

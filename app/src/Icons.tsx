@@ -1,5 +1,3 @@
-import ArrowBarDown from 'bootstrap-icons/icons/arrow-bar-down.svg';
-import ArrowBarUp from 'bootstrap-icons/icons/arrow-bar-up.svg';
 import ArrowRight from 'bootstrap-icons/icons/arrow-right.svg';
 import Braces from 'bootstrap-icons/icons/braces.svg';
 import Bookmark from 'bootstrap-icons/icons/bookmark.svg';
@@ -14,6 +12,7 @@ import FileEarmarkFill from 'bootstrap-icons/icons/file-earmark-fill.svg';
 import FloppyFill from 'bootstrap-icons/icons/floppy-fill.svg';
 import Images from 'bootstrap-icons/icons/images.svg';
 import Journals from 'bootstrap-icons/icons/journals.svg';
+import List from 'bootstrap-icons/icons/list.svg';
 import PencilSquare from 'bootstrap-icons/icons/pencil-square.svg';
 import PeopleFill from 'bootstrap-icons/icons/people-fill.svg';
 import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
@@ -31,8 +30,6 @@ import XCircle from 'bootstrap-icons/icons/x-circle.svg';
 import XLg from 'bootstrap-icons/icons/x-lg.svg';
 
 export {
-    ArrowBarDown,
-    ArrowBarUp,
     ArrowRight,
     Braces,
     Bookmark,
@@ -47,6 +44,7 @@ export {
     FloppyFill,
     Images,
     Journals,
+    List,
     PencilSquare,
     PeopleFill,
     PersonCircle,

@@ -1,11 +1,3 @@
-import type { User } from "../user/model";
-
-export interface Locale {
-    key: string,
-    name: string,
-    disabled: boolean,
-}
-
 export interface ModelField {
     id: number,
     fieldId: number,
@@ -125,18 +117,11 @@ export interface ContentValue {
 export interface ContentDetailsResponse {
     content: ContentResponse,
     values: ContentValue[],
-    user: User | null,
+    user: { id: number, name: string } | null,
 }
 
 export interface ContentDetails extends Omit<ContentDetailsResponse, 'content'> {
     content: Content,
-    values: ContentValue[],
-    user: User | null,
-}
-
-export interface Options {
-    theme: string,
-    defaultLocale: string,
 }
 
 export interface Asset {

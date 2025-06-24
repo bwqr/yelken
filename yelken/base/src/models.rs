@@ -48,8 +48,9 @@ impl FromSql<Text, Backend> for UserState {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, AsExpression, FromSqlRow)]
+#[derive(Clone, Debug, PartialEq, AsExpression, FromSqlRow, Serialize)]
 #[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
 pub enum LoginKind {
     Email,
     Cloud,

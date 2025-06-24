@@ -87,12 +87,6 @@ table > tbody > tr > td {
 @include media-breakpoint-up(sm) {
   #sidenav {
     width: 13rem;
-  }
-}
-
-@include media-breakpoint-down(sm) {
-  #sidenav {
-    position: absolute;
-    z-index: 3;
+    height: 100%;
   }
 }

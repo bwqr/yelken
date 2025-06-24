@@ -1,11 +1,10 @@
-import { createEffect, createResource, createSignal, For, Match, Show, Suspense, Switch, useContext } from "solid-js";
+import { createEffect, createResource, createSignal, For, Match, Show, Switch, useContext } from "solid-js";
 import { AdminContext } from "../lib/admin/context";
 import { type Page as PageModel } from "../lib/admin/models";
 import { FloppyFill, PencilSquare, PlusLg, XLg } from "../Icons";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
-import { ContentContext } from "../lib/content/context";
 import { HttpError } from "../lib/api";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { createMemo } from "solid-js";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
@@ -37,9 +36,9 @@ export const CreatePage = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
 
     const creatingEntry = searchParams.key !== undefined && searchParams.name !== undefined;
     const [name, setName] = createSignal(searchParams.name ? decodeURIComponent(searchParams.name as string) : '');
@@ -211,7 +210,7 @@ export const CreatePage = () => {
                                         <>
                                             <option value="">Global</option>
                                             <For each={themes()}>
-                                                {(theme) => (<option value={theme.id}>{theme.name}{contentCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                                {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                             </For>
                                         </>
                                     )}
@@ -269,7 +268,7 @@ export const CreatePage = () => {
                             onChange={(ev) => setLocale(ev.target.value)}
                         >
                             <option value="" selected disabled={creatingEntry}>Not localized</option>
-                            <For each={contentCtx.activeLocales()}>
+                            <For each={baseCtx.activeLocales()}>
                                 {(locale) => (
                                     <option value={locale.key}>{locale.name}</option>
                                 )}
@@ -320,7 +319,7 @@ function groupPages(pages: PageModel[]): PageGroup[] {
 
 export const Pages = () => {
     const adminCtx = useContext(AdminContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
@@ -330,7 +329,7 @@ export const Pages = () => {
 
     createEffect(() => {
         if (!namespace()) {
-            setSearchParams({ namespace: contentCtx.options().theme }, { replace: true });
+            setSearchParams({ namespace: baseCtx.options().theme }, { replace: true });
         }
     });
 
@@ -365,7 +364,7 @@ export const Pages = () => {
                                         onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
                                     >
                                         <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{contentCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                            {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                         </For>
                                     </select>
                                 )}
@@ -478,7 +477,7 @@ export const Page = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
@@ -676,7 +675,7 @@ export const Page = () => {
                                     <div class="border rounded p-3">
                                         <div class="d-flex align-items-center">
                                             <h5 class="flex-grow-1 m-0">Entries</h5>
-                                            <Show when={group().pages.length < contentCtx.activeLocales().length && group().pages.find((p) => p.locale)}>
+                                            <Show when={group().pages.length < baseCtx.activeLocales().length && group().pages.find((p) => p.locale)}>
                                                 <A
                                                     href={`/pages/create?key=${group().key}&name=${encodeURIComponent(group().name)}${group().desc ? `&desc=${encodeURIComponent(group().desc as string)}` : ''}${namespace() ? `&namespace=${namespace()}` : ''}`}
                                                     class="btn icon-link"

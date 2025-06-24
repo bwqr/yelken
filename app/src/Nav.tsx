@@ -1,11 +1,12 @@
 import { A, useLocation } from "@solidjs/router";
-import { type Component, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
+import { type Component, createEffect, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import { UserContext } from "./lib/user/context";
-import { ArrowBarDown, ArrowBarUp, Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill } from "./Icons";
+import { Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill, List, XLg } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
 import ProfileIcon from "./components/ProfileIcon";
+import { Permission } from "./lib/admin/models";
 
 interface Link {
     title: string,
@@ -20,7 +21,15 @@ export function SideNav(): JSX.Element {
     const [dropdown, setDropdown] = createSignal(false);
     onCleanup(dropdownClickListener('sidenav-dropdown', () => setDropdown(false)));
 
-    const [show, setShow] = createSignal(true);
+    const [show, setShow] = createSignal(false);
+
+    // Close both mobile nav and dropdown when current page changes.
+    createEffect(() => {
+        if (location.pathname) {
+            setDropdown(false);
+            setShow(false);
+        }
+    });
 
     const categories: { title?: string, links: Link[] }[] = [
         {
@@ -28,45 +37,63 @@ export function SideNav(): JSX.Element {
                 { title: 'Dashboard', href: '/', icon: Dashboard },
             ]
         },
-        {
-            title: 'CMS',
-            links: [
-                { title: 'Models', href: '/models', icon: Stack },
-                { title: 'Contents', href: '/contents', icon: CardText },
-                { title: 'Assets', href: '/assets', icon: Images },
-            ]
-        },
-        {
-            title: 'Site Look',
-            links: [
-                { title: 'Themes', href: '/themes', icon: Columns },
-                { title: 'Locales', href: '/locales', icon: Translate },
-                { title: 'Templates', href: '/templates', icon: Braces },
-                { title: 'Pages', href: '/pages', icon: Journals },
-            ]
-        },
-        {
-            title: 'Administration',
-            links: [
-                { title: 'Roles', href: '/roles', icon: ShieldLock },
-                { title: 'Users & Perms', href: '/users', icon: PeopleFill },
-            ]
-        }
     ];
 
-    return (
-        <div class="p-2 pe-0" style="min-height: 100vh">
-            <nav id="sidenav" class="p-2 rounded shadow-sm border" classList={{ 'h-100': show() }} style="background: linear-gradient(to bottom, var(--custom-bg), color-mix(in srgb, var(--custom-bg) 50%, var(--bs-primary-bg-subtle) 50%));">
-                <button class="d-sm-none btn icon-link p-2" onClick={() => setShow(!show())}>
-                    <Show when={show()}><ArrowBarUp viewBox="0 0 16 16" /></Show>
-                    <Show when={!show()}><ArrowBarDown viewBox="0 0 16 16" /></Show>
-                </button>
+    if (
+        userCtx.user().permissions.includes(Permission.ContentRead) ||
+        userCtx.user().permissions.includes(Permission.ContentWrite)
+    ) {
+        categories.push(...[
+            {
+                title: 'CMS',
+                links: [
+                    { title: 'Models', href: '/models', icon: Stack },
+                    { title: 'Contents', href: '/contents', icon: CardText },
+                    { title: 'Assets', href: '/assets', icon: Images },
+                ]
+            },
+        ]);
+    }
 
-                <div class="px-4 py-2 d-none d-lg-block">
-                    <A href="/" class="text-decoration-none fs-4 text-secondary-emphasis">Yelken</A>
+    if (userCtx.user().permissions.includes(Permission.Admin)) {
+        categories.push(...[
+            {
+                title: 'Site Look',
+                links: [
+                    { title: 'Themes', href: '/themes', icon: Columns },
+                    { title: 'Locales', href: '/locales', icon: Translate },
+                    { title: 'Templates', href: '/templates', icon: Braces },
+                    { title: 'Pages', href: '/pages', icon: Journals },
+                ]
+            },
+            {
+                title: 'Administration',
+                links: [
+                    { title: 'Roles', href: '/roles', icon: ShieldLock },
+                    { title: 'Users & Perms', href: '/users', icon: PeopleFill },
+                ]
+            }
+        ]);
+    }
+
+    return (
+        <div class="p-md-2 pe-md-0">
+            <button class="d-sm-none btn icon-link p-2 float-end" onClick={() => setShow(!show())}>
+                <Show when={show()}><XLg viewBox="0 0 16 16" width="12" height="12" /></Show>
+                <Show when={!show()}><List viewBox="0 0 16 16" width="12" height="12" /></Show>
+            </button>
+
+            <nav
+                id="sidenav"
+                class="p-2 rounded shadow-sm border d-none d-md-block"
+                style={`${show() ? 'display: block !important;' : ''} background: linear-gradient(to bottom, var(--custom-bg), color-mix(in srgb, var(--custom-bg) 50%, var(--bs-primary-bg-subtle) 50%));`}
+            >
+
+                <div class="px-4 py-1">
+                    <A href="/" class="text-decoration-none fs-3 text-secondary-emphasis">Yelken</A>
                 </div>
 
-                <hr class="" />
+                <hr />
 
                 <div class="dropdown">
                     <button
@@ -103,7 +130,7 @@ export function SideNav(): JSX.Element {
                     </Show>
                 </div>
 
-                <div class="highlight-links" classList={{ 'd-none': !show() }}>
+                <div class="highlight-links">
                     <For each={categories}>
                         {(category) => (
                             <>
@@ -123,7 +150,7 @@ export function SideNav(): JSX.Element {
                                                     classList={{ 'active': link.href === '/' ? link.href === location.pathname : location.pathname.startsWith(link.href) }}
                                                 >
                                                     <Dynamic component={link.icon} viewBox="0 0 16 16" />
-                                                    <span class="d-none d-lg-block">{link.title}</span>
+                                                    {link.title}
                                                 </A>
                                             </li>
                                         )}

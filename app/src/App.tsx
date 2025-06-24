@@ -1,4 +1,4 @@
-import { createResource, For, Match, Show, Suspense, Switch, type Component, type JSX } from 'solid-js';
+import { createContext, createResource, For, Match, Show, Suspense, Switch, useContext, type Component, type Context, type JSX, type Resource, type ResourceReturn } from 'solid-js';
 import { Router, Route } from "@solidjs/router";
 import { SideNav } from './Nav';
 import Dashboard from './Dashboard';
@@ -7,9 +7,9 @@ import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
 import * as config from './lib/config';
 import { createStore, produce, reconcile } from 'solid-js/store';
-import { ContentContext, ContentService } from './lib/content/context';
+import { ContentContext, ContentService, type ContentStore } from './lib/content/context';
 import { UserContext, UserService } from './lib/user/context';
-import { AlertContext, type AlertStore } from './lib/context';
+import { AlertContext, BaseContext, BaseService, type AlertStore } from './lib/context';
 import { CreateModel, Model, Models } from './content/Model';
 import { CreatePage, Page, Pages } from './admin/Page';
 import { CreateTemplate, TemplateResource, Templates } from './admin/Template';
@@ -21,6 +21,25 @@ import { Dynamic } from 'solid-js/web';
 import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
 import { Asset, Assets, UploadAsset } from './content/Asset';
+
+class ServiceProvider {
+    private _contentCtx: ResourceReturn<ContentStore> | undefined;
+    private _contentInit: () => Promise<ContentStore>;
+
+    constructor(contentInit: () => Promise<ContentStore>) {
+        this._contentInit = contentInit;
+    }
+
+    contentCtx(): Resource<ContentStore> {
+        if (this._contentCtx === undefined) {
+            this._contentCtx = createResource(this._contentInit);
+        }
+
+        return this._contentCtx[0];
+    }
+}
+
+const ServiceContext: Context<ServiceProvider | undefined> = createContext();
 
 enum AlertState {
     Success,
@@ -61,12 +80,15 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
     const [promises] = createResource(() => Promise.all([
-        UserService.fetchUser(),
+        UserService.fetchUser().then((user) => new UserService(user)),
+        Promise.all([BaseService.fetchLocales(), BaseService.fetchOptions()]).then(([locales, options]) => new BaseService(locales, options))
+    ]));
+
+    const contentInit = () => Promise.all([
         ContentService.fetchModels(),
         ContentService.fetchFields(),
-        ContentService.fetchOptions(),
-        ContentService.fetchLocales(),
-    ]));
+    ])
+        .then(([models, fields]) => new ContentService(models, fields));
 
     return (
         <Suspense fallback={<p>Loading...</p>}>
@@ -76,15 +98,14 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                 </Match>
                 <Match when={promises()}>
                     {(promises) => {
-                        const [user, models, fields, options, locales] = promises();
-
-                        const userService = new UserService(user);
-                        const contentService = new ContentService(models, fields, options, locales);
+                        const [userService, baseService] = promises();
 
                         return (
-                            <ContentContext.Provider value={contentService}>
-                                <UserContext.Provider value={userService}>{props.children}</UserContext.Provider>
-                            </ContentContext.Provider>
+                            <ServiceContext.Provider value={new ServiceProvider(contentInit)}>
+                                <BaseContext.Provider value={baseService}>
+                                    <UserContext.Provider value={userService}>{props.children}</UserContext.Provider>
+                                </BaseContext.Provider>
+                            </ServiceContext.Provider>
                         );
                     }}
                 </Match>
@@ -167,7 +188,7 @@ const App: Component = () => {
                 </Route>
 
                 <Route path="/" component={(props) => (
-                    <div class="d-flex">
+                    <div class="d-flex flex-md-row flex-column" style="min-height: 100vh;">
                         <BackgroundServices>
                             <SideNav />
 
@@ -180,14 +201,34 @@ const App: Component = () => {
                     <Route path="/" component={Dashboard} />
                     <Route path="/profile" component={(_) => <p>Profile</p>} />
 
-                    <Route path="/models" component={(props) => (<>{props.children}</>)}>
+                    <Route path="/models" component={(props) => (
+                        <Suspense fallback={<p>Loading ...</p>}>
+                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                                {(ctx) => (
+                                    <ContentContext.Provider value={ctx()}>
+                                        {props.children}
+                                    </ContentContext.Provider>
+                                )}
+                            </Show>
+                        </Suspense>
+                    )}>
                         <Route path="/" component={Models} />
                         <Route path="/view/:namespace/:key" component={Model} />
                         <Route path="/view/:key" component={Model} />
                         <Route path="/create" component={CreateModel} />
                     </Route>
 
-                    <Route path="/contents" component={(props) => (<>{props.children}</>)}>
+                    <Route path="/contents" component={(props) => (
+                        <Suspense fallback={<p>Loading ...</p>}>
+                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                                {(ctx) => (
+                                    <ContentContext.Provider value={ctx()}>
+                                        {props.children}
+                                    </ContentContext.Provider>
+                                )}
+                            </Show>
+                        </Suspense>
+                    )}>
                         <Route path="/" component={ContentRoot}>
                             <Route path="/" component={Contents} />
                             <Route path="/by-model/:key" component={ContentsByModel} />
@@ -199,7 +240,17 @@ const App: Component = () => {
                         <Route path="/create/:namespace/:key" component={CreateContent} />
                     </Route>
 
-                    <Route path="/assets" component={(props) => <>{props.children}</>}>
+                    <Route path="/assets" component={(props) => (
+                        <Suspense fallback={<p>Loading CMS ...</p>}>
+                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                                {(ctx) => (
+                                    <ContentContext.Provider value={ctx()}>
+                                        {props.children}
+                                    </ContentContext.Provider>
+                                )}
+                            </Show>
+                        </Suspense>
+                    )}>
                         <Route path="/" component={Assets} />
                         <Route path="/upload" component={UploadAsset} />
                         <Route path="/view/:id" component={Asset} />

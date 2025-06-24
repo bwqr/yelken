@@ -6,7 +6,7 @@ import { createStore, unwrap } from "solid-js/store";
 import type { CreateModelField } from "../lib/content/requests";
 import { HttpError } from "../lib/api";
 import { FloppyFill, PencilSquare, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import { Dynamic } from "solid-js/web";
 import ProgressSpinner from "../components/ProgressSpinner";
@@ -225,6 +225,7 @@ export const CreateModel = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const contentCtx = useContext(ContentContext)!;
     const navigate = useNavigate();
 
@@ -272,7 +273,7 @@ export const CreateModel = () => {
         setInProgress(true);
 
         contentCtx.createModel({
-            namespace: themeScoped() ? contentCtx.options().theme : null,
+            namespace: themeScoped() ? baseCtx.options().theme : null,
             key: key().trim(),
             name: name().trim(),
             desc: desc().trim().length > 0 ? desc().trim() : null,
@@ -369,7 +370,7 @@ export const CreateModel = () => {
                                     checked={themeScoped()}
                                     onChange={() => setThemeScoped(true)}
                                 />
-                                <label class="form-check-label" for="modelScopeTheme">Active Theme ({contentCtx.options().theme})</label>
+                                <label class="form-check-label" for="modelScopeTheme">Active Theme ({baseCtx.options().theme})</label>
                             </div>
                         </div>
                     </div>

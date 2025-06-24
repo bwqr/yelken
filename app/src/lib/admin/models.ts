@@ -1,3 +1,5 @@
+import type { UserState } from "../user/models";
+
 export enum LocationKind {
     User = 'user',
     Global = 'global',
@@ -48,11 +50,6 @@ export enum Permission {
     ContentWrite = 'content.write',
     UserRead = 'user.read',
     UserWrite = 'user.write',
-}
-
-export enum UserState {
-    Enabled = 'enabled',
-    Disabled = 'disabled',
 }
 
 export interface Page {

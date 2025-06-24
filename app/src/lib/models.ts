@@ -34,3 +34,14 @@ export interface Pagination<T> {
     totalItems: number,
     items: T[],
 }
+
+export interface Locale {
+    key: string,
+    name: string,
+    disabled: boolean,
+}
+
+export interface Options {
+    theme: string,
+    defaultLocale: string,
+}

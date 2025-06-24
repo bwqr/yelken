@@ -1,5 +1,5 @@
 import { createContext, createSignal, type Accessor, type Context } from "solid-js";
-import type { User } from "./model";
+import type { User } from "./models";
 import { Api } from "../api";
 
 export interface UserStore {

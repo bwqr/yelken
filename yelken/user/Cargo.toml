@@ -8,6 +8,7 @@ base.path = "../base"
 
 anyhow.workspace = true
 axum.workspace = true
+chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true

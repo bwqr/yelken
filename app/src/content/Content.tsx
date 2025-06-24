@@ -6,7 +6,7 @@ import { createStore, unwrap } from "solid-js/store";
 import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } from "../lib/content/models";
 import { Dynamic } from "solid-js/web";
 import type { CreateContentValue } from "../lib/content/requests";
-import { AlertContext } from "../lib/context";
+import { AlertContext, BaseContext } from "../lib/context";
 import { Bookmark, CheckCircleFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, FileEarmarkFill, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
@@ -33,6 +33,7 @@ const ContentValueModal = (props: {
     }
 
     const alertCtx = useContext(AlertContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const contentCtx = useContext(ContentContext)!;
 
     const [store, setStore] = createStore(props.initial ?? {
@@ -183,7 +184,7 @@ const ContentValueModal = (props: {
                                                     onChange={(ev) => setStore('locale', ev.target.value)}
                                                 >
                                                     <option value="" disabled selected>Select a locale</option>
-                                                    <For each={contentCtx.activeLocales()}>
+                                                    <For each={baseCtx.activeLocales()}>
                                                         {(locale) => (
                                                             <option value={locale.key}>{locale.name}</option>
                                                         )}
@@ -373,11 +374,12 @@ export const CreateContent = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
-    const locales = contentCtx.activeLocales();
+    const locales = baseCtx.activeLocales();
     const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [name, setName] = createSignal('');
@@ -627,6 +629,7 @@ export const Content = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
+    const baseCtx = useContext(BaseContext)!;
     const contentCtx = useContext(ContentContext)!;
     const params = useParams();
     const navigate = useNavigate();
@@ -958,7 +961,7 @@ export const Content = () => {
 
                                         <For each={model()?.fields ?? []}>
                                             {(mf) => {
-                                                const locales = contentCtx.activeLocales();
+                                                const locales = baseCtx.activeLocales();
                                                 const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
                                                 const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
 

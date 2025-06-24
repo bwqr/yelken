@@ -1,6 +1,6 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
 import { PaginationRequest } from '../models';
-import { Content, Model, type ModelResponse, type Asset, type ContentDetails, type ContentStage, type Field, type Locale, type Options, type ModelField, type ContentResponse, type ContentDetailsResponse, type ContentValue } from "./models";
+import { Content, Model, type ModelResponse, type Asset, type ContentDetails, type ContentStage, type Field, type ModelField, type ContentResponse, type ContentDetailsResponse, type ContentValue } from "./models";
 import type { CreateContent, CreateContentValue, CreateModel, CreateModelField, UpdateModelField } from "./requests";
 import { Api } from "../api";
 import type { Pagination } from "../models";
@@ -8,15 +8,9 @@ import type { Pagination } from "../models";
 export interface ContentStore {
     fields: Accessor<Field[]>;
     models: Accessor<Model[]>;
-    options: Accessor<Options>;
-    locales: Accessor<Locale[]>;
-
-    activeLocales(): Locale[];
 
     loadFields(): Promise<void>;
-    loadLocales(): Promise<void>;
     loadModels(): Promise<void>;
-    loadOptions(): Promise<void>;
 
     fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>>;
     fetchAsset(id: number): Promise<Asset | undefined>;
@@ -50,21 +44,9 @@ export class ContentService implements ContentStore {
     models: Accessor<Model[]>;
     private setModels: Setter<Model[]>;
 
-    options: Accessor<Options>;
-    private setOptions: Setter<Options>;
-
-    locales: Accessor<Locale[]>;
-    private setLocales: Setter<Locale[]>;
-
-    constructor(models: Model[], fields: Field[], options: Options, locales: Locale[]) {
+    constructor(models: Model[], fields: Field[]) {
         [this.models, this.setModels] = createSignal(models);
         [this.fields, this.setFields] = createSignal(fields);
-        [this.options, this.setOptions] = createSignal(options);
-        [this.locales, this.setLocales] = createSignal(locales);
-    }
-
-    activeLocales(): Locale[] {
-        return this.locales().filter((l) => !l.disabled);
     }
 
     async createModel(request: CreateModel): Promise<Model> {
@@ -103,16 +85,8 @@ export class ContentService implements ContentStore {
         this.setFields(await ContentService.fetchFields());
     }
 
-    async loadLocales(): Promise<void> {
-        this.setLocales(await ContentService.fetchLocales());
-    }
-
     async loadModels(): Promise<void> {
         this.setModels(await ContentService.fetchModels());
-    }
-
-    async loadOptions(): Promise<void> {
-        this.setOptions(await ContentService.fetchOptions());
     }
 
     async fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>> {
@@ -178,15 +152,7 @@ export class ContentService implements ContentStore {
         return Api.get('/content/fields');
     }
 
-    static async fetchLocales(): Promise<Locale[]> {
-        return Api.get('/content/locales');
-    }
-
     static async fetchModels(): Promise<Model[]> {
         return Api.get<ModelResponse[]>('/content/models').then((models) => models.map(Model.fromResponse));
-    }
-
-    static async fetchOptions(): Promise<Options> {
-        return Api.get('/content/options');
     }
 }
