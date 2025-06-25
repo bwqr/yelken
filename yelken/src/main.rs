@@ -69,6 +69,8 @@ fn db_config_from_env() -> Result<DatabaseConfig> {
 }
 
 fn config_from_env() -> Result<Config> {
+    const DEFAULT_UPLOAD_SIZE_LIMIT: usize = 2048 * 1024;
+
     let env = std::env::var("YELKEN_ENV").context("YELKEN_ENV is not defined")?;
 
     let site_url = std::env::var("YELKEN_SITE_URL")
@@ -85,11 +87,22 @@ fn config_from_env() -> Result<Config> {
         .map(|var| var.as_str() == "on" || var.as_str() == "true" || var.as_str() == "yes")
         .unwrap_or(false);
 
+    let upload_size_limit = if let Ok(var) = std::env::var("YELKEN_UPLOAD_SIZE_LIMIT") {
+        let limit: usize = var
+            .parse()
+            .context("YELKEN_UPLOAD_SIZE_LIMIT is not a valid number")?;
+
+        limit * 1024
+    } else {
+        DEFAULT_UPLOAD_SIZE_LIMIT
+    };
+
     Ok(Config {
         env,
         site_url,
         app_url,
         reload_templates,
+        upload_size_limit,
     })
 }
 

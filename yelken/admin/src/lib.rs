@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     middleware,
     routing::{delete, get, post, put},
     Router,
@@ -66,7 +67,11 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/template", put(template::update_template))
         .route("/template", delete(template::delete_template))
         .route("/theme/themes", get(theme::fetch_themes))
-        .route("/theme/theme", post(install::install_theme))
+        .route(
+            "/theme/theme",
+            post(install::install_theme)
+                .layer(DefaultBodyLimit::max(state.config.upload_size_limit)),
+        )
         .route("/theme/theme/{theme}", delete(install::uninstall_theme))
         .route("/options/theme", put(options::update_theme))
         .route(

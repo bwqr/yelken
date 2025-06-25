@@ -1,4 +1,5 @@
 use axum::{
+    extract::DefaultBodyLimit,
     middleware,
     routing::{delete, get, post, put},
     Router,
@@ -36,7 +37,10 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/model/{id}/field", post(model::create_model_field))
         .route("/model-field/{id}", put(model::update_model_field))
         .route("/model-field/{id}", delete(model::delete_model_field))
-        .route("/assets", post(asset::create_asset))
+        .route(
+            "/asset",
+            post(asset::create_asset).layer(DefaultBodyLimit::max(state.config.upload_size_limit)),
+        )
         .route("/asset/{id}", put(asset::update_asset))
         .route("/asset/{id}", delete(asset::delete_asset))
         .route("/content", post(content::create_content))

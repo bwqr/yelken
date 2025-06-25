@@ -107,7 +107,8 @@ async fn store_and_insert_assert(
                 while let Some(chunk) = field
                     .chunk()
                     .await
-                    .map_err(|_| HttpError::bad_request("invalid_multipart_field"))?
+                    .inspect_err(|e| log::debug!("Failed reading multipart field, {e:?}"))
+                    .map_err(|_| HttpError::bad_request("failed_reading_multipart_field"))?
                 {
                     sink.write(chunk).into_send_future().await?;
                 }

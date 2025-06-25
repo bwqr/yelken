@@ -16,6 +16,7 @@ pub struct Config {
     pub site_url: Url,
     pub app_url: Url,
     pub reload_templates: bool,
+    pub upload_size_limit: usize,
 }
 
 #[derive(Clone)]
