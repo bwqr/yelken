@@ -111,14 +111,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    namespaces (key) {
+        #[max_length = 128]
+        key -> Varchar,
+        #[max_length = 16]
+        source -> Varchar,
+    }
+}
+
+diesel::table! {
     options (id) {
         id -> Int4,
         #[max_length = 128]
         namespace -> Nullable<Varchar>,
         #[max_length = 128]
         key -> Varchar,
-        #[max_length = 128]
-        value -> Varchar,
+        value -> Text,
     }
 }
 
@@ -222,6 +230,8 @@ diesel::joinable!(contents -> users (created_by));
 diesel::joinable!(enum_options -> fields (field_id));
 diesel::joinable!(model_fields -> fields (field_id));
 diesel::joinable!(model_fields -> models (model_id));
+diesel::joinable!(models -> namespaces (namespace));
+diesel::joinable!(options -> namespaces (namespace));
 diesel::joinable!(pages -> locales (locale));
 diesel::joinable!(permissions -> roles (role_id));
 diesel::joinable!(permissions -> users (user_id));
@@ -237,6 +247,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     locales,
     model_fields,
     models,
+    namespaces,
     options,
     pages,
     permissions,

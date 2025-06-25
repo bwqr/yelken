@@ -159,6 +159,7 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         site_url,
         app_url,
         reload_templates: true,
+        upload_size_limit: 8192 * 1024,
     };
 
     let app = yelken::router(

@@ -14,4 +14,10 @@ delete from fields;
 
 delete from locales;
 
+delete from options;
+
+delete from namespaces;
+
+delete from themes;
+
 delete from plugins;

@@ -9,10 +9,14 @@ use base::{
     config::Options,
     db::{BatchQuery, Pool, PooledConnection},
     middlewares::auth::AuthUser,
-    models::{ContentStage, Field, Locale, Theme},
+    models::{ContentStage, Field, Locale, NamespaceSource, Theme},
     responses::HttpError,
     runtime::{spawn_blocking, IntoSendFuture},
-    schema::{content_values, contents, fields, locales, model_fields, models, pages, themes},
+    schema::{
+        content_values, contents, fields, locales, model_fields, models, namespaces, pages, themes,
+    },
+    services::SafePath,
+    utils::{LocationKind, ResourceKind},
     AppState,
 };
 use bytes::Buf;
@@ -93,37 +97,78 @@ pub async fn uninstall_theme(
         .first::<String>(&mut state.pool.get().await?)
         .await?;
 
+    let namespace = SafePath::from_str(&theme)
+        .inspect_err(|e| log::error!("Failed to parse theme as safe path, {e:?}"))
+        .map_err(|_| HttpError::internal_server_error("invalid_theme_id"))?;
+
     let locations = [
         ["themes", &theme].join("/"),
-        ["locales", "themes", &theme].join("/"),
-        ["templates", "themes", &theme].join("/"),
+        base::utils::location(
+            &LocationKind::User {
+                namespace: namespace.clone(),
+            },
+            ResourceKind::Locale,
+        ),
+        base::utils::location(&LocationKind::User { namespace }, ResourceKind::Template),
     ];
 
-    for location in locations {
-        let entries = state
-            .storage
-            .list_with(&location)
-            .recursive(true)
-            .into_send_future()
-            .await
-            .inspect_err(|e| log::warn!("Failed to list theme files for path {location}, {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+    state
+        .pool
+        .get()
+        .await?
+        .transaction(|conn| {
+            async move {
+                diesel::delete(namespaces::table)
+                    .filter(
+                        namespaces::key
+                            .eq(&theme)
+                            .and(namespaces::source.eq(NamespaceSource::Theme)),
+                    )
+                    .execute(conn)
+                    .await
+                    .map_err(|e| {
+                        if let Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) = &e
+                        {
+                            return HttpError::conflict("namespace_being_used");
+                        }
 
-        state
-            .storage
-            .delete_iter(entries)
-            .into_send_future()
-            .await
-            .inspect_err(|e| log::warn!("Failed to delete theme files for path {location}, {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
-    }
+                        e.into()
+                    })?;
 
-    diesel::delete(themes::table)
-        .filter(themes::id.eq(theme))
-        .execute(&mut state.pool.get().await?)
-        .await?;
+                for location in locations {
+                    let entries = state
+                        .storage
+                        .list_with(&location)
+                        .recursive(true)
+                        .into_send_future()
+                        .await
+                        .inspect_err(|e| {
+                            log::warn!("Failed to list theme files for path {location}, {e:?}")
+                        })
+                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
 
-    Ok(())
+                    state
+                        .storage
+                        .delete_iter(entries)
+                        .into_send_future()
+                        .await
+                        .inspect_err(|e| {
+                            log::warn!("Failed to delete theme files for path {location}, {e:?}")
+                        })
+                        .map_err(|_| HttpError::internal_server_error("io_error"))?;
+                }
+
+                diesel::delete(themes::table)
+                    .filter(themes::id.eq(theme))
+                    .execute(&mut state.pool.get().await?)
+                    .await?;
+
+                Result::<(), HttpError>::Ok(())
+            }
+            .scope_boxed()
+        })
+        .await
+        .map_err(Into::into)
 }
 
 pub async fn install_theme(
@@ -337,6 +382,14 @@ async fn create_theme(
             e.into()
         })?;
 
+    diesel::insert_into(namespaces::table)
+        .values((
+            namespaces::key.eq(&theme.id),
+            namespaces::source.eq("theme"),
+        ))
+        .execute(conn)
+        .await?;
+
     diesel::insert_into(pages::table)
         .values(
             manifest
@@ -483,9 +536,9 @@ async fn create_theme(
                         .filter_map(|v| {
                             let locale = v.1.locale.as_ref().and_then(|cl| {
                                 if cl == "DEFAULT" {
-                                    Some(&default_locale)
+                                    Some(default_locale.clone())
                                 } else {
-                                    locales.iter().any(|l| *cl == l.key).then_some(cl)
+                                    locales.iter().any(|l| *cl == l.key).then(|| cl.clone())
                                 }
                             })?;
 

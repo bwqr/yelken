@@ -214,6 +214,41 @@ pub struct Page {
     pub created_at: NaiveDateTime,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
+pub enum NamespaceSource {
+    Theme,
+    Plugin,
+}
+
+impl ToSql<Text, Backend> for NamespaceSource {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            NamespaceSource::Theme => "theme",
+            NamespaceSource::Plugin => "plugin",
+        };
+
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
+    }
+}
+
+impl FromSql<Text, Backend> for NamespaceSource {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
+            b"theme" => Ok(NamespaceSource::Theme),
+            b"plugin" => Ok(NamespaceSource::Plugin),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
+#[derive(Queryable)]
+pub struct Namespace {
+    pub key: String,
+    pub source: NamespaceSource,
+}
+
 #[derive(Queryable, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Theme {

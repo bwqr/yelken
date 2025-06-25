@@ -1,3 +1,5 @@
+insert into namespaces (key, source) values ('default', 'theme');
+
 insert into locales (key, name) values ('en', 'English'), ('tr', 'Türkçe');
 
 insert into themes (id, version, name) values ('default', '0.1.0', 'Yelken Default Theme');

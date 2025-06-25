@@ -5,13 +5,6 @@ begin
 end;
 $$ language plpgsql;
 
-create table options(
-    id        serial primary key not null,
-    namespace varchar(128) default null,
-    key       varchar(128) not null,
-    value     varchar(128) not null
-);
-
 create table plugins(
     id         varchar(128) primary key not null,
     version    varchar(32)  not null,
@@ -26,6 +19,19 @@ create table themes(
     version varchar(32)  not null,
     name    varchar(128) not null,
     created_at timestamp not null default current_timestamp
+);
+
+create table namespaces(
+    key      varchar(128) primary key not null,
+    source   varchar(16)  not null check (source in ('theme', 'plugin'))
+);
+
+create table options(
+    id        serial primary key not null,
+    namespace varchar(128) default null,
+    key       varchar(128) not null,
+    value     text         not null,
+    constraint fk_options_namespace foreign key (namespace) references namespaces (key) on delete no action on update no action
 );
 
 create table roles(
@@ -103,7 +109,8 @@ create table models(
     key        varchar(128) not null,
     name       varchar(128) not null,
     "desc"     text         default null,
-    created_at timestamp    not null default current_timestamp
+    created_at timestamp    not null default current_timestamp,
+    constraint fk_models_namespace foreign key (namespace) references namespaces (key) on delete no action on update no action
 );
 
 create table model_fields(

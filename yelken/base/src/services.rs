@@ -201,7 +201,17 @@ where
 
             // TODO implement support for ACCEPT_RANGES and RANGE header similar to tower-http's fs service.
             let stream = match reader.into_bytes_stream(..).into_send_future().await {
-                Ok(stream) => stream,
+                Ok(stream) => {
+                    #[cfg(target_family = "wasm")]
+                    {
+                        send_wrapper::SendWrapper::new(stream)
+                    }
+
+                    #[cfg(not(target_family = "wasm"))]
+                    {
+                        stream
+                    }
+                }
                 Err(e) => return Ok(response_from_opendal_error(e)),
             };
 

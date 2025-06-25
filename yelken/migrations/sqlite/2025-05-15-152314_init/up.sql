@@ -1,10 +1,3 @@
-create table options(
-    id        integer primary key autoincrement,
-    namespace varchar(128) default null,
-    key       varchar(128) not null,
-    value     varchar(128) not null
-);
-
 create table plugins(
     id         varchar(128) primary key not null,
     version    varchar(32)  not null,
@@ -19,6 +12,20 @@ create table themes(
     version varchar(32)  not null,
     name    varchar(128) not null,
     created_at timestamp not null default current_timestamp
+);
+
+create table namespaces(
+    key      varchar(128) primary key not null,
+    source   varchar(16)  not null,
+    check (source in ('theme', 'plugin'))
+);
+
+create table options(
+    id        integer primary key autoincrement,
+    namespace varchar(128) default null,
+    key       varchar(128) not null,
+    value     text         not null,
+    foreign key (namespace) references namespaces (key) on delete no action on update no action
 );
 
 create table roles(
@@ -97,7 +104,8 @@ create table models(
     key        varchar(128) not null,
     name       varchar(128) not null,
     "desc"     text         default null,
-    created_at timestamp    not null default current_timestamp
+    created_at timestamp    not null default current_timestamp,
+    foreign key (namespace) references namespaces (namespace) on delete no action on update no action
 );
 
 create table model_fields(
@@ -155,7 +163,8 @@ create table pages(
     template   varchar(128) not null,
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
-    foreign key (locale) references locales (key) on delete no action on update no action
+    foreign key (locale) references locales (key) on delete no action on update no action,
+    foreign key (namespace) references namespaces (namespace) on delete no action on update no action
 );
 
 create table form_submissions(

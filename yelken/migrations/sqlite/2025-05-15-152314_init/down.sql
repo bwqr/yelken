@@ -26,8 +26,10 @@ drop table users;
 
 drop table roles;
 
+drop table options;
+
+drop table namespaces;
+
 drop table plugins;
 
 drop table themes;
-
-drop table options;
