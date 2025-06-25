@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ffi::OsStr, io::Read};
+use std::{collections::HashMap, ffi::OsStr, io::Read, str::FromStr};
 
 use axum::{
     extract::{Multipart, Path, State},
@@ -9,10 +9,10 @@ use base::{
     config::Options,
     db::{BatchQuery, Pool, PooledConnection},
     middlewares::auth::AuthUser,
-    models::{ContentStage, Field, Theme},
+    models::{ContentStage, Field, Locale, Theme},
     responses::HttpError,
     runtime::{spawn_blocking, IntoSendFuture},
-    schema::{content_values, contents, fields, model_fields, models, pages, themes},
+    schema::{content_values, contents, fields, locales, model_fields, models, pages, themes},
     AppState,
 };
 use bytes::Buf;
@@ -128,6 +128,7 @@ pub async fn uninstall_theme(
 
 pub async fn install_theme(
     State(state): State<AppState>,
+    Extension(options): Extension<Options>,
     user: AuthUser,
     mut multipart: Multipart,
 ) -> Result<Json<Theme>, HttpError> {
@@ -162,6 +163,7 @@ pub async fn install_theme(
         reader,
         tmp_theme_dir.clone(),
         user.id,
+        format!("{}", options.default_locale()),
     )
     .await;
 
@@ -186,6 +188,7 @@ async fn install(
     reader: impl Read + Send + 'static,
     tmp_dir: String,
     user_id: i32,
+    default_locale: String,
 ) -> Result<Theme, HttpError> {
     let (manifest, files) = {
         let tmp_storage = tmp_storage.clone();
@@ -202,7 +205,7 @@ async fn install(
         .get()
         .await?
         .transaction(move |conn| {
-            async move { create_theme(conn, manifest, user_id).await }.scope_boxed()
+            async move { create_theme(conn, manifest, user_id, default_locale).await }.scope_boxed()
         })
         .await?;
 
@@ -314,7 +317,10 @@ async fn create_theme(
     conn: &mut PooledConnection,
     manifest: ThemeManifest,
     user_id: i32,
+    default_locale: String,
 ) -> Result<Theme, HttpError> {
+    let locales = locales::table.load::<Locale>(conn).await?;
+
     let theme = diesel::insert_into(themes::table)
         .values((
             themes::id.eq(&manifest.id),
@@ -336,16 +342,24 @@ async fn create_theme(
             manifest
                 .pages
                 .into_iter()
-                .map(|page| {
-                    (
+                .filter_map(|page| {
+                    let locale = page.locale.and_then(|pl| {
+                        if pl == "DEFAULT" {
+                            Some(default_locale.clone())
+                        } else {
+                            locales.iter().any(|l| pl == l.key).then_some(pl)
+                        }
+                    })?;
+
+                    Some((
                         pages::namespace.eq(manifest.id.clone()),
                         pages::key.eq(page.key),
                         pages::name.eq(page.name),
                         pages::desc.eq(page.desc),
                         pages::path.eq(page.path),
                         pages::template.eq(page.template),
-                        pages::locale.eq(page.locale),
-                    )
+                        pages::locale.eq(locale),
+                    ))
                 })
                 .collect::<Vec<_>>(),
         )
@@ -466,13 +480,21 @@ async fn create_theme(
                 .values(
                     values
                         .into_iter()
-                        .map(|v| {
-                            (
+                        .filter_map(|v| {
+                            let locale = v.1.locale.as_ref().and_then(|cl| {
+                                if cl == "DEFAULT" {
+                                    Some(&default_locale)
+                                } else {
+                                    locales.iter().any(|l| *cl == l.key).then_some(cl)
+                                }
+                            })?;
+
+                            Some((
                                 content_values::content_id.eq(content_id),
                                 content_values::model_field_id.eq(v.0),
                                 content_values::value.eq(v.1.value.clone()),
-                                content_values::locale.eq(v.1.locale.clone()),
-                            )
+                                content_values::locale.eq(locale),
+                            ))
                         })
                         .collect::<Vec<_>>(),
                 )
