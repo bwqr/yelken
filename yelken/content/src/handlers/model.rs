@@ -22,9 +22,13 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Model>>, HttpError> {
     let mut conn = state.pool.get().await?;
 
-    let models = models::table.load::<base::models::Model>(&mut conn).await?;
+    let models = models::table
+        .order(models::id.asc())
+        .load::<base::models::Model>(&mut conn)
+        .await?;
 
     let mut model_fields = model_fields::table
+        .order(model_fields::id.asc())
         .load::<base::models::ModelField>(&mut conn)
         .await?;
 

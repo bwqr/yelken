@@ -24,6 +24,7 @@ pub async fn fetch_options(
 
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table
+        .order(fields::id.asc())
         .load::<Field>(&mut state.pool.get().await?)
         .await
         .map(Json)

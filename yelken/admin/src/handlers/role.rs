@@ -24,6 +24,7 @@ use crate::{
 
 pub async fn fetch_roles(State(state): State<AppState>) -> Result<Json<Vec<Role>>, HttpError> {
     roles::table
+        .order(roles::id.asc())
         .load::<Role>(&mut state.pool.get().await?)
         .await
         .map(Json)

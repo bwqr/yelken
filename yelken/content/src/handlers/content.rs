@@ -32,6 +32,7 @@ pub async fn fetch_contents(
     contents::table
         .filter(contents::model_id.eq(req.model_id))
         .select((contents::all_columns, CountStarOver))
+        .order(contents::id.desc())
         .paginate(page.page)
         .per_page(page.per_page)
         .load_and_count_pages::<Content>(&mut state.pool.get().await?)

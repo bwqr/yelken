@@ -17,12 +17,14 @@ pub async fn fetch_pages(
     State(state): State<AppState>,
     Query(req): Query<FilterNamespace>,
 ) -> Result<Json<Vec<Page>>, HttpError> {
+    let query = pages::table.order(pages::id.asc());
+
     if let Some(namespace) = req.namespace {
-        pages::table
+        query
             .filter(pages::namespace.eq(namespace.into_inner()))
             .load::<Page>(&mut state.pool.get().await?)
     } else {
-        pages::table
+        query
             .filter(pages::namespace.is_null())
             .load::<Page>(&mut state.pool.get().await?)
     }
@@ -36,7 +38,9 @@ pub async fn fetch_page(
     Path(page_key): Path<String>,
     Query(req): Query<FilterNamespace>,
 ) -> Result<Json<Vec<Page>>, HttpError> {
-    let query = pages::table.filter(pages::key.eq(page_key));
+    let query = pages::table
+        .order(pages::id.asc())
+        .filter(pages::key.eq(page_key));
 
     if let Some(namespace) = req.namespace {
         query

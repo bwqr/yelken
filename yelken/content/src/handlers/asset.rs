@@ -26,6 +26,7 @@ pub async fn fetch_assets(
 ) -> Result<Json<Pagination<Asset>>, HttpError> {
     assets::table
         .select((assets::all_columns, CountStarOver))
+        .order(assets::id.asc())
         .paginate(page.page)
         .per_page(page.per_page)
         .load_and_count_pages::<Asset>(&mut state.pool.get().await?)

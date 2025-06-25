@@ -46,6 +46,7 @@ pub async fn fetch_users(
             users::name,
             users::state,
         ))
+        .order(users::id.asc())
         .load::<(i32, Option<i32>, String, String, UserState)>(&mut state.pool.get().await?)
         .await
         .map(|users| {
