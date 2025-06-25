@@ -4,7 +4,6 @@ use std::sync::Arc;
 use arc_swap::ArcSwap;
 use base::db::Pool;
 use base::models::ContentStage;
-use base::responses::HttpError;
 use base::runtime::{block_on, IntoSendFuture};
 use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
 use context::{ConfigContext, LocaleContext, PageContext};
@@ -14,6 +13,12 @@ use opendal::{EntryMode, Operator};
 use unic_langid::LanguageIdentifier;
 
 use crate::l10n::L10n;
+
+#[derive(Debug)]
+enum RenderError {
+    Database(diesel::result::Error),
+    Pool(diesel_async::pooled_connection::deadpool::PoolError),
+}
 
 pub mod context {
     use minijinja::value::{Object, Value};
@@ -372,14 +377,15 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         env.add_function("get_enum_id", move |field: String, value: String| {
             let pool = pool.clone();
 
-            let id: Result<i32, HttpError> = block_on(async move {
-                Ok(enum_options::table
+            let id: Result<i32, RenderError> = block_on(async move {
+                enum_options::table
                     .inner_join(fields::table)
                     .filter(fields::key.eq(field))
                     .filter(enum_options::value.eq(value))
                     .select(enum_options::id)
-                    .first::<i32>(&mut pool.get().await?)
-                    .await?)
+                    .first::<i32>(&mut pool.get().await.map_err(RenderError::Pool)?)
+                    .await
+                    .map_err(RenderError::Database)
             });
 
             id.map(|id| Value::from(id))
@@ -409,100 +415,125 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
                 let pool = pool.clone();
 
-                let content: Result<BTreeMap<String, Value>, HttpError> = block_on(async move {
-                    let mut conn = pool.get().await?;
+                let content: Result<Option<BTreeMap<String, Value>>, RenderError> =
+                    block_on(async move {
+                        let mut conn = pool.get().await.map_err(RenderError::Pool)?;
 
-                    let model_id = models::table
-                        .filter(
-                            models::key.eq(model).and(
-                                models::namespace
-                                    .is_null()
-                                    .or(models::namespace.eq(&namespace)),
-                            ),
-                        )
-                        .select(models::id)
-                        .first::<i32>(&mut conn)
-                        .await?;
-
-                    let model_fields = model_fields::table
-                        .inner_join(fields::table)
-                        .filter(model_fields::model_id.eq(model_id))
-                        .select((
-                            model_fields::id,
-                            model_fields::key,
-                            model_fields::multiple,
-                            fields::kind,
-                        ))
-                        .load::<(i32, String, bool, String)>(&mut conn)
-                        .await?;
-
-                    let content = if field == "id" {
-                        let id = str::parse::<i32>(&value).map_err(|_| {
-                            HttpError::internal_server_error("invalid_arg_received")
-                        })?;
-
-                        contents::table
-                            .select(contents::id)
-                            .filter(contents::id.eq(id))
-                            .first::<i32>(&mut conn)
-                            .await?
-                    } else {
-                        let Some(model_field) = model_fields.iter().find(|mf| mf.1 == field) else {
-                            return Err(HttpError::internal_server_error("unknown_field_received"));
-                        };
-
-                        contents::table
-                            .select(contents::id)
-                            .inner_join(content_values::table)
+                        let Some(model_id) = models::table
                             .filter(
-                                content_values::model_field_id
-                                    .eq(model_field.0)
-                                    .and(content_values::value.eq(value)),
+                                models::key.eq(model).and(
+                                    models::namespace
+                                        .is_null()
+                                        .or(models::namespace.eq(&namespace)),
+                                ),
                             )
+                            .select(models::id)
                             .first::<i32>(&mut conn)
-                            .await?
-                    };
-
-                    let content_values = content_values::table
-                        .filter(content_values::content_id.eq(content))
-                        .filter(
-                            content_values::locale
-                                .eq(format!("{}", locale.current))
-                                .or(content_values::locale.is_null()),
-                        )
-                        .order((content_values::content_id.asc(), content_values::id.asc()))
-                        .select((content_values::model_field_id, content_values::value))
-                        .load::<(i32, String)>(&mut conn)
-                        .await?;
-
-                    let mut content = BTreeMap::new();
-
-                    for (model_field_id, model_field_key, multiple, kind) in model_fields {
-                        let mut values = content_values.iter().filter(|cv| cv.0 == model_field_id);
-
-                        let value = if multiple {
-                            Some(Value::from(
-                                values
-                                    .map(|v| str_to_value(&kind, &v.1))
-                                    .collect::<Vec<_>>(),
-                            ))
-                        } else {
-                            values
-                                .next()
-                                .map(|v| Value::from(str_to_value(&kind, &v.1)))
+                            .await
+                            .optional()
+                            .map_err(RenderError::Database)?
+                        else {
+                            return Ok(None);
                         };
 
-                        if let Some(value) = value {
-                            content.insert(model_field_key.clone(), value);
+                        let model_fields = model_fields::table
+                            .inner_join(fields::table)
+                            .filter(model_fields::model_id.eq(model_id))
+                            .select((
+                                model_fields::id,
+                                model_fields::key,
+                                model_fields::multiple,
+                                fields::kind,
+                            ))
+                            .load::<(i32, String, bool, String)>(&mut conn)
+                            .await
+                            .map_err(RenderError::Database)?;
+
+                        let content = if field == "id" {
+                            let Ok(id) = str::parse::<i32>(&value) else {
+                                return Ok(None);
+                            };
+
+                            contents::table
+                                .select(contents::id)
+                                .filter(contents::id.eq(id))
+                                .first::<i32>(&mut conn)
+                                .await
+                                .optional()
+                                .map_err(RenderError::Database)?
+                        } else {
+                            let Some(model_field) = model_fields.iter().find(|mf| mf.1 == field)
+                            else {
+                                return Ok(None);
+                            };
+
+                            contents::table
+                                .select(contents::id)
+                                .inner_join(content_values::table)
+                                .filter(
+                                    content_values::model_field_id
+                                        .eq(model_field.0)
+                                        .and(content_values::value.eq(value)),
+                                )
+                                .first::<i32>(&mut conn)
+                                .await
+                                .optional()
+                                .map_err(RenderError::Database)?
+                        };
+
+                        let Some(content) = content else {
+                            return Ok(None);
+                        };
+
+                        let content_values = content_values::table
+                            .filter(content_values::content_id.eq(content))
+                            .filter(
+                                content_values::locale
+                                    .eq(format!("{}", locale.current))
+                                    .or(content_values::locale.is_null()),
+                            )
+                            .order((content_values::content_id.asc(), content_values::id.asc()))
+                            .select((content_values::model_field_id, content_values::value))
+                            .load::<(i32, String)>(&mut conn)
+                            .await
+                            .map_err(RenderError::Database)?;
+
+                        let mut content = BTreeMap::new();
+
+                        for (model_field_id, model_field_key, multiple, kind) in model_fields {
+                            let mut values =
+                                content_values.iter().filter(|cv| cv.0 == model_field_id);
+
+                            let value = if multiple {
+                                Some(Value::from(
+                                    values
+                                        .map(|v| str_to_value(&kind, &v.1))
+                                        .collect::<Vec<_>>(),
+                                ))
+                            } else {
+                                values
+                                    .next()
+                                    .map(|v| Value::from(str_to_value(&kind, &v.1)))
+                            };
+
+                            if let Some(value) = value {
+                                content.insert(model_field_key.clone(), value);
+                            }
                         }
-                    }
 
-                    Ok(content)
-                });
+                        Ok(Some(content))
+                    });
 
-                log::debug!("{content:?}");
-
-                content.map_err(|e| Error::new(ErrorKind::InvalidOperation, format!("{e:?}")))
+                content
+                    .inspect_err(|e| match e {
+                        RenderError::Database(e) => {
+                            log::error!("Database error occurred during rendering, {e:?}")
+                        }
+                        RenderError::Pool(e) => {
+                            log::error!("Pool error occurred during rendering, {e:?}")
+                        }
+                    })
+                    .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
             },
         );
     };
@@ -538,10 +569,10 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
                 let pool = pool.clone();
 
-                let values: Result<Vec<Value>, HttpError> = block_on(async move {
-                    let mut conn = pool.get().await?;
+                let values: Result<Option<Vec<Value>>, RenderError> = block_on(async move {
+                    let mut conn = pool.get().await.map_err(RenderError::Pool)?;
 
-                    let model_id = models::table
+                    let Some(model_id) = models::table
                         .filter(
                             models::key.eq(model).and(
                                 models::namespace
@@ -551,7 +582,12 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         )
                         .select(models::id)
                         .first::<i32>(&mut conn)
-                        .await?;
+                        .await
+                        .optional()
+                        .map_err(RenderError::Database)?
+                    else {
+                        return Ok(None);
+                    };
 
                     let model_fields = model_fields::table
                         .inner_join(fields::table)
@@ -564,7 +600,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                             fields::kind,
                         ))
                         .load::<(i32, String, bool, String)>(&mut conn)
-                        .await?;
+                        .await
+                        .map_err(RenderError::Database)?;
 
                     let content_values = if let Some(filter) = filter {
                         let (c1, c2) = diesel::alias!(contents as c1, contents as c2);
@@ -607,7 +644,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                 cv1.field(content_values::value),
                             ))
                             .load::<(i32, i32, String)>(&mut conn)
-                            .await?
+                            .await
+                            .map_err(RenderError::Database)?
                     } else {
                         contents::table
                             .inner_join(models::table)
@@ -631,7 +669,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                                 content_values::value,
                             ))
                             .load::<(i32, i32, String)>(&mut conn)
-                            .await?
+                            .await
+                            .map_err(RenderError::Database)?
                     };
 
                     let mut contents = Vec::<Value>::new();
@@ -671,10 +710,19 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         contents.push(Value::from(content));
                     }
 
-                    Ok(contents)
+                    Ok(Some(contents))
                 });
 
-                values.map_err(|e| Error::new(ErrorKind::InvalidOperation, format!("{e:?}")))
+                values
+                    .inspect_err(|e| match e {
+                        RenderError::Database(e) => {
+                            log::error!("Database error occurred during rendering, {e:?}")
+                        }
+                        RenderError::Pool(e) => {
+                            log::error!("Pool error occurred during rendering, {e:?}")
+                        }
+                    })
+                    .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
             },
         );
     }
