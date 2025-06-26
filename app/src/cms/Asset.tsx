@@ -15,10 +15,10 @@ import './Asset.scss';
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) => void, }) => {
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
     const [pagination, setPagination] = createStore<PaginationRequest>({});
 
-    const [assets] = createResource(() => ({ page: pagination.page, perPage: pagination.perPage }), (pagination) => contentCtx.fetchAssets(pagination));
+    const [assets] = createResource(() => ({ page: pagination.page, perPage: pagination.perPage }), (pagination) => cmsContext.fetchAssets(pagination));
 
     return (
         <>
@@ -284,12 +284,12 @@ export const UploadAsset = () => {
 };
 
 export const Assets = () => {
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
-    const [assets] = createResource(pagination, (pagination) => contentCtx.fetchAssets(pagination));
+    const [assets] = createResource(pagination, (pagination) => cmsContext.fetchAssets(pagination));
 
     return (
         <div class="container py-4 px-md-4">
@@ -364,12 +364,12 @@ export const Asset = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
     const navigate = useNavigate();
 
     const params = useParams();
 
-    const [asset, { mutate }] = createResource(() => parseInt(params.id), (id) => contentCtx.fetchAsset(id));
+    const [asset, { mutate }] = createResource(() => parseInt(params.id), (id) => cmsContext.fetchAsset(id));
 
     const [assetDetails, setAssetDetails] = createStore({ name: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
@@ -406,7 +406,7 @@ export const Asset = () => {
 
         setInProgress(Action.UpdateDetails);
 
-        contentCtx.updateAsset(
+        cmsContext.updateAsset(
             a.id,
             assetDetails.name.trim(),
         )
@@ -428,7 +428,7 @@ export const Asset = () => {
             return;
         }
 
-        return contentCtx.deleteAsset(a.id)
+        return cmsContext.deleteAsset(a.id)
             .then(() => {
                 setDeletingAsset(false);
 

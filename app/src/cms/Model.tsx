@@ -24,7 +24,7 @@ const ModelFieldModal = (props: {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
 
     const [store, setStore] = createStore(props.initial ?? {
         key: '',
@@ -166,7 +166,7 @@ const ModelFieldModal = (props: {
                                     onChange={(ev) => setStore('fieldId', parseInt(ev.target.value))}
                                 >
                                     <option value="" disabled selected>Select a field</option>
-                                    <For each={contentCtx.fields()}>
+                                    <For each={cmsContext.fields()}>
                                         {(field) => (
                                             <option value={field.id}>{field.name}</option>
                                         )}
@@ -226,7 +226,7 @@ export const CreateModel = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
     const navigate = useNavigate();
 
     const [key, setKey] = createSignal('');
@@ -272,7 +272,7 @@ export const CreateModel = () => {
 
         setInProgress(true);
 
-        contentCtx.createModel({
+        cmsContext.createModel({
             namespace: themeScoped() ? commonCtx.options().theme : null,
             key: key().trim(),
             name: name().trim(),
@@ -280,7 +280,7 @@ export const CreateModel = () => {
             modelFields: unwrap(fields),
         })
             .then(async (model) => {
-                await contentCtx.loadModels();
+                await cmsContext.loadModels();
 
                 alertCtx.success(`Model "${model.name}" is created successfully`);
 
@@ -397,7 +397,7 @@ export const CreateModel = () => {
 
                     <For each={fields}>
                         {(mf) => {
-                            const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+                            const field = () => cmsContext.fields().find((f) => f.id === mf.fieldId);
 
                             return (
                                 <div class="card mb-4">
@@ -483,7 +483,7 @@ export const CreateModel = () => {
 };
 
 export const Models = () => {
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
 
     return (
         <div class="container py-4 px-md-4">
@@ -495,7 +495,7 @@ export const Models = () => {
                 </A>
             </div>
 
-            <Show when={contentCtx.models().length > 0} fallback={
+            <Show when={cmsContext.models().length > 0} fallback={
                 <p class="text-secondary text-center">There is no model to display yet. You can create a new one by using <strong>Create Model</strong> button.</p>
             }>
                 <div class="row">
@@ -511,7 +511,7 @@ export const Models = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <For each={contentCtx.models()}>
+                                <For each={cmsContext.models()}>
                                     {(model) => (
                                         <tr>
                                             <td></td>
@@ -545,11 +545,11 @@ export const Model = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsContext = useContext(CMSContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
-    const model = createMemo(() => contentCtx.models().find(ModelModel.searchWithParams(params.namespace, params.key)));
+    const model = createMemo(() => cmsContext.models().find(ModelModel.searchWithParams(params.namespace, params.key)));
 
     const [modelDetails, setModelDetails] = createStore({ name: '', desc: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
@@ -576,8 +576,8 @@ export const Model = () => {
             return;
         }
 
-        return contentCtx.deleteModel(m.id)
-            .then(() => contentCtx.loadModels())
+        return cmsContext.deleteModel(m.id)
+            .then(() => cmsContext.loadModels())
             .then(() => {
                 setDeletingModel(false);
 
@@ -608,12 +608,12 @@ export const Model = () => {
 
         setInProgress(Action.UpdateDetails);
 
-        contentCtx.updateModelDetails(
+        cmsContext.updateModelDetails(
             m.id,
             modelDetails.name,
             modelDetails.desc.trim().length > 0 ? modelDetails.desc : null
         )
-            .then(() => contentCtx.loadModels())
+            .then(() => cmsContext.loadModels())
             .then(() => {
                 setEditingDetails(false);
 
@@ -624,14 +624,14 @@ export const Model = () => {
     }
 
     const saveField = async (id: number, updatedField: CreateModelField) => {
-        return contentCtx.updateModelField(id, {
+        return cmsContext.updateModelField(id, {
             name: updatedField.name,
             desc: updatedField.desc,
             localized: updatedField.localized,
             required: updatedField.required,
             multiple: updatedField.multiple,
         })
-            .then(() => contentCtx.loadModels())
+            .then(() => cmsContext.loadModels())
             .then(() => {
                 setEditingField(undefined);
 
@@ -646,8 +646,8 @@ export const Model = () => {
             return;
         }
 
-        return contentCtx.createModelField(m.id, newField)
-            .then(() => contentCtx.loadModels())
+        return cmsContext.createModelField(m.id, newField)
+            .then(() => cmsContext.loadModels())
             .then(() => {
                 setCreatingField(false);
 
@@ -656,8 +656,8 @@ export const Model = () => {
     };
 
     const deleteField = async (modelField: ModelField) => {
-        return contentCtx.deleteModelField(modelField.id)
-            .then(() => contentCtx.loadModels())
+        return cmsContext.deleteModelField(modelField.id)
+            .then(() => cmsContext.loadModels())
             .then(() => {
                 setDeletingField(undefined);
 
@@ -791,7 +791,7 @@ export const Model = () => {
 
                                     <For each={model().fields}>
                                         {(mf) => {
-                                            const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+                                            const field = () => cmsContext.fields().find((f) => f.id === mf.fieldId);
 
                                             return (
                                                 <div class="card mb-4">

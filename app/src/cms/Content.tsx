@@ -34,7 +34,7 @@ const ContentValueModal = (props: {
 
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsCtx = useContext(CMSContext)!;
 
     const [store, setStore] = createStore(props.initial ?? {
         value: '',
@@ -47,7 +47,7 @@ const ContentValueModal = (props: {
 
     const [showPickAsset, setShowPickAsset] = createSignal(false);
 
-    const field = () => contentCtx.fields().find((f) => f.id === props.modelField.fieldId);
+    const field = () => cmsCtx.fields().find((f) => f.id === props.modelField.fieldId);
 
     const close = () => {
         if (inProgress()) {
@@ -266,10 +266,10 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 }
 
 export const Contents = () => {
-    const contentCtx = useContext(CMSContext)!;
+    const cmsCtx = useContext(CMSContext)!;
     return (
         <div class="container py-4 px-md-4">
-            <Show when={contentCtx.models()[0]} fallback={
+            <Show when={cmsCtx.models()[0]} fallback={
                 <p class="text-secondary text-center">A <strong>Model</strong> needs to be created first to create a <strong>Content</strong>. You can create a new model in <A href="/models">Models</A> page.</p>
             }>
                 {(model) => (<Navigate href={`/contents/by-model/${model().urlPath()}`} />)}
@@ -279,17 +279,17 @@ export const Contents = () => {
 };
 
 export const ContentsByModel = () => {
-    const contentCtx = useContext(CMSContext)!;
+    const cmsCtx = useContext(CMSContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
     const params = useParams();
 
     const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
-    const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
+    const model = createMemo(() => cmsCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [contents] = createResource(
         () => model() ? { model: model()!, pagination: pagination() } : undefined,
-        ({ model, pagination }) => contentCtx.fetchContents(model.id, pagination)
+        ({ model, pagination }) => cmsCtx.fetchContents(model.id, pagination)
     );
 
     return (
@@ -375,12 +375,12 @@ export const CreateContent = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsCtx = useContext(CMSContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
     const locales = commonCtx.activeLocales();
-    const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
+    const model = createMemo(() => cmsCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [name, setName] = createSignal('');
     const [values, setValues] = createStore({} as Record<number, CreateContentValue[]>);
@@ -428,7 +428,7 @@ export const CreateContent = () => {
 
         setInProgress(true);
 
-        contentCtx.createContent({
+        cmsCtx.createContent({
             name: name(),
             modelId: model()!.id,
             values: Object.values(unwrap(values)).flat(),
@@ -513,7 +513,7 @@ export const CreateContent = () => {
                                                 <ul class="list-group list-group-flush">
                                                     <For each={values[mf.id]}>
                                                         {(value) => {
-                                                            const field = () => contentCtx.fields().find((f) => f.id === mf.fieldId);
+                                                            const field = () => cmsCtx.fields().find((f) => f.id === mf.fieldId);
 
                                                             return (
                                                                 <li class="list-group-item d-flex align-items-center">
@@ -630,12 +630,12 @@ export const Content = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
-    const contentCtx = useContext(CMSContext)!;
+    const cmsCtx = useContext(CMSContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
-    const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => contentCtx.fetchContent(id));
-    const model = () => contentCtx.models().find((m) => m.id === content()?.content.modelId);
+    const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => cmsCtx.fetchContent(id));
+    const model = () => cmsCtx.models().find((m) => m.id === content()?.content.modelId);
 
     const [contentDetails, setContentDetails] = createStore({ name: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
@@ -668,7 +668,7 @@ export const Content = () => {
         const stage = c.content.stage === ContentStage.Published ? ContentStage.Draft : ContentStage.Published;
         setInProgress(Action.UpdateStage);
 
-        contentCtx.updateContentStage(c.content.id, stage)
+        cmsCtx.updateContentStage(c.content.id, stage)
             .then(() => {
                 setShowStageDropdown(false);
 
@@ -701,7 +701,7 @@ export const Content = () => {
 
         setInProgress(Action.UpdateDetails);
 
-        contentCtx.updateContentDetails(
+        cmsCtx.updateContentDetails(
             c.content.id,
             contentDetails.name.trim(),
         )
@@ -724,7 +724,7 @@ export const Content = () => {
             return;
         }
 
-        return contentCtx.createContentValue(c.content.id, value)
+        return cmsCtx.createContentValue(c.content.id, value)
             .then((value) => {
                 setCreatingValue(undefined);
 
@@ -742,7 +742,7 @@ export const Content = () => {
             return;
         }
 
-        return contentCtx.updateContentValue(id, value)
+        return cmsCtx.updateContentValue(id, value)
             .then(() => {
                 setEditingValue(undefined);
 
@@ -767,7 +767,7 @@ export const Content = () => {
             return;
         }
 
-        contentCtx.deleteContent(c.content.id)
+        cmsCtx.deleteContent(c.content.id)
             .then(() => {
                 setDeletingContent(false);
 
@@ -783,7 +783,7 @@ export const Content = () => {
         const c = content();
         const modelField = model()?.fields.find((mf) => mf.id === value.modelFieldId);
 
-        return contentCtx.deleteContentValue(value.id)
+        return cmsCtx.deleteContentValue(value.id)
             .then(() => {
                 setDeletingValue(undefined);
 
@@ -962,7 +962,7 @@ export const Content = () => {
                                         <For each={model()?.fields ?? []}>
                                             {(mf) => {
                                                 const locales = commonCtx.activeLocales();
-                                                const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
+                                                const field = createMemo(() => cmsCtx.fields().find((f) => f.id === mf.fieldId));
                                                 const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
 
                                                 return (

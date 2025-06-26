@@ -9,7 +9,7 @@ import * as config from './lib/config';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import { CMSContext, CMSService, type CMSStore } from './lib/cms/context';
 import { UserContext, UserService } from './lib/user/context';
-import { AlertContext, CommonContext, CommonService as CommonService, type AlertStore } from './lib/context';
+import { AlertContext, CommonContext, CommonService, type AlertStore } from './lib/context';
 import { CreateModel, Model, Models } from './cms/Model';
 import { CreatePage, Page, Pages } from './appearance/Page';
 import { CreateTemplate, TemplateResource, Templates } from './appearance/Template';

@@ -149,7 +149,7 @@ export class CMSService implements CMSStore {
     }
 
     static async fetchFields(): Promise<Field[]> {
-        return Api.get('/cms/model/fields');
+        return Api.get('/cms/field/all');
     }
 
     static async fetchModels(): Promise<Model[]> {
