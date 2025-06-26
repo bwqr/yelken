@@ -41,6 +41,9 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     loadingWasmPromise
       .then(() => sendRequest(event.request))
-      .catch((e) => console.error(e))
+      .catch((e) => {
+        console.error(e);
+        return new Response(null, { status: '503' });
+      })
   );
 });
