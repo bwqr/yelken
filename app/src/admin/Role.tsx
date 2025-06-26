@@ -4,11 +4,12 @@ import { createEffect, createResource, createSignal, For, Match, onCleanup, Show
 import { AdminContext } from "../lib/admin/context";
 import { AlertContext } from "../lib/context";
 import { HttpError } from "../lib/api";
-import { Permission, type Role as RoleModel } from "../lib/admin/models";
+import { type Role as RoleModel } from "../lib/admin/models";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
 import { createStore } from "solid-js/store";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { Permission } from "../lib/models";
 
 export const CreateRole = () => {
     enum ValidationError {

@@ -94,6 +94,39 @@ pub async fn router(
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
 
+    let api = Router::new().nest("/common", common::router(state.clone()));
+
+    #[cfg(feature = "admin")]
+    let api = api.nest("/admin", admin::router(state.clone()));
+
+    #[cfg(feature = "appearance")]
+    let api = api.nest("/appearance", appearance::router(state.clone()));
+
+    #[cfg(feature = "auth")]
+    let api = api.nest("/auth", auth::router());
+
+    #[cfg(feature = "cms")]
+    let api = api.nest("/cms", cms::router(state.clone()));
+
+    #[cfg(feature = "user")]
+    let api = api.nest("/user", user::router(state.clone()));
+
+    #[cfg(feature = "plugin")]
+    let (api, layers, plugin_host) = {
+        let plugin_host = plugin::PluginHost::new(
+            &format!("{}/plugins", server_config.storage_dir),
+            state.pool.get().await.unwrap(),
+        )
+        .await
+        .unwrap();
+
+        (
+            api.nest("/plugin", plugin::router(state.clone())),
+            layers.layer(Extension(plugin_host.clone())),
+            plugin_host,
+        )
+    };
+
     let app = Router::new().nest_service(
         "/assets/content",
         ServeStorageDir::new(storage.clone(), || "assets".to_string()),
@@ -109,9 +142,6 @@ pub async fn router(
             }),
         )
     };
-
-    #[cfg(feature = "admin")]
-    let app = app.nest("/api/admin", admin::router(state.clone()));
 
     #[cfg(feature = "app")]
     let app = app.nest(
@@ -143,34 +173,12 @@ pub async fn router(
         )
     };
 
-    #[cfg(feature = "auth")]
-    let app = app.nest("/api/auth", auth::router());
-
-    #[cfg(feature = "content")]
-    let app = app.nest("/api/content", content::router(state.clone()));
-
     #[cfg(feature = "form")]
     let app = app.nest("/yk/form", form::router());
 
-    #[cfg(feature = "plugin")]
-    let (app, layers, plugin_host) = {
-        let plugin_host = plugin::PluginHost::new(
-            &format!("{}/plugins", server_config.storage_dir),
-            state.pool.get().await.unwrap(),
-        )
-        .await
-        .unwrap();
-
-        (
-            app.nest("/api/plugin", plugin::router(state.clone())),
-            layers.layer(Extension(plugin_host.clone())),
-            plugin_host,
-        )
-    };
-
-    #[cfg(feature = "ui")]
+    #[cfg(feature = "appearance")]
     let (app, layers) = {
-        let l10n = ui::L10n::new(
+        let l10n = appearance::L10n::new(
             &storage,
             &options.locale_locations(),
             &options.locales(),
@@ -183,28 +191,27 @@ pub async fn router(
         #[cfg(not(feature = "plugin"))]
         let resources = (l10n.clone(), state.pool.clone());
 
-        let render = ui::Render::new(
+        let render = appearance::Render::new(
             &storage,
             &options.template_locations(),
             Some(resources.clone()),
         )
         .await
         .inspect_err(|e| log::error!("Failed to initialize Render, using an empty instance, {e:?}"))
-        .unwrap_or_else(|_| ui::Render::empty(Some(resources)));
+        .unwrap_or_else(|_| appearance::Render::empty(Some(resources)));
 
         (
-            app.nest("/api/ui", ui::router(state.clone()))
-                .fallback(ui::serve_page),
+            app.fallback(appearance::serve_page),
             layers.layer(Extension(l10n)).layer(Extension(render)),
         )
     };
 
-    #[cfg(feature = "user")]
-    let app = app.nest("/api/user", user::router(state.clone()));
-
     let base_path = state.config.site_url.path().to_string();
 
-    let app = app.with_state(state).layer(layers);
+    let app = app
+        .nest("/api", api.fallback(axum::http::StatusCode::NOT_FOUND))
+        .with_state(state)
+        .layer(layers);
 
     if base_path == "/" {
         return app;

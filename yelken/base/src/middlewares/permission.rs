@@ -25,26 +25,30 @@ use super::auth::AuthUser;
 use std::str::FromStr;
 
 #[derive(Clone, Copy)]
-pub enum Mode {
-    Read,
-    Write,
-}
-
-#[derive(Clone, Copy)]
 pub enum Permission {
     Admin,
-    Content(Mode),
-    User(Mode),
+    CMSRead,
+    AssetWrite,
+    ContentWrite,
+    ModelWrite,
+    AppearanceRead,
+    PageWrite,
+    TemplateWrite,
+    ThemeWrite,
 }
 
 impl Permission {
     pub fn as_str(&self) -> &'static str {
         match self {
             Permission::Admin => "admin",
-            Permission::Content(Mode::Read) => "content.read",
-            Permission::Content(Mode::Write) => "content.write",
-            Permission::User(Mode::Read) => "user.read",
-            Permission::User(Mode::Write) => "user.write",
+            Permission::CMSRead => "cms.read",
+            Permission::AssetWrite => "asset.write",
+            Permission::ContentWrite => "content.write",
+            Permission::ModelWrite => "model.write",
+            Permission::AppearanceRead => "appearance.read",
+            Permission::PageWrite => "page.write",
+            Permission::TemplateWrite => "template.write",
+            Permission::ThemeWrite => "theme.write",
         }
     }
 }
@@ -55,10 +59,14 @@ impl FromStr for Permission {
     fn from_str(val: &str) -> Result<Self, Self::Err> {
         let perm = match val {
             "admin" => Permission::Admin,
-            "content.read" => Permission::Content(Mode::Read),
-            "content.write" => Permission::Content(Mode::Write),
-            "user.read" => Permission::User(Mode::Read),
-            "user.write" => Permission::User(Mode::Write),
+            "cms.read" => Permission::CMSRead,
+            "asset.write" => Permission::AssetWrite,
+            "content.write" => Permission::ContentWrite,
+            "model.write" => Permission::ModelWrite,
+            "appearance.read" => Permission::AppearanceRead,
+            "page.write" => Permission::PageWrite,
+            "template.write" => Permission::TemplateWrite,
+            "theme.write" => Permission::ThemeWrite,
             _ => return Err("unknown permission"),
         };
 

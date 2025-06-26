@@ -2,40 +2,41 @@ import { createContext, createResource, For, Match, Show, Suspense, Switch, useC
 import { Router, Route, A } from "@solidjs/router";
 import { SideNav } from './Nav';
 import Dashboard from './Dashboard';
-import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './content/Content';
+import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './cms/Content';
 import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
 import * as config from './lib/config';
 import { createStore, produce, reconcile } from 'solid-js/store';
-import { ContentContext, ContentService, type ContentStore } from './lib/content/context';
+import { CMSContext, CMSService, type CMSStore } from './lib/cms/context';
 import { UserContext, UserService } from './lib/user/context';
-import { AlertContext, BaseContext, BaseService, type AlertStore } from './lib/context';
-import { CreateModel, Model, Models } from './content/Model';
-import { CreatePage, Page, Pages } from './admin/Page';
-import { CreateTemplate, TemplateResource, Templates } from './admin/Template';
+import { AlertContext, CommonContext, CommonService, type AlertStore } from './lib/context';
+import { CreateModel, Model, Models } from './cms/Model';
+import { CreatePage, Page, Pages } from './appearance/Page';
+import { CreateTemplate, TemplateResource, Templates } from './appearance/Template';
 import { AdminContext, AdminService } from './lib/admin/context';
 import { Check, Exclamation, XCircle } from './Icons';
-import { InstallTheme, Themes } from './admin/Theme';
+import { InstallTheme, Themes } from './appearance/Theme';
 import { CreateLocale, Locale, LocaleResource, Locales } from './admin/Locale';
 import { Dynamic } from 'solid-js/web';
 import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
-import { Asset, Assets, UploadAsset } from './content/Asset';
+import { Asset, Assets, UploadAsset } from './cms/Asset';
+import { AppearanceContext, AppearanceService } from './lib/appearance/context';
 
 class ServiceProvider {
-    private _contentCtx: ResourceReturn<ContentStore> | undefined;
-    private _contentInit: () => Promise<ContentStore>;
+    private _cmsCtx: ResourceReturn<CMSStore> | undefined;
+    private cmsInit: () => Promise<CMSStore>;
 
-    constructor(contentInit: () => Promise<ContentStore>) {
-        this._contentInit = contentInit;
+    constructor(cmsInit: () => Promise<CMSStore>) {
+        this.cmsInit = cmsInit;
     }
 
-    contentCtx(): Resource<ContentStore> {
-        if (this._contentCtx === undefined) {
-            this._contentCtx = createResource(this._contentInit);
+    cmsCtx(): Resource<CMSStore> {
+        if (this._cmsCtx === undefined) {
+            this._cmsCtx = createResource(this.cmsInit);
         }
 
-        return this._contentCtx[0];
+        return this._cmsCtx[0];
     }
 }
 
@@ -81,14 +82,14 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
 const BackgroundServices = (props: { children?: JSX.Element }) => {
     const [promises] = createResource(() => Promise.all([
         UserService.fetchUser().then((user) => new UserService(user)),
-        Promise.all([BaseService.fetchLocales(), BaseService.fetchOptions()]).then(([locales, options]) => new BaseService(locales, options))
+        Promise.all([CommonService.fetchLocales(), CommonService.fetchNamespaces(), CommonService.fetchOptions()]).then(([locales, namespaces, options]) => new CommonService(locales, namespaces, options))
     ]));
 
-    const contentInit = () => Promise.all([
-        ContentService.fetchModels(),
-        ContentService.fetchFields(),
+    const cmsInit = () => Promise.all([
+        CMSService.fetchModels(),
+        CMSService.fetchFields(),
     ])
-        .then(([models, fields]) => new ContentService(models, fields));
+        .then(([models, fields]) => new CMSService(models, fields));
 
     return (
         <Suspense fallback={<p>Loading ...</p>}>
@@ -98,13 +99,13 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
                 </Match>
                 <Match when={promises()}>
                     {(promises) => {
-                        const [userService, baseService] = promises();
+                        const [userService, commonService] = promises();
 
                         return (
-                            <ServiceContext.Provider value={new ServiceProvider(contentInit)}>
-                                <BaseContext.Provider value={baseService}>
+                            <ServiceContext.Provider value={new ServiceProvider(cmsInit)}>
+                                <CommonContext.Provider value={commonService}>
                                     <UserContext.Provider value={userService}>{props.children}</UserContext.Provider>
-                                </BaseContext.Provider>
+                                </CommonContext.Provider>
                             </ServiceContext.Provider>
                         );
                     }}
@@ -205,11 +206,11 @@ const App: Component = () => {
                         <Suspense fallback={
                             <p class="icon-link justify-content-center w-100">Loading ...</p>
                         }>
-                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                            <Show when={useContext(ServiceContext)!.cmsCtx()()}>
                                 {(ctx) => (
-                                    <ContentContext.Provider value={ctx()}>
+                                    <CMSContext.Provider value={ctx()}>
                                         {props.children}
-                                    </ContentContext.Provider>
+                                    </CMSContext.Provider>
                                 )}
                             </Show>
                         </Suspense>
@@ -224,11 +225,11 @@ const App: Component = () => {
                         <Suspense fallback={
                             <p class="icon-link justify-content-center w-100">Loading ...</p>
                         }>
-                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                            <Show when={useContext(ServiceContext)!.cmsCtx()()}>
                                 {(ctx) => (
-                                    <ContentContext.Provider value={ctx()}>
+                                    <CMSContext.Provider value={ctx()}>
                                         {props.children}
-                                    </ContentContext.Provider>
+                                    </CMSContext.Provider>
                                 )}
                             </Show>
                         </Suspense>
@@ -248,11 +249,11 @@ const App: Component = () => {
                         <Suspense fallback={
                             <p class="icon-link justify-content-center w-100">Loading ...</p>
                         }>
-                            <Show when={useContext(ServiceContext)!.contentCtx()()}>
+                            <Show when={useContext(ServiceContext)!.cmsCtx()()}>
                                 {(ctx) => (
-                                    <ContentContext.Provider value={ctx()}>
+                                    <CMSContext.Provider value={ctx()}>
                                         {props.children}
-                                    </ContentContext.Provider>
+                                    </CMSContext.Provider>
                                 )}
                             </Show>
                         </Suspense>
@@ -263,9 +264,9 @@ const App: Component = () => {
                     </Route>
 
                     <Route path="/themes" component={(props) => (
-                        <AdminContext.Provider value={new AdminService()}>
+                        <AppearanceContext.Provider value={new AppearanceService()}>
                             {props.children}
-                        </AdminContext.Provider>
+                        </AppearanceContext.Provider>
                     )}>
                         <Route path="/" component={Themes} />
                         <Route path="/install" component={InstallTheme} />
@@ -284,9 +285,9 @@ const App: Component = () => {
                     </Route>
 
                     <Route path="/pages" component={(props) => (
-                        <AdminContext.Provider value={new AdminService()}>
+                        <AppearanceContext.Provider value={new AppearanceService()}>
                             {props.children}
-                        </AdminContext.Provider>
+                        </AppearanceContext.Provider>
                     )}>
                         <Route path="/" component={Pages} />
                         <Route path="/view/:namespace/:key" component={Page} />
@@ -295,9 +296,9 @@ const App: Component = () => {
                     </Route>
 
                     <Route path="/templates" component={(props) => (
-                        <AdminContext.Provider value={new AdminService()}>
+                        <AppearanceContext.Provider value={new AppearanceService()}>
                             {props.children}
-                        </AdminContext.Provider>
+                        </AppearanceContext.Provider>
                     )}>
                         <Route path="/" component={Templates} />
                         <Route path="/resource" component={TemplateResource} />
