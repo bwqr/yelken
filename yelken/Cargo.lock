@@ -33,11 +33,9 @@ checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 name = "admin"
 version = "0.1.0"
 dependencies = [
- "anyhow",
+ "appearance",
  "axum",
  "base",
- "bytes",
- "chrono",
  "diesel",
  "diesel-async",
  "fluent",
@@ -45,10 +43,7 @@ dependencies = [
  "opendal",
  "rand 0.9.1",
  "serde",
- "serde_json",
- "ui",
  "unic-langid",
- "zip",
 ]
 
 [[package]]
@@ -166,6 +161,32 @@ dependencies = [
  "serde",
  "serde_json",
  "url",
+]
+
+[[package]]
+name = "appearance"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "axum",
+ "base",
+ "bytes",
+ "diesel",
+ "diesel-async",
+ "fluent",
+ "log",
+ "matchit",
+ "minijinja",
+ "opendal",
+ "plugin",
+ "rand 0.9.1",
+ "serde",
+ "serde_json",
+ "tokio",
+ "unic-langid",
+ "url",
+ "zip",
 ]
 
 [[package]]
@@ -501,29 +522,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cobs"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
-
-[[package]]
-name = "colorchoice"
-version = "1.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
-
-[[package]]
-name = "console_error_panic_hook"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
-dependencies = [
- "cfg-if",
- "wasm-bindgen",
-]
-
-[[package]]
-name = "content"
+name = "cms"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -537,6 +536,40 @@ dependencies = [
  "rand 0.9.1",
  "serde",
  "tower",
+]
+
+[[package]]
+name = "cobs"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
+
+[[package]]
+name = "colorchoice"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "base",
+ "diesel",
+ "diesel-async",
+ "log",
+ "serde",
+]
+
+[[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -3421,28 +3454,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 
 [[package]]
-name = "ui"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "axum",
- "base",
- "diesel",
- "diesel-async",
- "fluent",
- "log",
- "matchit",
- "minijinja",
- "opendal",
- "plugin",
- "serde",
- "tokio",
- "unic-langid",
- "url",
-]
-
-[[package]]
 name = "unic-langid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4453,10 +4464,12 @@ dependencies = [
  "admin",
  "anyhow",
  "app",
+ "appearance",
  "auth",
  "axum",
  "base",
- "content",
+ "cms",
+ "common",
  "diesel",
  "diesel-async",
  "dotenvy",
@@ -4469,7 +4482,6 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http",
- "ui",
  "user",
 ]
 

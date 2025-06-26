@@ -1,0 +1,24 @@
+[package]
+name = "auth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base.path = "../../base"
+
+anyhow.workspace = true
+axum.workspace = true
+chrono.workspace = true
+diesel.workspace = true
+diesel-async.workspace = true
+log.workspace = true
+rand.workspace = true
+reqwest = { workspace = true, optional = true }
+serde.workspace = true
+
+url = { workspace = true, optional = true }
+
+[features]
+default = []
+email = []
+oauth = ["dep:reqwest", "dep:url"]

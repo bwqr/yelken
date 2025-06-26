@@ -1,15 +1,16 @@
 [workspace]
 members = [
-  "admin",
+  "api/admin",
+  "api/appearance",
+  "api/auth",
+  "api/cms",
+  "api/common",
+  "api/user",
   "app",
-  "auth",
   "base",
-  "content",
   "form",
   "plugin",
   "setup",
-  "ui",
-  "user",
   "wasm",
 ]
 
@@ -40,15 +41,16 @@ unic-langid = "0.9.5"
 url = "2.5.4"
 
 [dependencies]
-admin = { path = "./admin", optional = true }
+admin = { path = "api/admin", optional = true }
 app = { path = "./app", optional = true }
-auth = { path = "./auth", optional = true }
+appearance = { path = "api/appearance", optional = true }
+auth = { path = "api/auth", optional = true }
 base.path = "./base"
-content = { path = "./content", optional = true }
+common.path = "api/common"
+cms = { path = "api/cms", optional = true }
 form = { path = "./form", optional = true }
 plugin = { path = "./plugin", optional = true }
-ui = { path = "./ui", optional = true }
-user = { path = "./user", optional = true }
+user = { path = "api/user", optional = true }
 setup = { path = "./setup", optional = true, features = ["postgres"] }
 
 anyhow.workspace = true
@@ -74,18 +76,18 @@ lto = true
 
 [features]
 default = [
-  "admin", "app", "auth", "content", "setup", "ui", "user",
+  "admin", "app", "appearance", "auth", "cms", "setup", "user",
   "base/postgres",
   "axum/default", "opendal/services-fs", "dep:tokio"
 ]
 admin = ["dep:admin"]
 app = ["dep:app"]
+appearance = ["dep:appearance"]
 auth = ["dep:auth", "auth?/email"]
-content = ["dep:content"]
+cms = ["dep:cms"]
 form = ["dep:form"]
-plugin = ["dep:plugin", "ui?/plugin"]
+plugin = ["dep:plugin", "appearance?/plugin"]
 setup = ["dep:setup"]
-ui = ["dep:ui"]
 user = ["dep:user"]
 
 # Patched for getting 'sqlite-wasm-rs' update and other sqlite improvements which are not released yet

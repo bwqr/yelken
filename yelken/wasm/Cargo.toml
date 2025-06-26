@@ -30,5 +30,5 @@ wasm-bindgen-futures = "0.4.50"
 web-sys = { version = "0.3.77", features = ["Headers", "Response", "ResponseInit"] }
 
 [features]
-default = ["yelken/admin", "yelken/app", "yelken/auth", "yelken/content", "yelken/ui", "yelken/user"]
+default = ["yelken/admin", "yelken/app", "yelken/appearance", "yelken/auth", "yelken/cms", "yelken/user"]
 sqlite = ["base/sqlite", "setup/sqlite"]

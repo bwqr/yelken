@@ -243,7 +243,7 @@ impl FromSql<Text, Backend> for NamespaceSource {
     }
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Namespace {
     pub key: String,
     pub source: NamespaceSource,

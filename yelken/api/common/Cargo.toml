@@ -1,0 +1,13 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base.path = "../../base"
+
+axum = { workspace = true, features = ["multipart"] }
+diesel.workspace = true
+diesel-async.workspace = true
+log.workspace = true
+serde.workspace = true

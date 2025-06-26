@@ -1,0 +1,18 @@
+[package]
+name = "admin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+base.path = "../../base"
+appearance.path = "../appearance"
+
+axum = { workspace = true, features = ["multipart", "macros"] }
+diesel.workspace = true
+diesel-async.workspace = true
+fluent.workspace = true
+log.workspace = true
+opendal.workspace = true
+rand.workspace = true
+serde.workspace = true
+unic-langid.workspace = true
