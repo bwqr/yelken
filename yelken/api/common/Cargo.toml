@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 base.path = "../../base"
 
-axum = { workspace = true, features = ["multipart"] }
+axum.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 log.workspace = true

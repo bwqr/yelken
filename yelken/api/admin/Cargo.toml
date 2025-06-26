@@ -7,7 +7,7 @@ edition = "2021"
 base.path = "../../base"
 appearance.path = "../appearance"
 
-axum = { workspace = true, features = ["multipart", "macros"] }
+axum.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 fluent.workspace = true

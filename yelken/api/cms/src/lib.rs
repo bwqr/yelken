@@ -60,9 +60,15 @@ pub fn router(state: AppState) -> Router<AppState> {
             perm: Permission::ContentWrite,
         });
 
+    let field_read = Router::new()
+        .route("/all", get(handlers::fetch_fields))
+        .layer(PermissionLayer {
+            pool: state.pool.clone(),
+            perm: Permission::CMSRead,
+        });
+
     let model_read = Router::new()
         .route("/all", get(model::fetch_models))
-        .route("/fields", get(handlers::fetch_fields))
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::CMSRead,
@@ -83,6 +89,7 @@ pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/asset", asset_read.merge(asset_write))
         .nest("/content", content_read.merge(content_write))
+        .nest("/field", field_read)
         .nest("/model", model_read.merge(model_write))
         .layer(middleware::from_fn_with_state(state.clone(), from_token))
 }
