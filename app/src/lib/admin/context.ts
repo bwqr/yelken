@@ -1,15 +1,10 @@
 import { createContext, type Context } from "solid-js";
 import { Api, HttpError } from "../api";
-import { Location, Permission, type LocaleResource, type Page, type Role, type RoleDetail, type Template, type TemplateDetail, type Theme, type User, type UserDetail } from "./models";
+import { type LocaleResource, type Role, type RoleDetail, type User, type UserDetail } from "./models";
+import { Location, Permission } from "../models";
 import type { UserState } from "../user/models";
 
 export interface AdminStore {
-    fetchPages(namespace?: string): Promise<Page[]>
-    fetchPage(key: string, namespace?: string): Promise<Page[]>;
-    createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page>;
-    updatePage(key: string, req: { name: string, desc: string | null }, namespace?: string): Promise<void>;
-    deletePage(key: string, locale: string | null, namespace?: string): Promise<void>;
-
     fetchUsers(): Promise<User[]>;
     fetchUser(username: string): Promise<UserDetail | undefined>;
     createUser(req: { name: string, email: string, password: string }): Promise<User>;
@@ -24,16 +19,6 @@ export interface AdminStore {
     updateRolePermission(id: number, permissions: Permission[]): Promise<void>;
     deleteRole(key: string): Promise<void>;
 
-    fetchTemplates(namespace?: string): Promise<Template[]>
-    fetchTemplate(path: string, kind: Location): Promise<TemplateDetail | undefined>
-    createTemplate(path: string, template: string, namespace?: string): Promise<void>;
-    updateTemplate(path: string, template: string, namespace?: string): Promise<void>;
-    deleteTemplate(path: string, namespace?: string): Promise<void>;
-
-    fetchThemes(): Promise<Theme[]>,
-    setThemeActive(themeId: string): Promise<void>;
-    uninstallTheme(themeId: string): Promise<void>;
-
     fetchLocaleResource(key: string, location: Location): Promise<LocaleResource | undefined>;
     updateLocaleResource(key: string, resource: string, namespace?: string): Promise<void>;
     createLocale(req: { name: string, key: string }): Promise<void>;
@@ -46,50 +31,6 @@ export interface AdminStore {
 export const AdminContext: Context<AdminStore | undefined> = createContext();
 
 export class AdminService implements AdminStore {
-    async fetchPages(namespace?: string): Promise<Page[]> {
-        const searchParams = new URLSearchParams();
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.get(`/admin/page/pages?${searchParams.toString()}`);
-    }
-
-    async fetchPage(key: string, namespace?: string): Promise<Page[]> {
-        const searchParams = new URLSearchParams();
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.get(`/admin/page/page/${key}?${searchParams.toString()}`);
-    }
-
-    async createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page> {
-        return Api.post('/admin/page', req);
-    }
-
-    async updatePage(key: string, req: { name: string; desc: string | null; }, namespace?: string): Promise<void> {
-        const searchParams = namespace ? new URLSearchParams({ namespace }).toString() : '';
-
-        return Api.put(`/admin/page/page/${key}?${searchParams}`, req);
-    }
-
-    async deletePage(key: string, locale: string | null, namespace?: string): Promise<void> {
-        const searchParams = new URLSearchParams();
-
-        if (locale) {
-            searchParams.append('locale', locale);
-        }
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.delete(`/admin/page/page/${key}?${searchParams.toString()}`);
-    }
-
     async fetchUsers(): Promise<User[]> {
         return Api.get('/admin/user/users');
     }
@@ -140,63 +81,6 @@ export class AdminService implements AdminStore {
         return Api.delete(`/admin/role/role/${key}`);
     }
 
-    async fetchTemplates(namespace?: string): Promise<Template[]> {
-        const searchParams = new URLSearchParams();
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.get(`/admin/template/templates?${searchParams.toString()}`);
-    }
-
-    async fetchTemplate(path: string, kind: Location): Promise<TemplateDetail | undefined> {
-        const searchParams = Location.toSearchParams(kind);
-
-        searchParams.append('path', path);
-
-        return Api.get<TemplateDetail>(`/admin/template/template?${searchParams.toString()}`)
-            .catch((e) => {
-                if ((e instanceof HttpError) && e.error === 'template_not_found') {
-                    return undefined;
-                }
-
-                throw e;
-            });
-    }
-
-    async createTemplate(path: string, template: string, namespace?: string): Promise<void> {
-        return Api.post('/admin/template', { path, namespace, template });
-    }
-
-    async updateTemplate(path: string, template: string, namespace?: string): Promise<void> {
-        return Api.put('/admin/template', { path, namespace, template });
-    }
-
-    async deleteTemplate(path: string, namespace?: string): Promise<void> {
-        const searchParams = new URLSearchParams();
-
-        searchParams.append('path', path);
-
-        if (namespace) {
-            searchParams.append('namespace', namespace);
-        }
-
-        return Api.delete(`/admin/template?${searchParams.toString()}`);
-    }
-
-    async fetchThemes(): Promise<Theme[]> {
-        return Api.get('/admin/theme/themes');
-    }
-
-    async setThemeActive(themeId: string): Promise<void> {
-        return Api.put('/admin/options/theme', { theme: themeId });
-    }
-
-    async uninstallTheme(themeId: string): Promise<void> {
-        return Api.delete(`/admin/theme/theme/${themeId}`);
-    }
-
     async fetchLocaleResource(key: string, location: Location): Promise<LocaleResource | undefined> {
         const searchParams = Location.toSearchParams(location);
 
@@ -233,6 +117,6 @@ export class AdminService implements AdminStore {
     }
 
     async setLocaleDefault(key: string): Promise<void> {
-        return Api.put(`/admin/options/default-locale`, { locale: key });
+        return Api.put('/admin/locale/default', { locale: key });
     }
 }

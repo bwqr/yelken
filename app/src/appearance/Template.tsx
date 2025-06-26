@@ -1,10 +1,9 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
-import { AdminContext } from "../lib/admin/context";
-import { Location } from "../lib/admin/models";
+import { AppearanceContext } from "../lib/appearance/context";
+import { Location, LocationKind } from "../lib/models";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
-import { LocationKind } from "../lib/admin/models";
 import { FloppyFill, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
-import { AlertContext, BaseContext } from "../lib/context";
+import { AlertContext, CommonContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
@@ -25,14 +24,14 @@ export const CreateTemplate = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const adminCtx = useContext(AdminContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const navigate = useNavigate();
 
     const [path, setPath] = createSignal('');
     const [namespace, setNamespace] = createSignal('');
 
-    const [themes] = createResource(() => adminCtx.fetchThemes());
+    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     const [inProgress, setInProgress] = createSignal(false);
 
@@ -67,7 +66,7 @@ export const CreateTemplate = () => {
 
         setInProgress(true);
 
-        adminCtx.createTemplate(req.path, '', req.namespace)
+        appearanceCtx.createTemplate(req.path, '', req.namespace)
             .then(() => {
                 alertCtx.success(`Template "${req.path}" is created successfully`);
 
@@ -135,7 +134,7 @@ export const CreateTemplate = () => {
                                             <option value="">Global</option>
                                             <For each={themes()}>
                                                 {(theme) => (
-                                                    <option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>
+                                                    <option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>
                                                 )}
                                             </For>
                                         </select>
@@ -171,14 +170,14 @@ export const CreateTemplate = () => {
 
 export const Templates = () => {
     const alertCtx = useContext(AlertContext)!;
-    const adminCtx = useContext(AdminContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
     const [templates, { refetch }] = createResource(
         () => ({ namespace: namespace() }),
-        ({ namespace }) => adminCtx.fetchTemplates(namespace)
+        ({ namespace }) => appearanceCtx.fetchTemplates(namespace)
             .then((templates) => {
                 const map = templates.reduce((map, template) => {
                     if (!map.has(template.path)) {
@@ -199,7 +198,7 @@ export const Templates = () => {
                 return Array.from(map.values()).toSorted((a, b) => a.path < b.path ? -1 : 1);
             })
     );
-    const [themes] = createResource(() => adminCtx.fetchThemes());
+    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [deleting, setDeleting] = createSignal(undefined as { path: string, namespace?: string } | undefined);
@@ -207,7 +206,7 @@ export const Templates = () => {
     onCleanup(dropdownClickListener('template-quick-action', () => setItem(undefined), () => !deleting()));
 
     const deleteTemplate = async (path: string, namespace?: string) => {
-        return adminCtx.deleteTemplate(path, namespace)
+        return appearanceCtx.deleteTemplate(path, namespace)
             .then(() => refetch())
             .then(() => {
                 setDeleting(undefined);
@@ -249,7 +248,7 @@ export const Templates = () => {
                                     >
                                         <option value="">Global</option>
                                         <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                            {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                         </For>
                                     </select>
                                 </div>
@@ -347,7 +346,7 @@ export const TemplateResource = () => {
     let editorRef: HTMLElement | undefined = undefined;
 
     const alertCtx = useContext(AlertContext)!;
-    const adminCtx = useContext(AdminContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
     const params = useParams();
     const [searchParams] = useSearchParams();
 
@@ -356,8 +355,8 @@ export const TemplateResource = () => {
     const [template] = createResource(
         () => ({ path: decodeURIComponent(searchParams.path as string), namespace: namespace() }),
         // When namespace is given, first try to fetch user provided template. If it does not exist, then try theme provided template.
-        ({ path, namespace }) => adminCtx.fetchTemplate(path, namespace ? { kind: LocationKind.User, namespace } : { kind: LocationKind.Global })
-            .then((template) => template ?? (namespace ? adminCtx.fetchTemplate(path, { kind: LocationKind.Theme, namespace }) : undefined))
+        ({ path, namespace }) => appearanceCtx.fetchTemplate(path, namespace ? { kind: LocationKind.User, namespace } : { kind: LocationKind.Global })
+            .then((template) => template ?? (namespace ? appearanceCtx.fetchTemplate(path, { kind: LocationKind.Theme, namespace }) : undefined))
     );
 
     const [editor] = createResource(async () => {
@@ -390,7 +389,7 @@ export const TemplateResource = () => {
 
         setInProgress(true);
 
-        adminCtx.updateTemplate(t.path, e.getValue(), namespace())
+        appearanceCtx.updateTemplate(t.path, e.getValue(), namespace())
             .then(() => alertCtx.success(`Template "${t.path}" is updated successfully`))
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(false));

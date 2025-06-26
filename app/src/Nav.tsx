@@ -6,7 +6,7 @@ import { UserContext } from "./lib/user/context";
 import { Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill, List, XLg } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
 import ProfileIcon from "./components/ProfileIcon";
-import { Permission } from "./lib/admin/models";
+import { Permission } from "./lib/models";
 
 interface Link {
     title: string,
@@ -39,10 +39,7 @@ export function SideNav(): JSX.Element {
         },
     ];
 
-    if (
-        userCtx.user().permissions.includes(Permission.ContentRead) ||
-        userCtx.user().permissions.includes(Permission.ContentWrite)
-    ) {
+    if (userCtx.user().permissions.includes(Permission.CMSRead)) {
         categories.push(...[
             {
                 title: 'CMS',
@@ -55,24 +52,29 @@ export function SideNav(): JSX.Element {
         ]);
     }
 
-    if (userCtx.user().permissions.includes(Permission.Admin)) {
+    if (userCtx.user().permissions.includes(Permission.AppearanceRead)) {
         categories.push(...[
             {
-                title: 'Site Look',
+                title: 'Appearance',
                 links: [
                     { title: 'Themes', href: '/themes', icon: Columns },
-                    { title: 'Locales', href: '/locales', icon: Translate },
                     { title: 'Templates', href: '/templates', icon: Braces },
                     { title: 'Pages', href: '/pages', icon: Journals },
                 ]
             },
+        ]);
+    }
+
+    if (userCtx.user().permissions.includes(Permission.Admin)) {
+        categories.push(...[
             {
                 title: 'Administration',
                 links: [
+                    { title: 'Locales', href: '/locales', icon: Translate },
                     { title: 'Roles', href: '/roles', icon: ShieldLock },
                     { title: 'Users & Perms', href: '/users', icon: PeopleFill },
                 ]
-            }
+            },
         ]);
     }
 

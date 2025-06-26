@@ -1,12 +1,12 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
-import { ContentContext } from "../lib/content/context";
+import { CMSContext } from "../lib/cms/context";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { FileEarmarkFill, FloppyFill, PencilSquare, ThreeDotsVertical, Trash, Upload } from "../Icons";
 import { AlertContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
 import * as config from '../lib/config';
-import { type Asset as AssetModel } from '../lib/content/models';
+import { type Asset as AssetModel } from '../lib/cms/models';
 import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { createStore } from "solid-js/store";
@@ -15,7 +15,7 @@ import './Asset.scss';
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) => void, }) => {
-    const contentCtx = useContext(ContentContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const [pagination, setPagination] = createStore<PaginationRequest>({});
 
     const [assets] = createResource(() => ({ page: pagination.page, perPage: pagination.perPage }), (pagination) => contentCtx.fetchAssets(pagination));
@@ -190,7 +190,7 @@ export const UploadAsset = () => {
         const formdata = new FormData();
         formdata.append('asset', asset()!);
 
-        Api.request<unknown, AssetModel>('/content/assets', 'POST', { formdata })
+        Api.request<unknown, AssetModel>('/cms/asset/create', 'POST', { formdata })
             .then((asset) => {
                 alertCtx.success(`Asset "${asset.name}" is created successfully`);
 
@@ -284,7 +284,7 @@ export const UploadAsset = () => {
 };
 
 export const Assets = () => {
-    const contentCtx = useContext(ContentContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
@@ -364,7 +364,7 @@ export const Asset = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const navigate = useNavigate();
 
     const params = useParams();

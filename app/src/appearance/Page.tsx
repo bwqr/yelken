@@ -1,10 +1,10 @@
 import { createEffect, createResource, createSignal, For, Match, Show, Switch, useContext } from "solid-js";
-import { AdminContext } from "../lib/admin/context";
-import { type Page as PageModel } from "../lib/admin/models";
+import { AppearanceContext } from "../lib/appearance/context";
+import { type Page as PageModel } from "../lib/appearance/models";
 import { FloppyFill, PencilSquare, PlusLg, XLg } from "../Icons";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
-import { AlertContext, BaseContext } from "../lib/context";
+import { AlertContext, CommonContext } from "../lib/context";
 import { createMemo } from "solid-js";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
@@ -34,9 +34,9 @@ export const CreatePage = () => {
         Locale,
     }
 
-    const adminCtx = useContext(AdminContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -49,8 +49,8 @@ export const CreatePage = () => {
     const [template, setTemplate] = createSignal('');
     const [locale, setLocale] = createSignal('');
 
-    const [templates] = createResource(namespace, (namespace) => adminCtx.fetchTemplates(namespace || undefined).then((templates) => unique(templates)));
-    const [themes] = createResource(() => adminCtx.fetchThemes());
+    const [templates] = createResource(namespace, (namespace) => appearanceCtx.fetchTemplates(namespace || undefined).then((templates) => unique(templates)));
+    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     const [inProgress, setInProgress] = createSignal(false);
 
@@ -101,7 +101,7 @@ export const CreatePage = () => {
 
         setInProgress(true);
 
-        adminCtx.createPage(req)
+        appearanceCtx.createPage(req)
             .then(() => {
                 alertCtx.success(`Page "${req.name}" is created successfully`);
 
@@ -210,7 +210,7 @@ export const CreatePage = () => {
                                         <>
                                             <option value="">Global</option>
                                             <For each={themes()}>
-                                                {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                                {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                             </For>
                                         </>
                                     )}
@@ -218,7 +218,7 @@ export const CreatePage = () => {
                             </Switch>
                         </select>
                         <Show when={themes.error}>
-                            <small class="text-danger">Error while fetching namespaces: <strong>{themes.error.message}</strong></small>
+                            <small class="text-danger">Error while fetching themes: <strong>{themes.error.message}</strong></small>
                         </Show>
                     </div>
 
@@ -268,7 +268,7 @@ export const CreatePage = () => {
                             onChange={(ev) => setLocale(ev.target.value)}
                         >
                             <option value="" selected disabled={creatingEntry}>Not localized</option>
-                            <For each={baseCtx.activeLocales()}>
+                            <For each={commonCtx.activeLocales()}>
                                 {(locale) => (
                                     <option value={locale.key}>{locale.name}</option>
                                 )}
@@ -318,18 +318,18 @@ function groupPages(pages: PageModel[]): PageGroup[] {
 }
 
 export const Pages = () => {
-    const adminCtx = useContext(AdminContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
-    const [globalPages] = createResource(() => adminCtx.fetchPages().then(groupPages))
-    const [pages] = createResource(namespace, (namespace) => adminCtx.fetchPages(namespace).then(groupPages));
-    const [themes] = createResource(() => adminCtx.fetchThemes());
+    const [globalPages] = createResource(() => appearanceCtx.fetchPages().then(groupPages))
+    const [pages] = createResource(namespace, (namespace) => appearanceCtx.fetchPages(namespace).then(groupPages));
+    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     createEffect(() => {
         if (!namespace()) {
-            setSearchParams({ namespace: baseCtx.options().theme }, { replace: true });
+            setSearchParams({ namespace: commonCtx.options().theme }, { replace: true });
         }
     });
 
@@ -346,14 +346,14 @@ export const Pages = () => {
             <div class="row">
                 <div class="offset-md-3 col-md-6">
                     <div class="d-flex align-items-center">
-                        <h5 class="flex-grow-1">Namespaced Pages</h5>
+                        <h5 class="flex-grow-1">Theme Scoped Pages</h5>
 
                         <Switch>
                             <Match when={themes.loading}>
-                                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Namespaces ...</p>
+                                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Themes ...</p>
                             </Match>
                             <Match when={themes.error}>
-                                <p class="text-danger-emphasis text-center">Error while fetching namespaces: <strong>{themes.error.message}</strong></p>
+                                <p class="text-danger-emphasis text-center">Error while fetching themes: <strong>{themes.error.message}</strong></p>
                             </Match>
                             <Match when={themes()}>
                                 {(themes) => (
@@ -364,7 +364,7 @@ export const Pages = () => {
                                         onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
                                     >
                                         <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{baseCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                            {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
                                         </For>
                                     </select>
                                 )}
@@ -382,7 +382,7 @@ export const Pages = () => {
                             <p class="text-danger-emphasis text-center">Error while fetching pages: <strong>{pages.error.message}</strong></p>
                         </Match>
                         <Match when={pages()?.length === 0}>
-                            <p class="text-secondary text-center">There is no page for the <strong>{namespace()}</strong> namespace to display yet. You can create a new one by using <strong>Create Page</strong> button.</p>
+                            <p class="text-secondary text-center">There is no page for the <strong>{namespace()}</strong> theme to display yet. You can create a new one by using <strong>Create Page</strong> button.</p>
                         </Match>
                         <Match when={pages()}>
                             {(pages) => (
@@ -476,13 +476,13 @@ export const Page = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const adminCtx = useContext(AdminContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
     const namespace = createMemo(() => params.namespace as string | undefined);
-    const [group, { mutate }] = createResource(() => ({ key: params.key, namespace: namespace() }), ({ key, namespace }) => adminCtx.fetchPage(key, namespace).then((pages) => {
+    const [group, { mutate }] = createResource(() => ({ key: params.key, namespace: namespace() }), ({ key, namespace }) => appearanceCtx.fetchPage(key, namespace).then((pages) => {
         const group = groupPages(pages);
 
         if (group.length === 0) {
@@ -525,7 +525,7 @@ export const Page = () => {
 
         setInProgress(Action.UpdateDetails);
 
-        adminCtx.updatePage(
+        appearanceCtx.updatePage(
             g.key,
             req,
             namespace(),
@@ -542,7 +542,7 @@ export const Page = () => {
     };
 
     const deletePage = async (key: string, path: string, locale: string | null, namespace?: string) => {
-        return adminCtx.deletePage(key, locale, namespace)
+        return appearanceCtx.deletePage(key, locale, namespace)
             .then(() => {
                 setDeleting(undefined);
 
@@ -675,7 +675,7 @@ export const Page = () => {
                                     <div class="border rounded p-3">
                                         <div class="d-flex align-items-center">
                                             <h5 class="flex-grow-1 m-0">Entries</h5>
-                                            <Show when={group().pages.length < baseCtx.activeLocales().length && group().pages.find((p) => p.locale)}>
+                                            <Show when={group().pages.length < commonCtx.activeLocales().length && group().pages.find((p) => p.locale)}>
                                                 <A
                                                     href={`/pages/create?key=${group().key}&name=${encodeURIComponent(group().name)}${group().desc ? `&desc=${encodeURIComponent(group().desc as string)}` : ''}${namespace() ? `&namespace=${namespace()}` : ''}`}
                                                     class="btn icon-link"

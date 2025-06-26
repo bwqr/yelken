@@ -5,11 +5,12 @@ import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../I
 import { AlertContext } from "../lib/context";
 import { HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
-import { Permission, type User as UserModel } from "../lib/admin/models";
+import { type User as UserModel } from "../lib/admin/models";
 import ProgressSpinner from "../components/ProgressSpinner";
 import { createStore } from "solid-js/store";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { UserState } from "../lib/user/models";
+import { Permission } from "../lib/models";
 
 export const CreateUser = () => {
     enum ValidationError {

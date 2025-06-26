@@ -1,13 +1,12 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
-import { AlertContext, BaseContext } from "../lib/context";
+import { AlertContext, CommonContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
-import { LocationKind, Location } from "../lib/admin/models";
 import ProgressSpinner from "../components/ProgressSpinner";
-import type { Locale as LocaleModel } from "../lib/models";
+import { NamespaceSource, type Locale as LocaleModel, LocationKind, Location } from "../lib/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { createStore } from "solid-js/store";
 
@@ -18,7 +17,7 @@ export const CreateLocale = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const adminCtx = useContext(AdminContext)!;
     const navigate = useNavigate();
 
@@ -59,7 +58,7 @@ export const CreateLocale = () => {
         setInProgress(true);
 
         adminCtx.createLocale(req)
-            .then(() => baseCtx.loadLocales())
+            .then(() => commonCtx.loadLocales())
             .then(() => {
                 alertCtx.success(`Locale "${req.name}" is created successfully`);
 
@@ -145,11 +144,11 @@ export const LocaleResource = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const params = useParams();
 
     const location = createMemo(() => Location.fromParams(params.kind, params.namespace));
-    const locale = createMemo(() => baseCtx.locales().find((l) => l.key === params.key));
+    const locale = createMemo(() => commonCtx.locales().find((l) => l.key === params.key));
 
     const [resource] = createResource(
         () => {
@@ -269,12 +268,12 @@ export const Locale = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
-    const baseCtx = useContext(BaseContext)!;
+    const commonCtx = useContext(CommonContext)!;
     const navigate = useNavigate();
     const params = useParams();
 
-    const locale = createMemo(() => baseCtx.locales().find((l) => l.key === params.key));
-    const [themes] = createResource(() => adminCtx.fetchThemes());
+    const locale = createMemo(() => commonCtx.locales().find((l) => l.key === params.key));
+    const themes = createMemo(() => commonCtx.namespaces().filter((ns) => ns.source === NamespaceSource.Theme));
 
     const [localeDetails, setLocaleDetails] = createStore({ name: '' });
     const [editingDetails, setEditingDetails] = createSignal(false);
@@ -316,7 +315,7 @@ export const Locale = () => {
             l.key,
             req
         )
-            .then(() => baseCtx.loadLocales())
+            .then(() => commonCtx.loadLocales())
             .then(() => {
                 setEditingDetails(false);
 
@@ -328,7 +327,7 @@ export const Locale = () => {
 
     const deleteLocale = async (locale: LocaleModel) => {
         return adminCtx.deleteLocale(locale.key)
-            .then(() => baseCtx.loadLocales())
+            .then(() => commonCtx.loadLocales())
             .then(() => {
                 setDeletingLocale(false);
 
@@ -442,56 +441,44 @@ export const Locale = () => {
 
                                     <hr />
 
-                                    <Switch>
-                                        <Match when={themes.loading}>
-                                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Resources ...</p>
-                                        </Match>
-                                        <Match when={themes.error}>
-                                            <p class="text-danger-emphasis text-center">Error while fetching themes: <strong>{themes.error.message}</strong></p>
-                                        </Match>
-                                        <Match when={themes()}>
-                                            {(themes) => (
-                                                <table class="table w-100">
-                                                    <tbody>
-                                                        <tr>
-                                                            <td>Global</td>
-                                                            <td></td>
-                                                            <td class="text-end">
-                                                                <A href={`/locales/resource/${locale().key}/${LocationKind.Global}`} class="icon-link">
-                                                                    <PencilSquare viewBox="0 0 16 16" />
-                                                                </A>
-                                                            </td>
-                                                        </tr>
-                                                        <For each={themes()}>
-                                                            {(theme) => (
-                                                                <tr>
-                                                                    <td>
-                                                                        <Show when={baseCtx.options().theme === theme.id} fallback={theme.id}>
-                                                                            <strong>
-                                                                                {theme.id}
-                                                                                &nbsp
-                                                                                (Active Theme)
-                                                                            </strong>
-                                                                        </Show>
-                                                                    </td>
-                                                                    <td>
-                                                                        <A href={`/locales/resource/${locale().key}/${LocationKind.Theme}/${theme.id}`} class="mx-3">
-                                                                            Theme's Translations
-                                                                        </A>
-                                                                    </td>
-                                                                    <td class="text-end">
-                                                                        <A href={`/locales/resource/${locale().key}/${LocationKind.User}/${theme.id}`} class="icon-link">
-                                                                            <PencilSquare viewBox="0 0 16 16" />
-                                                                        </A>
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </For>
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </Match>
-                                    </Switch>
+                                    <table class="table w-100">
+                                        <tbody>
+                                            <tr>
+                                                <td>Global</td>
+                                                <td></td>
+                                                <td class="text-end">
+                                                    <A href={`/locales/resource/${locale().key}/${LocationKind.Global}`} class="icon-link">
+                                                        <PencilSquare viewBox="0 0 16 16" />
+                                                    </A>
+                                                </td>
+                                            </tr>
+                                            <For each={themes()}>
+                                                {(theme) => (
+                                                    <tr>
+                                                        <td>
+                                                            <Show when={commonCtx.options().theme === theme.key} fallback={theme.key}>
+                                                                <strong>
+                                                                    {theme.key}
+                                                                    &nbsp
+                                                                    (Active Theme)
+                                                                </strong>
+                                                            </Show>
+                                                        </td>
+                                                        <td>
+                                                            <A href={`/locales/resource/${locale().key}/${LocationKind.Theme}/${theme.key}`} class="mx-3">
+                                                                Theme's Translations
+                                                            </A>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <A href={`/locales/resource/${locale().key}/${LocationKind.User}/${theme.key}`} class="icon-link">
+                                                                <PencilSquare viewBox="0 0 16 16" />
+                                                            </A>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </For>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -517,7 +504,7 @@ export const Locales = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!
+    const commonCtx = useContext(CommonContext)!
 
     const [item, setItem] = createSignal(undefined as string | undefined);
 
@@ -533,7 +520,7 @@ export const Locales = () => {
         setInProgress(Action.UpdateState);
 
         adminCtx.updateLocaleState(locale.key, disabled)
-            .then(() => baseCtx.loadLocales())
+            .then(() => commonCtx.loadLocales())
             .then(() => {
                 setItem(undefined);
 
@@ -551,7 +538,7 @@ export const Locales = () => {
         setInProgress(Action.SetDefault);
 
         adminCtx.setLocaleDefault(locale.key)
-            .then(() => baseCtx.loadOptions())
+            .then(() => commonCtx.loadOptions())
             .then(() => {
                 setItem(undefined);
 
@@ -571,7 +558,7 @@ export const Locales = () => {
                 </A>
             </div>
 
-            <Show when={baseCtx.locales().length > 0} fallback={
+            <Show when={commonCtx.locales().length > 0} fallback={
                 <p class="text-secondary text-center">There is no locale to display yet. You can create a new one by using <strong>Create Locale</strong> button.</p>
             }>
                 <div class="row">
@@ -587,7 +574,7 @@ export const Locales = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <For each={baseCtx.locales()}>
+                                <For each={commonCtx.locales()}>
                                     {(locale) => (
                                         <tr>
                                             <td></td>
@@ -598,7 +585,7 @@ export const Locales = () => {
                                             </td>
                                             <td>{locale.key}</td>
                                             <td class="text-center">
-                                                <Show when={locale.key === baseCtx.options().defaultLocale}>
+                                                <Show when={locale.key === commonCtx.options().defaultLocale}>
                                                     <span class="badge border rounded-pill border-success text-success ms-2">Default</span>
                                                 </Show>
                                                 <Show when={locale.disabled}>
@@ -614,14 +601,14 @@ export const Locales = () => {
                                                         <li>
                                                             <button
                                                                 class="dropdown-item icon-link"
-                                                                disabled={inProgress() === Action.SetDefault || locale.key === baseCtx.options().defaultLocale || locale.disabled}
+                                                                disabled={inProgress() === Action.SetDefault || locale.key === commonCtx.options().defaultLocale || locale.disabled}
                                                                 on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale); }}
                                                             >
                                                                 <ProgressSpinner show={inProgress() === Action.SetDefault} />
                                                                 Set as Default
                                                             </button>
                                                         </li>
-                                                        <Show when={locale.key !== baseCtx.options().defaultLocale}>
+                                                        <Show when={locale.key !== commonCtx.options().defaultLocale}>
                                                             <li>
                                                                 <button
                                                                     class="dropdown-item icon-link"

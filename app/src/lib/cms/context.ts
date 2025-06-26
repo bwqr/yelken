@@ -5,7 +5,7 @@ import type { CreateContent, CreateContentValue, CreateModel, CreateModelField, 
 import { Api } from "../api";
 import type { Pagination } from "../models";
 
-export interface ContentStore {
+export interface CMSStore {
     fields: Accessor<Field[]>;
     models: Accessor<Model[]>;
 
@@ -35,9 +35,9 @@ export interface ContentStore {
     deleteModelField(id: number): Promise<void>;
 }
 
-export const ContentContext: Context<ContentStore | undefined> = createContext();
+export const CMSContext: Context<CMSStore | undefined> = createContext();
 
-export class ContentService implements ContentStore {
+export class CMSService implements CMSStore {
     fields: Accessor<Field[]>;
     private setFields: Setter<Field[]>;
 
@@ -50,49 +50,49 @@ export class ContentService implements ContentStore {
     }
 
     async createModel(request: CreateModel): Promise<Model> {
-        return Api.post<CreateModel, ModelResponse>('/content/model', request).then(Model.fromResponse);
+        return Api.post<CreateModel, ModelResponse>('/cms/model/create', request).then(Model.fromResponse);
     }
 
     async createModelField(id: number, req: CreateModelField): Promise<ModelField> {
-        return Api.post(`/content/model/${id}/field`, req);
+        return Api.post(`/cms/model/field/${id}/create`, req);
     }
 
     async updateModelDetails(id: number, name: string, desc: string | null): Promise<void> {
-        return Api.put(`/content/model/${id}`, { name, desc });
+        return Api.put(`/cms/model/update/${id}`, { name, desc });
     }
 
     async updateModelField(id: number, req: UpdateModelField): Promise<void> {
-        return Api.put(`/content/model-field/${id}`, req);
+        return Api.put(`/cms/model/field/${id}/update`, req);
     }
 
     async deleteModel(id: number): Promise<void> {
-        return Api.delete(`/content/model/${id}`);
+        return Api.delete(`/cms/model/delete/${id}`);
     }
 
     async deleteModelField(id: number): Promise<void> {
-        return Api.delete(`/content/model-field/${id}`);
+        return Api.delete(`/cms/model/field/${id}/delete`);
     }
 
     async createContent(content: CreateContent): Promise<Content> {
-        return Api.post('/content/content', content);
+        return Api.post('/cms/content/create', content);
     }
 
     async createContentValue(id: number, req: CreateContentValue): Promise<ContentValue> {
-        return Api.post(`/content/content/${id}`, req);
+        return Api.post(`/cms/content/value/${id}/create`, req);
     }
 
     async loadFields(): Promise<void> {
-        this.setFields(await ContentService.fetchFields());
+        this.setFields(await CMSService.fetchFields());
     }
 
     async loadModels(): Promise<void> {
-        this.setModels(await ContentService.fetchModels());
+        this.setModels(await CMSService.fetchModels());
     }
 
     async fetchAssets(pagination?: PaginationRequest): Promise<Pagination<Asset>> {
         const params = pagination ? PaginationRequest.toSearchParams(pagination).toString() : '';
 
-        let url = '/content/assets';
+        let url = '/cms/asset/all';
 
         if (params.length > 0) {
             url = `${url}?${params}`;
@@ -102,15 +102,15 @@ export class ContentService implements ContentStore {
     }
 
     async fetchAsset(id: number): Promise<Asset | undefined> {
-        return Api.get<Asset>(`/content/asset/${id}`).catch(Api.handleNotFound);
+        return Api.get<Asset>(`/cms/asset/view/${id}`).catch(Api.handleNotFound);
     }
 
     async updateAsset(id: number, name: string): Promise<void> {
-        return Api.put(`/content/asset/${id}`, { name });
+        return Api.put(`/cms/asset/update/${id}`, { name });
     }
 
     async deleteAsset(id: number): Promise<void> {
-        return Api.delete(`/content/asset/${id}`);
+        return Api.delete(`/cms/asset/delete/${id}`);
     }
 
     async fetchContents(modelId: number, pagination?: PaginationRequest): Promise<Pagination<Content>> {
@@ -118,41 +118,41 @@ export class ContentService implements ContentStore {
 
         params.append('modelId', modelId.toString());
 
-        return Api.get<Pagination<ContentResponse>>(`/content/contents?${params.toString()}`)
+        return Api.get<Pagination<ContentResponse>>(`/cms/content/all?${params.toString()}`)
             .then((pg) => ({ ...pg, items: pg.items.map(Content.fromResponse) }))
     }
 
     async fetchContent(id: number): Promise<ContentDetails | undefined> {
-        return Api.get<ContentDetailsResponse>(`/content/content/${id}`)
+        return Api.get<ContentDetailsResponse>(`/cms/content/view/${id}`)
             .then((resp) => ({ ...resp, content: Content.fromResponse(resp.content) }))
             .catch(Api.handleNotFound);
     }
 
     async updateContentStage(id: number, stage: ContentStage): Promise<void> {
-        return Api.put(`/content/content/${id}/stage`, { stage });
+        return Api.put(`/cms/content/stage/${id}`, { stage });
     }
 
     async updateContentDetails(id: number, name: string): Promise<void> {
-        return Api.put(`/content/content/${id}`, { name });
+        return Api.put(`/cms/content/update/${id}`, { name });
     }
 
     async updateContentValue(id: number, req: CreateContentValue): Promise<void> {
-        return Api.put(`/content/value/${id}`, req);
+        return Api.put(`/cms/content/value/${id}/update`, req);
     }
 
     async deleteContent(id: number): Promise<void> {
-        return Api.delete(`/content/content/${id}`);
+        return Api.delete(`/cms/content/delete/${id}`);
     }
 
     async deleteContentValue(id: number): Promise<void> {
-        return Api.delete(`/content/value/${id}`);
+        return Api.delete(`/cms/content/value/${id}/delete`);
     }
 
     static async fetchFields(): Promise<Field[]> {
-        return Api.get('/content/fields');
+        return Api.get('/cms/model/fields');
     }
 
     static async fetchModels(): Promise<Model[]> {
-        return Api.get<ModelResponse[]>('/content/models').then((models) => models.map(Model.fromResponse));
+        return Api.get<ModelResponse[]>('/cms/model/all').then((models) => models.map(Model.fromResponse));
     }
 }

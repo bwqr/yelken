@@ -1,12 +1,12 @@
 import { createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
-import { AdminContext } from "../lib/admin/context";
+import { AppearanceContext } from "../lib/appearance/context";
 import { A, useNavigate } from "@solidjs/router";
 import { ThreeDotsVertical, Upload } from "../Icons";
 import { dropdownClickListener } from "../lib/utils";
-import { AlertContext, BaseContext } from "../lib/context";
+import { AlertContext, CommonContext } from "../lib/context";
 import { Api, HttpError } from "../lib/api";
 import ProgressSpinner from "../components/ProgressSpinner";
-import type { Theme } from "../lib/admin/models";
+import type { Theme } from "../lib/appearance/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
 interface Manifest {
@@ -134,7 +134,7 @@ export const InstallTheme = () => {
         const formdata = new FormData();
         formdata.append('theme', theme()!);
 
-        Api.request('/admin/theme/theme', 'POST', { formdata })
+        Api.request('/appearance/theme/install', 'POST', { formdata })
             .then(() => {
                 alertCtx.success(`Theme "${manifest()?.name}" is installed successfully`);
 
@@ -238,8 +238,8 @@ export const Themes = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
-    const adminCtx = useContext(AdminContext)!;
+    const commonCtx = useContext(CommonContext)!;
+    const appearanceCtx = useContext(AppearanceContext)!;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [uninstalling, setUninstalling] = createSignal(undefined as Theme | undefined);
@@ -248,7 +248,7 @@ export const Themes = () => {
 
     onCleanup(dropdownClickListener('theme-quick-action', () => setItem(undefined), () => !uninstalling()));
 
-    const [themes, { mutate }] = createResource(() => adminCtx.fetchThemes());
+    const [themes, { mutate }] = createResource(() => appearanceCtx.fetchThemes());
 
     const setThemeActive = (theme: Theme) => {
         if (inProgress() !== undefined) {
@@ -257,8 +257,8 @@ export const Themes = () => {
 
         setInProgress(Action.Activate);
 
-        adminCtx.setThemeActive(theme.id)
-            .then(() => baseCtx.loadOptions())
+        appearanceCtx.setThemeActive(theme.id)
+            .then(() => commonCtx.loadOptions())
             .then(() => {
                 setItem(undefined);
 
@@ -269,7 +269,7 @@ export const Themes = () => {
     };
 
     const uninstallTheme = async (theme: Theme) => {
-        return adminCtx.uninstallTheme(theme.id)
+        return appearanceCtx.uninstallTheme(theme.id)
             .then(() => {
                 setItem(undefined);
                 setUninstalling(undefined);
@@ -323,7 +323,7 @@ export const Themes = () => {
                                                     <td>{theme.version}</td>
                                                     <td>{theme.name}</td>
                                                     <td class="text-center">
-                                                        <Show when={theme.id === baseCtx.options().theme}>
+                                                        <Show when={theme.id === commonCtx.options().theme}>
                                                             <span class="badge rounded-pill border border-success text-success ms-2">Active</span>
                                                         </Show>
                                                     </td>
@@ -336,18 +336,18 @@ export const Themes = () => {
                                                                 <li>
                                                                     <button
                                                                         class="dropdown-item icon-link"
-                                                                        disabled={inProgress() !== undefined || theme.id === baseCtx.options().theme}
+                                                                        disabled={inProgress() !== undefined || theme.id === commonCtx.options().theme}
                                                                         on:click={(ev) => { ev.stopPropagation(); setThemeActive(theme); }}
                                                                     >
                                                                         <ProgressSpinner show={inProgress() === Action.Activate} />
                                                                         Activate
                                                                     </button>
                                                                 </li>
-                                                                <Show when={theme.id !== baseCtx.options().theme}>
+                                                                <Show when={theme.id !== commonCtx.options().theme}>
                                                                     <li>
                                                                         <button
                                                                             class="dropdown-item icon-link text-danger"
-                                                                            disabled={inProgress() !== undefined || theme.id === baseCtx.options().theme}
+                                                                            disabled={inProgress() !== undefined || theme.id === commonCtx.options().theme}
                                                                             on:click={() => setUninstalling(theme)}
                                                                         >
                                                                             Uninstall

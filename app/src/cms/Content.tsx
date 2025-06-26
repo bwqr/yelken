@@ -1,12 +1,12 @@
 import { A, Navigate, useNavigate, useParams, useSearchParams } from "@solidjs/router";
-import { ContentContext } from "../lib/content/context";
+import { CMSContext } from "../lib/cms/context";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { HttpError } from "../lib/api";
 import { createStore, unwrap } from "solid-js/store";
-import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } from "../lib/content/models";
+import { ContentStage, FieldKind, Model, type ContentValue, type ModelField } from "../lib/cms/models";
 import { Dynamic } from "solid-js/web";
-import type { CreateContentValue } from "../lib/content/requests";
-import { AlertContext, BaseContext } from "../lib/context";
+import type { CreateContentValue } from "../lib/cms/requests";
+import { AlertContext, CommonContext } from "../lib/context";
 import { Bookmark, CheckCircleFill, FloppyFill, Images, PencilSquare, PlusLg, PlusSquareDotted, FileEarmarkFill, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { PickAsset } from "./Asset";
 import { PaginationRequest } from "../lib/models";
@@ -33,8 +33,8 @@ const ContentValueModal = (props: {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const commonCtx = useContext(CommonContext)!;
+    const contentCtx = useContext(CMSContext)!;
 
     const [store, setStore] = createStore(props.initial ?? {
         value: '',
@@ -184,7 +184,7 @@ const ContentValueModal = (props: {
                                                     onChange={(ev) => setStore('locale', ev.target.value)}
                                                 >
                                                     <option value="" disabled selected>Select a locale</option>
-                                                    <For each={baseCtx.activeLocales()}>
+                                                    <For each={commonCtx.activeLocales()}>
                                                         {(locale) => (
                                                             <option value={locale.key}>{locale.name}</option>
                                                         )}
@@ -233,7 +233,7 @@ const ContentValueModal = (props: {
 }
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
-    const models = useContext(ContentContext)!.models();
+    const models = useContext(CMSContext)!.models();
 
     return (
         <div class="d-flex flex-grow-1">
@@ -266,7 +266,7 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
 }
 
 export const Contents = () => {
-    const contentCtx = useContext(ContentContext)!;
+    const contentCtx = useContext(CMSContext)!;
     return (
         <div class="container py-4 px-md-4">
             <Show when={contentCtx.models()[0]} fallback={
@@ -279,7 +279,7 @@ export const Contents = () => {
 };
 
 export const ContentsByModel = () => {
-    const contentCtx = useContext(ContentContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
     const params = useParams();
 
@@ -374,12 +374,12 @@ export const CreateContent = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const commonCtx = useContext(CommonContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
-    const locales = baseCtx.activeLocales();
+    const locales = commonCtx.activeLocales();
     const model = createMemo(() => contentCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
 
     const [name, setName] = createSignal('');
@@ -629,8 +629,8 @@ export const Content = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
-    const baseCtx = useContext(BaseContext)!;
-    const contentCtx = useContext(ContentContext)!;
+    const commonCtx = useContext(CommonContext)!;
+    const contentCtx = useContext(CMSContext)!;
     const params = useParams();
     const navigate = useNavigate();
 
@@ -961,7 +961,7 @@ export const Content = () => {
 
                                         <For each={model()?.fields ?? []}>
                                             {(mf) => {
-                                                const locales = baseCtx.activeLocales();
+                                                const locales = commonCtx.activeLocales();
                                                 const field = createMemo(() => contentCtx.fields().find((f) => f.id === mf.fieldId));
                                                 const values = createMemo(() => content().values.filter((v) => v.modelFieldId === mf.id));
 

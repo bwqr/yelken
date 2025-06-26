@@ -1,4 +1,4 @@
-import type { Permission } from "../admin/models";
+import type { Permission } from "../models";
 
 export enum UserState {
     Enabled = 'enabled',
