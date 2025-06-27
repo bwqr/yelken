@@ -7,7 +7,7 @@ import { AlertContext, CommonContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
-import { HttpError } from "../lib/api";
+import { HttpError, ValidationErrors } from "../lib/api";
 
 const locationKindOrder = [LocationKind.User, LocationKind.Global, LocationKind.Theme];
 
@@ -31,11 +31,10 @@ export const CreateTemplate = () => {
     const [path, setPath] = createSignal('');
     const [namespace, setNamespace] = createSignal('');
 
-    const [themes] = createResource(() => appearanceCtx.fetchThemes());
-
     const [inProgress, setInProgress] = createSignal(false);
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
+    const [serverValidationErrors, setServerValidationErrors] = createSignal(undefined as ValidationErrors<'path' | 'namespace'> | undefined);
     const [serverError, setServerError] = createSignal(undefined as string | undefined);
 
     const onSubmit = (ev: SubmitEvent) => {
@@ -45,12 +44,13 @@ export const CreateTemplate = () => {
             return;
         }
 
+        setServerValidationErrors(undefined);
         setServerError(undefined);
 
         const errors = new Set<ValidationError>();
         const req = { path: path().trim(), namespace: namespace().trim() || undefined };
 
-        if (req.path.length === 0) {
+        if (req.path.length < 3 || req.path.startsWith('.html')) {
             errors.add(ValidationError.Path);
         }
 
@@ -78,6 +78,8 @@ export const CreateTemplate = () => {
             .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.message);
+                } else if (e instanceof ValidationErrors) {
+                    setServerValidationErrors(e);
                 } else {
                     alertCtx.fail(e.message);
                 }
@@ -97,7 +99,11 @@ export const CreateTemplate = () => {
                                 type="text"
                                 id="templatePath"
                                 class="form-control"
-                                classList={{ 'is-invalid': validationErrors().has(ValidationError.Path) || validationErrors().has(ValidationError.NotHtmlPath) }}
+                                classList={{
+                                    'is-invalid': validationErrors().has(ValidationError.Path)
+                                        || validationErrors().has(ValidationError.NotHtmlPath)
+                                        || serverValidationErrors()?.fieldMessages.has('path')
+                                }}
                                 name="path"
                                 placeholder="Path of template, e.g. index.html"
                                 value={path()}
@@ -105,48 +111,51 @@ export const CreateTemplate = () => {
                             />
                             <Switch>
                                 <Match when={validationErrors().has(ValidationError.Path)}>
-                                    <small class="invalid-feedback">Please enter a path.</small>
+                                    <small class="invalid-feedback">Please enter a path with at least 3 characters.</small>
                                 </Match>
                                 <Match when={validationErrors().has(ValidationError.NotHtmlPath)}>
-                                    <small class="invalid-feedback">Template path must end with <strong>.html</strong>.</small>
+                                    <small class="invalid-feedback">Path must end with <strong>.html</strong> .</small>
                                 </Match>
                             </Switch>
+                            <Show when={serverValidationErrors()?.fieldMessages.get('path')}>
+                                {(messages) => (<For each={messages()}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
+                            </Show>
                         </div>
 
-                        <Switch>
-                            <Match when={themes.loading}>
-                                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Namespaces ...</p>
-                            </Match>
-                            <Match when={themes.error}>
-                                <p class="text-danger-emphasis text-center">Error while fetching namespaces: <strong>{themes.error.message}</strong></p>
-                            </Match>
-                            <Match when={themes()}>
-                                {(themes) => (
-                                    <div class="mb-4">
-                                        <label for="templateNamespace" class="form-label">Namespace</label>
-                                        <select
-                                            id="templateNamespace"
-                                            class="form-select"
-                                            name="namespace"
-                                            value={namespace()}
-                                            onChange={(ev) => setNamespace(ev.target.value)}
-                                        >
-                                            <option value="">Global</option>
-                                            <For each={themes()}>
-                                                {(theme) => (
-                                                    <option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>
-                                                )}
-                                            </For>
-                                        </select>
-                                    </div>
-                                )}
-                            </Match>
-                        </Switch>
+                        <div class="mb-4">
+                            <label for="templateNamespace" class="form-label">Namespace</label>
+                            <select
+                                id="templateNamespace"
+                                class="form-select"
+                                classList={{ 'is-invalid': serverValidationErrors()?.fieldMessages.has('namespace') }}
+                                name="namespace"
+                                value={namespace()}
+                                onChange={(ev) => setNamespace(ev.target.value)}
+                            >
+                                <option value="">Global</option>
+                                <For each={commonCtx.namespaces()}>
+                                    {(namespace) => (
+                                        <option value={namespace.key}>{namespace.key}{commonCtx.options().theme === namespace.key ? ' (Active Theme)' : ''}</option>
+                                    )}
+                                </For>
+                            </select>
+                            <Show when={serverValidationErrors()?.fieldMessages.get('namespace')}>
+                                {(messages) => (<For each={messages()}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
+                            </Show>
+                        </div>
 
                         <Show when={serverError()}>
                             <div class="mb-2">
-                                <small class="text-danger">{serverError()}</small>
+                                <small class="text-danger-emphasis">{serverError()}</small>
                             </div>
+                        </Show>
+
+                        <Show when={serverValidationErrors()?.messages}>
+                            {(messages) => (
+                                <div class="mb-2">
+                                    <For each={messages()}>{(message) => (<small class="text-danger-emphasis">{message}</small>)}</For>
+                                </div>
+                            )}
                         </Show>
 
                         <div class="d-flex justify-content-center">
