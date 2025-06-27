@@ -2,7 +2,6 @@ use axum::Router;
 use base::AppState;
 
 mod handlers;
-mod requests;
 
 pub fn router() -> Router<AppState> {
     let router = Router::new();

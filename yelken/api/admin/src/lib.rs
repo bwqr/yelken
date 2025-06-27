@@ -17,45 +17,55 @@ mod requests;
 mod responses;
 
 pub fn router(state: AppState) -> Router<AppState> {
-    Router::new()
+    let permission_write = Router::new()
         .route(
-            "/permission/role/{role_id}",
+            "/role/{role_id}/update",
             post(permission::update_role_permissions),
         )
         .route(
-            "/permission/user/{user_id}",
+            "/user/{user_id}/update",
             post(permission::update_user_permissions),
-        )
-        .route("/user/users", get(user::fetch_users))
-        .route("/user/user/{username}", get(user::fetch_user))
-        .route("/user", post(user::create_user))
-        .route("/user/{user_id}", put(user::update_user))
-        .route("/user/{user_id}", delete(user::delete_user))
-        .route("/role", post(role::create_role))
-        .route("/role/roles", get(role::fetch_roles))
-        .route("/role/role/{key}", get(role::fetch_role))
-        .route("/role/role/{key}", put(role::update_role))
-        .route("/role/role/{key}", delete(role::delete_role))
-        .route("/locale", post(locale::create_locale))
-        .route("/locale/{locale_key}", put(locale::update_locale))
+        );
+
+    let user_read = Router::new()
+        .route("/all", get(user::fetch_users))
+        .route("/view/{username}", get(user::fetch_user));
+
+    let user_write = Router::new()
+        .route("/create", post(user::create_user))
+        .route("/update/{user_id}", put(user::update_user))
+        .route("/delete/{user_id}", delete(user::delete_user));
+
+    let role_read = Router::new()
+        .route("/all", get(role::fetch_roles))
+        .route("/view/{key}", get(role::fetch_role));
+
+    let role_write = Router::new()
+        .route("/create", post(role::create_role))
+        .route("/update/{key}", put(role::update_role))
+        .route("/delete/{key}", delete(role::delete_role));
+
+    let locale_write = Router::new()
+        .route("/create", post(locale::create_locale))
+        .route("/update/{key}", put(locale::update_locale))
+        .route("/state/{key}", put(locale::update_locale_state))
+        .route("/resource/{key}", get(locale::fetch_locale_resource))
         .route(
-            "/locale/{locale_key}/state",
-            put(locale::update_locale_state),
-        )
-        .route(
-            "/locale/{locale_key}/resource",
-            get(locale::fetch_locale_resource),
-        )
-        .route(
-            "/locale/{locale_key}/resource",
+            "/resource/{key}/update",
             put(locale::update_locale_resource),
         )
         .route(
-            "/locale/{locale_key}/resource",
+            "/resource/{key}/delete",
             delete(locale::delete_locale_resource),
         )
-        .route("/locale/{locale_key}", delete(locale::delete_locale))
-        .route("/locale/default", put(locale::update_default_locale))
+        .route("/delete/{key}", delete(locale::delete_locale))
+        .route("/default", put(locale::update_default_locale));
+
+    Router::new()
+        .nest("/permission", permission_write)
+        .nest("/user", user_read.merge(user_write))
+        .nest("/role", role_read.merge(role_write))
+        .nest("/locale", locale_write)
         .layer(PermissionLayer {
             pool: state.pool.clone(),
             perm: Permission::Admin,
