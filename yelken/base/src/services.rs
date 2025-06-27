@@ -17,7 +17,7 @@ use opendal::{ErrorKind, Operator};
 use serde::{Deserialize, Serialize};
 use tower::Service;
 
-use crate::runtime::IntoSendFuture;
+use crate::{runtime::IntoSendFuture, sanitize::Sanitize};
 
 #[derive(Clone)]
 pub struct SafePath<const DEPTH: usize>(String);
@@ -89,6 +89,12 @@ impl<const DEPTH: usize> Serialize for SafePath<DEPTH> {
         S: serde::Serializer,
     {
         <String as Serialize>::serialize(&self.0, serializer)
+    }
+}
+
+impl<const DEPTH: usize> Sanitize for SafePath<DEPTH> {
+    fn sanitize(self) -> Self {
+        Self(self.0.sanitize())
     }
 }
 

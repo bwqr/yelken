@@ -8,6 +8,7 @@ members = [
   "api/user",
   "app",
   "base",
+  "derive",
   "form",
   "plugin",
   "setup",

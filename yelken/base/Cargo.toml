@@ -14,6 +14,7 @@ futures.workspace = true
 log.workspace = true
 opendal.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 tower.workspace = true
 unic-langid.workspace = true
 url.workspace = true
@@ -24,6 +25,7 @@ jsonwebtoken = { version = "9.3.1", default-features = false }
 mime_guess = "2.0.5"
 ring = "0.17.8"
 send_wrapper = { version = "0.6.0", features = ["futures"] }
+askama_escape = "0.13.0"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio = { workspace = true, features = ["rt"] }

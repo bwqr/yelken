@@ -64,6 +64,23 @@ impl HttpError {
         }
     }
 
+    pub fn validation_errors(errors: crate::validate::Errors) -> Self {
+        HttpError {
+            code: StatusCode::UNPROCESSABLE_ENTITY,
+            error: "validation_errors",
+            context: serde_json::to_string(&errors)
+                .inspect_err(|e| log::error!("Failed to serialize validation error, {e:?}"))
+                .ok(),
+        }
+    }
+
+    pub fn validation_errors_with(key: &'static str, value: &'static str) -> Self {
+        let mut errors = crate::validate::Errors::new();
+        errors.insert_field(key, value);
+
+        Self::validation_errors(errors)
+    }
+
     pub fn with_context(mut self, context: String) -> Self {
         self.context = Some(context);
         self

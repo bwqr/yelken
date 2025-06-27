@@ -235,7 +235,14 @@ pub async fn delete_model_field(
     let effected_row: usize = diesel::delete(model_fields::table)
         .filter(model_fields::id.eq(model_field_id))
         .execute(&mut state.pool.get().await?)
-        .await?;
+        .await
+        .map_err(|e| {
+            if let Error::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, _) = &e {
+                return HttpError::conflict("model_field_being_used");
+            }
+
+            e.into()
+        })?;
 
     if effected_row == 0 {
         return Err(HttpError::not_found("model_field_not_found"));

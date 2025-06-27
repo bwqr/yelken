@@ -6,8 +6,10 @@ use base::{
     config::Options,
     responses::HttpError,
     runtime::IntoSendFuture,
+    sanitize::Sanitized,
     schema::themes,
     utils::{LocationKind, ResourceKind},
+    validate::Validated,
     AppState,
 };
 use diesel::prelude::*;
@@ -34,7 +36,7 @@ pub async fn fetch_templates(
         .await?;
 
         if !exists {
-            return Err(HttpError::conflict("namespace_not_found"));
+            return Err(HttpError::not_found("namespace_not_found"));
         }
 
         &[
@@ -92,7 +94,7 @@ pub async fn fetch_template(
             .await?;
 
             if !exists {
-                return Err(HttpError::conflict("namespace_not_found"));
+                return Err(HttpError::not_found("namespace_not_found"));
             }
         }
         LocationKind::Global => {}
@@ -129,7 +131,7 @@ pub async fn create_template(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
-    Json(req): Json<UpdateTemplate>,
+    Validated(Sanitized(Json(req))): Validated<Sanitized<Json<UpdateTemplate>>>,
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
@@ -139,7 +141,7 @@ pub async fn create_template(
         .await?;
 
         if !exists {
-            return Err(HttpError::conflict("namespace_not_found"));
+            return Err(HttpError::validation_errors_with("namespace", "not_found"));
         }
 
         (
@@ -166,7 +168,7 @@ pub async fn create_template(
     .await
     .map_err(|e| {
         if e.kind() == ErrorKind::ConditionNotMatch {
-            return HttpError::not_found("template_already_exists");
+            return HttpError::validation_errors_with("path", "already_exists");
         }
 
         HttpError::internal_server_error("failed_writing_template")
@@ -179,7 +181,7 @@ pub async fn create_template(
             .reload(&state.storage, &options.template_locations())
             .await
             .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
-            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+            .map_err(|_| HttpError::validation_errors_with("template", "invalid"))?;
     }
 
     Ok(())
@@ -189,7 +191,7 @@ pub async fn update_template(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
-    Json(req): Json<UpdateTemplate>,
+    Validated(Sanitized(Json(req))): Validated<Sanitized<Json<UpdateTemplate>>>,
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
@@ -199,7 +201,7 @@ pub async fn update_template(
         .await?;
 
         if !exists {
-            return Err(HttpError::conflict("namespace_not_found"));
+            return Err(HttpError::validation_errors_with("namespace", "not_found"));
         }
 
         (
@@ -228,7 +230,7 @@ pub async fn update_template(
             .reload(&state.storage, &options.template_locations())
             .await
             .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
-            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+            .map_err(|_| HttpError::validation_errors_with("template", "invalid"))?;
     }
 
     Ok(())
@@ -249,7 +251,7 @@ pub async fn delete_template(
         .await?;
 
         if !exists {
-            return Err(HttpError::conflict("namespace_not_found"));
+            return Err(HttpError::validation_errors_with("namespace", "not_found"));
         }
 
         (
@@ -276,7 +278,7 @@ pub async fn delete_template(
             .reload(&state.storage, &options.template_locations())
             .await
             .inspect_err(|e| log::warn!("Failed to reload render, {e:?}"))
-            .map_err(|_| HttpError::unprocessable_entity("invalid_template"))?;
+            .map_err(|_| HttpError::validation_errors_with("template", "invalid"))?;
     }
 
     Ok(())

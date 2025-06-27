@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 base.path = "../../base"
+derive.path = "../../derive"
 plugin = { path = "../../plugin", optional = true }
 
 anyhow.workspace = true

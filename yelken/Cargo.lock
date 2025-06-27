@@ -172,6 +172,7 @@ dependencies = [
  "axum",
  "base",
  "bytes",
+ "derive",
  "diesel",
  "diesel-async",
  "fluent",
@@ -203,6 +204,12 @@ name = "arc-swap"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
+
+[[package]]
+name = "askama_escape"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3df27b8d5ddb458c5fb1bbc1ce172d4a38c614a97d550b0ac89003897fb01de4"
 
 [[package]]
 name = "async-trait"
@@ -325,6 +332,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "arc-swap",
+ "askama_escape",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -339,6 +347,7 @@ dependencies = [
  "ring",
  "send_wrapper",
  "serde",
+ "serde_json",
  "tokio",
  "tower",
  "unic-langid",
@@ -820,6 +829,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "derive_arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -854,7 +872,7 @@ dependencies = [
 [[package]]
 name = "diesel"
 version = "2.2.4"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#1de7a2f7a6a7b55ad71128fdef44d7335bb6f3b8"
 dependencies = [
  "bitflags",
  "byteorder",
@@ -884,8 +902,9 @@ dependencies = [
 [[package]]
 name = "diesel_derives"
 version = "2.2.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#1de7a2f7a6a7b55ad71128fdef44d7335bb6f3b8"
 dependencies = [
+ "darling",
  "diesel_table_macro_syntax",
  "dsl_auto_type",
  "proc-macro2",
@@ -907,7 +926,7 @@ dependencies = [
 [[package]]
 name = "diesel_table_macro_syntax"
 version = "0.2.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#1de7a2f7a6a7b55ad71128fdef44d7335bb6f3b8"
 dependencies = [
  "syn",
 ]
@@ -970,7 +989,7 @@ checksum = "ea8a8b81cacc08888170eef4d13b775126db426d0b348bee9d18c2c1eaf123cf"
 [[package]]
 name = "dsl_auto_type"
 version = "0.1.0"
-source = "git+https://github.com/diesel-rs/diesel?branch=master#900bed90ee5372e1c2638c7fed93e0c005a85fdc"
+source = "git+https://github.com/diesel-rs/diesel?branch=master#1de7a2f7a6a7b55ad71128fdef44d7335bb6f3b8"
 dependencies = [
  "darling",
  "either",
