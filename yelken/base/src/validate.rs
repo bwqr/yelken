@@ -9,9 +9,17 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{responses::HttpError, sanitize::Sanitized};
 
 #[derive(Serialize)]
+#[serde(untagged)]
+pub enum Error {
+    Field(Vec<&'static str>),
+    Struct(HashMap<&'static str, Error>),
+    List(HashMap<usize, Error>),
+}
+
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Errors {
-    pub field_messages: HashMap<&'static str, Vec<&'static str>>,
+    pub field_messages: HashMap<&'static str, Error>,
     pub messages: Vec<&'static str>,
 }
 
@@ -28,7 +36,14 @@ impl Errors {
     }
 
     pub fn insert_field(&mut self, key: &'static str, error: &'static str) {
-        self.field_messages.entry(key).or_insert(vec![]).push(error)
+        match self
+            .field_messages
+            .entry(key)
+            .or_insert(Error::Field(vec![]))
+        {
+            Error::Field(v) => v.push(error),
+            _ => log::warn!("cannot insert a field error into non field variant"),
+        }
     }
 }
 
@@ -45,9 +60,9 @@ where
     }
 }
 
-pub struct Validated<T>(pub T);
+pub struct Valid<T>(pub T);
 
-impl<T> Deref for Validated<T> {
+impl<T> Deref for Valid<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -55,7 +70,7 @@ impl<T> Deref for Validated<T> {
     }
 }
 
-impl<S, T> FromRequest<S> for Validated<T>
+impl<S, T> FromRequest<S> for Valid<T>
 where
     S: Send + Sync,
     T: FromRequest<S> + Validate,
@@ -71,7 +86,7 @@ where
             return Err(Ok(HttpError::validation_errors(e)));
         }
 
-        Ok(Validated(inner))
+        Ok(Valid(inner))
     }
 }
 

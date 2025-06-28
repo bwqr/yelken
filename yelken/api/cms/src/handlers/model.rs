@@ -10,7 +10,9 @@ use base::{
     db::BatchQuery,
     models::ModelField,
     responses::HttpError,
+    sanitize::Sanitized,
     schema::{model_fields, models, themes},
+    validate::Valid,
     AppState,
 };
 use diesel::{
@@ -48,7 +50,7 @@ pub async fn fetch_models(State(state): State<AppState>) -> Result<Json<Vec<Mode
 
 pub async fn create_model(
     State(state): State<AppState>,
-    Json(req): Json<CreateModel>,
+    Valid(Sanitized(Json(req))): Valid<Sanitized<Json<CreateModel>>>,
 ) -> Result<Json<Model>, HttpError> {
     let mut conn = state.pool.get().await?;
 

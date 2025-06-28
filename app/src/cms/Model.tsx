@@ -4,7 +4,7 @@ import { Model as ModelModel, type ModelField } from "../lib/cms/models";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { createStore, unwrap } from "solid-js/store";
 import type { CreateModelField } from "../lib/cms/requests";
-import { HttpError } from "../lib/api";
+import { HttpError, ValidationErrors } from "../lib/api";
 import { FloppyFill, PencilSquare, PlusLg, PlusSquareDotted, ThreeDotsVertical, Trash, XLg } from "../Icons";
 import { AlertContext, CommonContext } from "../lib/context";
 import { dropdownClickListener } from "../lib/utils";
@@ -239,6 +239,7 @@ export const CreateModel = () => {
     const [inProgress, setInProgress] = createSignal(false);
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
+    const [serverValidationErrors, setServerValidationErrors] = createSignal(undefined as ValidationErrors<'name' | 'key' | 'modelFields'> | undefined);
     const [serverError, setServerError] = createSignal(undefined as string | undefined);
 
     const onSubmit = (ev: SubmitEvent) => {
@@ -252,11 +253,11 @@ export const CreateModel = () => {
 
         const errors = new Set<ValidationError>();
 
-        if (key().trim().length === 0) {
+        if (key().trim().length < 3) {
             errors.add(ValidationError.Key);
         }
 
-        if (name().trim().length === 0) {
+        if (name().trim().length < 3) {
             errors.add(ValidationError.Name);
         }
 
@@ -289,6 +290,8 @@ export const CreateModel = () => {
             .catch((e) => {
                 if (e instanceof HttpError) {
                     setServerError(e.error);
+                } else if (e instanceof ValidationErrors) {
+                    setServerValidationErrors(e);
                 } else {
                     alertCtx.fail(e.message);
                 }
@@ -396,7 +399,7 @@ export const CreateModel = () => {
                     </div>
 
                     <For each={fields}>
-                        {(mf) => {
+                        {(mf, idx) => {
                             const field = () => cmsContext.fields().find((f) => f.id === mf.fieldId);
 
                             return (
@@ -432,6 +435,15 @@ export const CreateModel = () => {
                                             return text.length === 0 ? (<></>) : (<li class="list-group-item">{features.join(' - ')}</li>);
                                         })()}
                                     </ul>
+                                    <Show when={serverValidationErrors()?.fieldMessages.get('modelFields')?.[idx()]}>
+                                        {(errors) => (
+                                            <div class="card-footer text-body-secondary">
+                                                <For each={Object.values(errors())}>
+                                                    {(error) => <small class="text-danger-emphasis">{error}</small>}
+                                                </For>
+                                            </div>
+                                        )}
+                                    </Show>
                                 </div>
                             );
                         }}

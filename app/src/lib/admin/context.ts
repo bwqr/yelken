@@ -53,7 +53,7 @@ export class AdminService implements AdminStore {
     }
 
     async deleteUser(id: number): Promise<void> {
-        return Api.delete(`/admin/user/${id}/update`);
+        return Api.delete(`/admin/user/delete/${id}`);
     }
 
     async fetchRoles(): Promise<Role[]> {

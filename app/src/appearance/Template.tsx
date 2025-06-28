@@ -118,7 +118,7 @@ export const CreateTemplate = () => {
                                 </Match>
                             </Switch>
                             <Show when={serverValidationErrors()?.fieldMessages.get('path')}>
-                                {(messages) => (<For each={messages()}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
+                                {(messages) => (<For each={messages() as string[]}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
                             </Show>
                         </div>
 
@@ -140,7 +140,7 @@ export const CreateTemplate = () => {
                                 </For>
                             </select>
                             <Show when={serverValidationErrors()?.fieldMessages.get('namespace')}>
-                                {(messages) => (<For each={messages()}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
+                                {(messages) => (<For each={messages() as string[]}>{(message) => (<small class="invalid-feedback">{message}</small>)}</For>)}
                             </Show>
                         </div>
 

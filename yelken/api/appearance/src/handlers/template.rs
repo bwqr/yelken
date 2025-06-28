@@ -9,7 +9,7 @@ use base::{
     sanitize::Sanitized,
     schema::themes,
     utils::{LocationKind, ResourceKind},
-    validate::Validated,
+    validate::Valid,
     AppState,
 };
 use diesel::prelude::*;
@@ -131,7 +131,7 @@ pub async fn create_template(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
-    Validated(Sanitized(Json(req))): Validated<Sanitized<Json<UpdateTemplate>>>,
+    Valid(Sanitized(Json(req))): Valid<Sanitized<Json<UpdateTemplate>>>,
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(
@@ -191,7 +191,7 @@ pub async fn update_template(
     State(state): State<AppState>,
     Extension(options): Extension<Options>,
     Extension(render): Extension<Render>,
-    Validated(Sanitized(Json(req))): Validated<Sanitized<Json<UpdateTemplate>>>,
+    Valid(Sanitized(Json(req))): Valid<Sanitized<Json<UpdateTemplate>>>,
 ) -> Result<(), HttpError> {
     let (reload, location) = if let Some(namespace) = req.namespace {
         let exists = diesel::dsl::select(diesel::dsl::exists(

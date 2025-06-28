@@ -525,6 +525,7 @@ dependencies = [
  "anyhow",
  "axum",
  "base",
+ "derive",
  "diesel",
  "diesel-async",
  "futures",

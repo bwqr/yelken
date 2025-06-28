@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
 use axum::{
-    Json,
     extract::{FromRequest, Request},
+    Json,
 };
 use serde::de::DeserializeOwned;
 
@@ -59,5 +59,26 @@ where
         } else {
             None
         }
+    }
+}
+
+impl<T> Sanitize for Vec<T>
+where
+    T: Sanitize,
+{
+    fn sanitize(self) -> Self {
+        self.into_iter().map(Sanitize::sanitize).collect()
+    }
+}
+
+impl Sanitize for i32 {
+    fn sanitize(self) -> Self {
+        self
+    }
+}
+
+impl Sanitize for bool {
+    fn sanitize(self) -> Self {
+        self
     }
 }

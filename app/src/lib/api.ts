@@ -25,8 +25,25 @@ export class HttpError extends Error {
     }
 }
 
+type ValidationError = string[] | { [k: number | string]: ValidationError };
+
+function convert(input: unknown): ValidationError {
+    if (Array.isArray(input)) {
+        return input.filter((v) => typeof v === 'string');
+    }
+
+    if (typeof input !== 'object' || input === null) {
+        return [];
+    }
+
+    return Object.fromEntries(
+        Object.entries(input)
+            .map(([key, value]) => ([key, convert(value) as ValidationError]))
+    );
+}
+
 export class ValidationErrors<K extends string> extends Error {
-    constructor(public fieldMessages: Map<K, string[]>, public messages: string[]) {
+    constructor(public fieldMessages: Map<K, ValidationError>, public messages: string[]) {
         super('validation_errors');
     }
 
@@ -45,11 +62,7 @@ export class ValidationErrors<K extends string> extends Error {
         const fieldMessages = new Map(
             Object
                 .entries(json.fieldMessages)
-                .filter(([_, value]) => Array.isArray(value))
-                .map(([key, value]) => ([
-                    key,
-                    (value as unknown[]).filter((v) => typeof v === 'string') as string[]
-                ]))
+                .map(([key, value]) => ([key, convert(value)]))
         );
 
         return new ValidationErrors(fieldMessages, json.messages.filter((m) => typeof m === 'string'));
