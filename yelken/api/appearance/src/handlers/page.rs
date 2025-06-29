@@ -19,14 +19,16 @@ pub async fn fetch_pages(
 ) -> Result<Json<Vec<Page>>, HttpError> {
     let query = pages::table.order(pages::id.asc());
 
+    let mut conn = state.pool.get().await?;
+
     if let Some(namespace) = req.namespace {
         query
             .filter(pages::namespace.eq(namespace.into_inner()))
-            .load::<Page>(&mut state.pool.get().await?)
+            .load::<Page>(&mut conn)
     } else {
         query
             .filter(pages::namespace.is_null())
-            .load::<Page>(&mut state.pool.get().await?)
+            .load::<Page>(&mut conn)
     }
     .await
     .map(Json)
