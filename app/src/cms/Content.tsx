@@ -126,7 +126,7 @@ const ContentValueModal = (props: {
                                                             }>
                                                                 <img
                                                                     class="d-block m-auto w-auto"
-                                                                    src={`${config.API_URL}/assets/content/${store.value}`}
+                                                                    src={config.resolveURL(config.API_URL, `/assets/content/${store.value}`)}
                                                                     alt={store.value}
                                                                     style="max-height: 100%;"
                                                                 />
@@ -533,7 +533,7 @@ export const CreateContent = () => {
                                                                                 <div class="flex-grow-1">
                                                                                     <img
                                                                                         class=""
-                                                                                        src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                        src={config.resolveURL(config.API_URL, `/assets/content/${value.value}`)}
                                                                                         alt={value.value}
                                                                                         style="max-width: 100%; max-height: 5rem;"
                                                                                     />
@@ -1001,7 +1001,7 @@ export const Content = () => {
                                                                                         <div class="flex-grow-1">
                                                                                             <img
                                                                                                 class=""
-                                                                                                src={`${config.API_URL}/assets/content/${value.value}`}
+                                                                                                src={config.resolveURL(config.API_URL, `/assets/content/${value.value}`)}
                                                                                                 alt={value.value}
                                                                                                 style="max-width: 100%; max-height: 5rem;"
                                                                                             />

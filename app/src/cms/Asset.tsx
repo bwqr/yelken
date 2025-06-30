@@ -54,7 +54,7 @@ export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) 
                                                                         <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                                                     }>
                                                                         <img
-                                                                            src={`${config.API_URL}/assets/content/${asset.filename}`}
+                                                                            src={config.resolveURL(config.API_URL, `/assets/content/${asset.filename}`)}
                                                                             alt={asset.name}
                                                                             class="rounded"
                                                                         />
@@ -325,7 +325,7 @@ export const Assets = () => {
                                                         <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                                     }>
                                                         <img
-                                                            src={`${config.API_URL}/assets/content/${asset.filename}`}
+                                                            src={config.resolveURL(config.API_URL, `/assets/content/${asset.filename}`)}
                                                             alt={asset.name}
                                                             class="rounded"
                                                         />
@@ -532,7 +532,7 @@ export const Asset = () => {
                                                 <tr>
                                                     <td>Link</td>
                                                     <td class="text-end text-truncate">
-                                                        <a target="_blank" href={`${config.API_URL}/assets/content/${asset().filename}`}>{asset().filename}</a>
+                                                        <a target="_blank" href={config.resolveURL(config.API_URL, `/assets/content/${asset().filename}`)}>{asset().filename}</a>
                                                     </td>
                                                 </tr>
                                             </tbody>
@@ -543,7 +543,7 @@ export const Asset = () => {
                                     <Show when={asset().filetype?.startsWith('image')} fallback={
                                         <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                     }>
-                                        <img src={`${config.API_URL}/assets/content/${asset().filename}`} class="d-block m-auto mw-100 rounded img-thumbnail" style="max-height: 80vh" alt={asset().name} />
+                                        <img src={config.resolveURL(config.API_URL, `/assets/content/${asset().filename}`)} class="d-block m-auto mw-100 rounded img-thumbnail" style="max-height: 80vh" alt={asset().name} />
                                     </Show>
                                 </div>
                             </div>
