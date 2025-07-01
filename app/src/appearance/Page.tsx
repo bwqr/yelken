@@ -45,12 +45,19 @@ export const CreatePage = () => {
     const [key, setKey] = createSignal(searchParams.key ? decodeURIComponent(searchParams.key as string) : '');
     const [desc, setDesc] = createSignal(searchParams.desc ? decodeURIComponent(searchParams.desc as string) : '');
     const [path, setPath] = createSignal('');
-    const [namespace, setNamespace] = createSignal(searchParams.namespace ? decodeURIComponent(searchParams.namespace as string) : '');
+    const [namespace, setNamespace] = createSignal(undefined as string | undefined);
     const [template, setTemplate] = createSignal('');
     const [locale, setLocale] = createSignal('');
 
     const [templates] = createResource(namespace, (namespace) => appearanceCtx.fetchTemplates(namespace || undefined).then((templates) => unique(templates)));
     const [themes] = createResource(() => appearanceCtx.fetchThemes());
+
+    createEffect(() => {
+        // Set the namespace when themes resource is loaded since select's options depend it to be loaded.
+        if (themes()) {
+            setNamespace(searchParams.namespace ? decodeURIComponent(searchParams.namespace as string) : '');
+        }
+    })
 
     const [inProgress, setInProgress] = createSignal(false);
 
@@ -72,7 +79,7 @@ export const CreatePage = () => {
             key: key().trim(),
             desc: desc().trim() || null,
             path: path().trim(),
-            namespace: namespace().trim() || null,
+            namespace: namespace()?.trim() || null,
             template: template().trim(),
             locale: locale().trim() || null,
         };
@@ -105,7 +112,7 @@ export const CreatePage = () => {
             .then(() => {
                 alertCtx.success(`Page "${req.name}" is created successfully`);
 
-                const url = req.namespace ? `/pages?namespace=${req.namespace}` : '/pages';
+                const url = req.namespace ? `/pages/view/${req.namespace}/${req.key}` : `/pages/view/${req.key}`
 
                 navigate(url, { replace: true });
             })
@@ -643,6 +650,21 @@ export const Page = () => {
                                                                 class="form-control float-end w-auto"
                                                                 name="key"
                                                                 value={group().key}
+                                                                disabled={true}
+                                                            />
+                                                        </Show>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="width: 25%">Namespace</td>
+                                                    <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                        <Show when={editingDetails()} fallback={namespace() ?? '-'}>
+                                                            <input
+                                                                id="pageNamespace"
+                                                                type="text"
+                                                                class="form-control float-end w-auto"
+                                                                name="namespace"
+                                                                value={namespace() ?? '-'}
                                                                 disabled={true}
                                                             />
                                                         </Show>
