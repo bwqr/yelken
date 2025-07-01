@@ -1,4 +1,4 @@
-use std::cmp::max;
+use std::{cmp::max, future::Future};
 
 use diesel::{
     expression::{is_aggregate::No, ValidGrouping},
@@ -59,29 +59,32 @@ impl<T> Paginated<T> {
         }
     }
 
-    pub async fn load_and_count_pages<'query, U>(
+    pub fn load_and_count_pages<'conn, 'query, U>(
         self,
-        conn: &mut PooledConnection,
-    ) -> QueryResult<Pagination<U>>
+        conn: &'conn mut PooledConnection,
+    ) -> impl Future<Output = QueryResult<Pagination<U>>> + Send + 'conn
     where
         Self: LoadQuery<'query, Connection, (U, i64)> + 'query,
-        U: Serialize + Send,
+        U: Send,
+        T: Send + 'conn,
     {
-        let per_page = self.per_page;
-        let page = self.page;
+        async move {
+            let per_page = self.per_page;
+            let page = self.page;
 
-        let results = self.load::<(U, i64)>(conn).await?;
-        let total = results.get(0).map(|x| x.1).unwrap_or(0);
-        let items = results.into_iter().map(|x| x.0).collect();
-        let total_pages = (total as f64 / per_page as f64).ceil() as i64;
+            let results = self.load::<(U, i64)>(conn).await?;
+            let total = results.get(0).map(|x| x.1).unwrap_or(0);
+            let items = results.into_iter().map(|x| x.0).collect();
+            let total_pages = (total as f64 / per_page as f64).ceil() as i64;
 
-        Ok(Pagination {
-            per_page,
-            current_page: page,
-            total_items: total,
-            total_pages,
-            items,
-        })
+            Ok(Pagination {
+                per_page,
+                current_page: page,
+                total_items: total,
+                total_pages,
+                items,
+            })
+        }
     }
 }
 
