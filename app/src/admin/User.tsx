@@ -386,13 +386,13 @@ export const User = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 25%">Name</td>
+                                                    <td style="width: 35%">Name</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={user().name}>
                                                             <input
                                                                 id="userName"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                                                 name="name"
                                                                 value={details.name}
@@ -408,10 +408,10 @@ export const User = () => {
                                                             <input
                                                                 id="userEmail"
                                                                 type="email"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 name="email"
                                                                 value={user().email}
-                                                                disabled={true}
+                                                                disabled
                                                             />
                                                         </Show>
                                                     </td>
@@ -422,7 +422,6 @@ export const User = () => {
                                                         <Show when={editingDetails()} fallback={user().state}>
                                                             <select
                                                                 class="form-select float-end"
-                                                                style="width: unset;"
                                                                 value={details.state}
                                                                 onChange={(ev) => setDetails('state', ev.target.value as UserState)}
                                                             >
@@ -448,7 +447,6 @@ export const User = () => {
                                                                     <Show when={editingDetails()} fallback={roles().find((r) => r.id === user().roleId)?.name ?? '-'}>
                                                                         <select
                                                                             class="form-select float-end"
-                                                                            style="width: unset;"
                                                                             value={details.roleId ?? ''}
                                                                             onChange={(ev) => setDetails('roleId', isNaN(parseInt(ev.target.value)) ? null : parseInt(ev.target.value))}
                                                                         >
@@ -505,9 +503,10 @@ export const User = () => {
                                                 <For each={Object.entries(Permission)}>
                                                     {([perm, value]) => (
                                                         <tr>
-                                                            <td>{perm}</td>
+                                                            <td><label for={`perm-${perm}`}>{perm}</label></td>
                                                             <td class="text-end">
                                                                 <input
+                                                                    id={`perm-${perm}`}
                                                                     class="form-check-input"
                                                                     type="checkbox"
                                                                     checked={editingPermissions() ? permissions[value] : user().permissions.includes(value)}

@@ -622,16 +622,16 @@ export const Page = () => {
 
                                         <hr />
 
-                                        <table class="table table-borderless w-100 m-0">
+                                        <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 25%">Name</td>
+                                                    <td style="width: 35%">Name</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().name}>
                                                             <input
                                                                 id="pageName"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                                                 name="name"
                                                                 value={pageDetails.name}
@@ -647,10 +647,10 @@ export const Page = () => {
                                                             <input
                                                                 id="pageKey"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 name="key"
                                                                 value={group().key}
-                                                                disabled={true}
+                                                                disabled
                                                             />
                                                         </Show>
                                                     </td>
@@ -662,10 +662,10 @@ export const Page = () => {
                                                             <input
                                                                 id="pageNamespace"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 name="namespace"
                                                                 value={namespace() ?? '-'}
-                                                                disabled={true}
+                                                                disabled
                                                             />
                                                         </Show>
                                                     </td>

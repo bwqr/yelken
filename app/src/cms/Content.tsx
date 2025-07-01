@@ -140,7 +140,7 @@ const ContentValueModal = (props: {
                                                         class="form-control"
                                                         classList={{ 'is-invalid': validationErrors().has(ValidationError.Value) }}
                                                         value={store.value}
-                                                        disabled={true}
+                                                        disabled
                                                     />
                                                     <Show when={validationErrors().has(ValidationError.Value)}>
                                                         <small class="invalid-feedback">Please pick an asset for {props.modelField.name}.</small>
@@ -834,7 +834,7 @@ export const Content = () => {
                                 </div>
                                 <div class="dropdown">
                                     <div class="btn-group">
-                                        <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled={true}>
+                                        <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled>
                                             <ProgressSpinner show={inProgress() === Action.UpdateStage} />
                                             <Dynamic component={contentStyle().icon} viewBox="0 0 17 17" />
                                             <Switch>
@@ -897,16 +897,16 @@ export const Content = () => {
 
                                         <hr />
 
-                                        <table class="table table-borderless w-100 m-0">
+                                        <table class="table table-borderless w-100 m-0" style="table-layout: fixed">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 25%">Name</td>
+                                                    <td style="width: 35%">Name</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={content().content.name}>
                                                             <input
                                                                 id="modelName"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                                                 name="name"
                                                                 value={contentDetails.name}
@@ -921,9 +921,9 @@ export const Content = () => {
                                                         <Show when={editingDetails()} fallback={model()?.title() ?? '-'}>
                                                             <input
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 value={model()?.title() ?? '-'}
-                                                                disabled={true}
+                                                                disabled
                                                             />
                                                         </Show>
                                                     </td>

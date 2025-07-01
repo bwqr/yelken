@@ -506,13 +506,13 @@ export const Asset = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 25%">Name</td>
+                                                    <td style="width: 35%">Name</td>
                                                     <td class="text-end text-truncate" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={asset().name}>
                                                             <input
                                                                 id="assetName"
                                                                 type="text"
-                                                                class="form-control float-end w-auto"
+                                                                class="form-control float-end"
                                                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                                                 name="name"
                                                                 value={assetDetails.name}
