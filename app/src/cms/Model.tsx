@@ -15,6 +15,7 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal";
 const ModelFieldModal = (props: {
     close: () => void;
     create: (field: CreateModelField) => Promise<void> | void;
+    restrictEdit?: boolean,
     initial?: CreateModelField
 }) => {
     enum ValidationError {
@@ -138,6 +139,7 @@ const ModelFieldModal = (props: {
                                     name="key"
                                     value={store.key}
                                     onInput={(ev) => setStore('key', ev.target.value)}
+                                    disabled={props.restrictEdit}
                                 />
                                 <Show when={validationErrors().has(ValidationError.Key)}>
                                     <small class="invalid-feedback">Please enter key.</small>
@@ -164,6 +166,7 @@ const ModelFieldModal = (props: {
                                     name="fieldId"
                                     value={store.fieldId ?? ''}
                                     onChange={(ev) => setStore('fieldId', parseInt(ev.target.value))}
+                                    disabled={props.restrictEdit}
                                 >
                                     <option value="" disabled selected>Select a field</option>
                                     <For each={cmsContext.fields()}>
@@ -762,10 +765,25 @@ export const Model = () => {
                                                         <input
                                                             id="modelKey"
                                                             type="text"
-                                                            class="form-control float-end w-auto"
+                                                            class="form-control float-end"
                                                             name="key"
                                                             value={model().key}
-                                                            disabled={true}
+                                                            disabled
+                                                        />
+                                                    </Show>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>Namespace</td>
+                                                <td class="text-end" classList={{ 'py-1': editingDetails() }}>
+                                                    <Show when={editingDetails()} fallback={model().namespace ?? '-'}>
+                                                        <input
+                                                            id="modelNamespace"
+                                                            type="text"
+                                                            class="form-control float-end"
+                                                            name="namespace"
+                                                            value={model().namespace ?? '-'}
+                                                            disabled
                                                         />
                                                     </Show>
                                                 </td>
@@ -861,6 +879,7 @@ export const Model = () => {
                     <ModelFieldModal
                         close={() => setEditingField(undefined)}
                         create={(updatedField) => saveField(field().id, updatedField)}
+                        restrictEdit={true}
                         initial={{ ...field() }}
                     />
                 )}
