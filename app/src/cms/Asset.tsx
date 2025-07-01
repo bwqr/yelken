@@ -49,17 +49,16 @@ export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) 
                                                     <For each={assets().items}>
                                                         {(asset) => (
                                                             <li class="p-1 flex-grow-1 d-flex justify-content-center">
-                                                                <A href="" class="position-relative h-100 d-flex" on:click={(ev) => { ev.preventDefault(); props.pick(asset); }}>
+                                                                <A href="" class="position-relative h-100 d-flex rounded overflow-hidden" on:click={(ev) => { ev.preventDefault(); props.pick(asset); }}>
                                                                     <Show when={asset.filetype?.startsWith('image')} fallback={
                                                                         <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                                                     }>
                                                                         <img
                                                                             src={config.resolveURL(config.API_URL, `/assets/content/${asset.filename}`)}
                                                                             alt={asset.name}
-                                                                            class="rounded"
                                                                         />
                                                                     </Show>
-                                                                    <small class="text-white position-absolute text-center w-100 start-0 bottom-0">{asset.name}</small>
+                                                                    <small class="text-body bg-secondary-subtle position-absolute text-center w-100 start-0 bottom-0 py-1">{asset.name}</small>
                                                                 </A>
                                                             </li>
                                                         )}
@@ -320,17 +319,16 @@ export const Assets = () => {
                                     <For each={assets().items}>
                                         {(asset) => (
                                             <li class="p-1 flex-grow-1 d-flex justify-content-center">
-                                                <A href={`/assets/view/${asset.id}`} class="position-relative h-100 d-flex">
+                                                <A href={`/assets/view/${asset.id}`} class="position-relative h-100 d-flex rounded overflow-hidden">
                                                     <Show when={asset.filetype?.startsWith('image')} fallback={
                                                         <FileEarmarkFill class="w-100 h-100 text-secondary-emphasis" viewBox="0 0 16 16" />
                                                     }>
                                                         <img
                                                             src={config.resolveURL(config.API_URL, `/assets/content/${asset.filename}`)}
                                                             alt={asset.name}
-                                                            class="rounded"
                                                         />
                                                     </Show>
-                                                    <small class="text-white position-absolute text-center w-100 start-0 bottom-0">{asset.name}</small>
+                                                    <small class="text-body bg-secondary-subtle position-absolute text-center w-100 start-0 bottom-0 py-1">{asset.name}</small>
                                                 </A>
                                             </li>
                                         )}
