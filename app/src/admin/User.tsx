@@ -133,7 +133,7 @@ export const CreateUser = () => {
                                 id="userPassword"
                                 type="password"
                                 name="password"
-                                placeholder="Name"
+                                placeholder="Password"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Password) }}
                                 value={password()}
@@ -150,7 +150,7 @@ export const CreateUser = () => {
                                 id="userPasswordConfirm"
                                 type="password"
                                 name="password"
-                                placeholder="Name"
+                                placeholder="Password Confirm"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.PasswordMismatch) }}
                                 value={passwordConfirm()}

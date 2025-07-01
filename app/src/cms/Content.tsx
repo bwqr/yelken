@@ -115,8 +115,19 @@ const ContentValueModal = (props: {
                             <Show when={field()} fallback={<p>Unknown field</p>}>
                                 {(field) => (
                                     <>
+                                        <div class="mb-4">
+                                            <label for="modelFieldName" class="form-label">Field Name</label>
+                                            <input
+                                                id="modelFieldName"
+                                                name="modelFieldName"
+                                                type="text"
+                                                class="form-control"
+                                                value={props.modelField.name}
+                                                disabled
+                                            />
+                                        </div>
                                         <div>
-                                            <label for="modelFieldName" class="form-label">{props.modelField.name}</label>
+                                            <label for="modelFieldName" class="form-label">Value</label>
                                             <Switch fallback={<p>Unsupported field</p>}>
                                                 <Match when={field().kind === FieldKind.Asset}>
                                                     <Show when={store.value}>
