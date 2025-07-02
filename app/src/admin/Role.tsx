@@ -433,9 +433,10 @@ export const Role = () => {
                                                 <For each={Object.entries(Permission)}>
                                                     {([perm, value]) => (
                                                         <tr>
-                                                            <td>{perm}</td>
+                                                            <td><label for={`perm-${perm}`}>{perm}</label></td>
                                                             <td class="text-end">
                                                                 <input
+                                                                    id={`perm-${perm}`}
                                                                     class="form-check-input"
                                                                     type="checkbox"
                                                                     checked={editingPermissions() ? permissions[value] : role().permissions.includes(value)}
