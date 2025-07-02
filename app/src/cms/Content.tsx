@@ -1001,7 +1001,8 @@ export const Content = () => {
                                                                                     class="flex-grow-1 m-0 overflow-hidden text-nowrap"
                                                                                     style="text-overflow: ellipsis"
                                                                                 >
-                                                                                    {value.value}
+                                                                                    {/* Truncate the value to not display very long texts even though overflowing part is hidden with ellipsis. */}
+                                                                                    {value.value.slice(0, 80)}
                                                                                 </p>
 
                                                                             }>
