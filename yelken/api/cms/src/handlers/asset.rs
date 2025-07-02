@@ -5,11 +5,11 @@ use axum::{
 use base::{
     db::Pool,
     middlewares::auth::AuthUser,
-    models::Asset,
+    models::{Asset, TagResource},
     paginate::{CountStarOver, Paginate, Pagination, PaginationRequest},
     responses::HttpError,
     runtime::IntoSendFuture,
-    schema::assets,
+    schema::{assets, tags},
     AppState,
 };
 use diesel::prelude::*;
@@ -25,6 +25,17 @@ pub async fn fetch_assets(
     Query(page): Query<PaginationRequest>,
 ) -> Result<Json<Pagination<Asset>>, HttpError> {
     assets::table
+        .filter(
+            assets::id.ne_all(
+                tags::table
+                    .filter(
+                        tags::resource
+                            .eq(TagResource::Asset)
+                            .and(tags::resource_id.eq(assets::id)),
+                    )
+                    .select(tags::resource_id),
+            ),
+        )
         .select((assets::all_columns, CountStarOver))
         .order(assets::id.asc())
         .paginate(page.page)

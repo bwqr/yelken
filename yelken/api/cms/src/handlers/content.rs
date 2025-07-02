@@ -56,6 +56,7 @@ pub async fn fetch_content(
 
     let values = content_values::table
         .filter(content_values::content_id.eq(content_id))
+        .order(content_values::id.asc())
         .load::<base::models::ContentValue>(&mut conn)
         .await?;
 

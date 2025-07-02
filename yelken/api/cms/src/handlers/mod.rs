@@ -6,6 +6,7 @@ use diesel_async::RunQueryDsl;
 pub mod asset;
 pub mod content;
 pub mod model;
+pub mod tag;
 
 pub async fn fetch_fields(State(state): State<AppState>) -> Result<Json<Vec<Field>>, HttpError> {
     fields::table

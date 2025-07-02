@@ -170,6 +170,14 @@ create table pages(
     constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
 );
 
+create table tags(
+    id          serial primary key not null,
+    resource    varchar(16)  not null check (resource in ('asset', 'content')),
+    resource_id int          not null,
+    key         varchar(128) not null,
+    value       text         default null
+);
+
 create table form_submissions(
     id         serial primary key not null,
     name       varchar(128) not null,

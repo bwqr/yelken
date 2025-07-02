@@ -269,3 +269,42 @@ pub struct Asset {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
+pub enum TagResource {
+    Asset,
+    Content,
+}
+
+impl ToSql<Text, Backend> for TagResource {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            TagResource::Asset => "asset",
+            TagResource::Content => "content",
+        };
+
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
+    }
+}
+
+impl FromSql<Text, Backend> for TagResource {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
+            b"asset" => Ok(TagResource::Asset),
+            b"content" => Ok(TagResource::Content),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
+#[derive(Queryable, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    pub id: i32,
+    pub resource: TagResource,
+    pub resource_id: i32,
+    pub key: String,
+    pub value: Option<String>,
+}

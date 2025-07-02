@@ -167,6 +167,15 @@ create table pages(
     foreign key (namespace) references namespaces (namespace) on delete no action on update no action
 );
 
+create table tags(
+    id          integer primary key autoincrement,
+    resource    varchar(16)  not null,
+    resource_id int          not null,
+    key         varchar(128) not null,
+    value       text         default null,
+    check (resource in ('asset', 'content'))
+);
+
 create table form_submissions(
     id         integer primary key autoincrement,
     name       varchar(128) not null,

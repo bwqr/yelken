@@ -188,6 +188,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    tags (id) {
+        id -> Int4,
+        #[max_length = 16]
+        resource -> Varchar,
+        resource_id -> Int4,
+        #[max_length = 128]
+        key -> Varchar,
+        value -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     themes (id) {
         #[max_length = 128]
         id -> Varchar,
@@ -253,6 +265,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     permissions,
     plugins,
     roles,
+    tags,
     themes,
     users,
 );

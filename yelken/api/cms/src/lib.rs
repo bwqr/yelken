@@ -16,7 +16,7 @@ mod handlers;
 mod requests;
 mod responses;
 
-pub use handlers::{asset, content, model};
+pub use handlers::{asset, content, model, tag};
 
 pub fn router(state: AppState) -> Router<AppState> {
     let asset_read = Router::new()
@@ -86,10 +86,35 @@ pub fn router(state: AppState) -> Router<AppState> {
             perm: Permission::ModelWrite,
         });
 
+    let tag_read = Router::new()
+        .route("/all", get(tag::fetch_tags))
+        .layer(PermissionLayer {
+            pool: state.pool.clone(),
+            perm: Permission::CMSRead,
+        });
+
+    let tag_asset_write = Router::new()
+        .route("/asset/create", post(tag::create_asset_tag))
+        .layer(PermissionLayer {
+            pool: state.pool.clone(),
+            perm: Permission::AssetWrite,
+        });
+
+    let tag_content_write = Router::new()
+        .route("/content/create", post(tag::create_content_tag))
+        .layer(PermissionLayer {
+            pool: state.pool.clone(),
+            perm: Permission::ContentWrite,
+        });
+
     Router::new()
         .nest("/asset", asset_read.merge(asset_write))
         .nest("/content", content_read.merge(content_write))
         .nest("/field", field_read)
         .nest("/model", model_read.merge(model_write))
+        .nest(
+            "/tag",
+            tag_read.merge(tag_asset_write).merge(tag_content_write),
+        )
         .layer(middleware::from_fn_with_state(state.clone(), from_token))
 }

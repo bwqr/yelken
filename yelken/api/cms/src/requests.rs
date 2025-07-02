@@ -1,8 +1,27 @@
 use std::collections::HashMap;
 
-use base::{models::ContentStage, sanitize::Sanitize, validate::Validate};
+use base::{
+    models::{ContentStage, TagResource},
+    sanitize::Sanitize,
+    validate::Validate,
+};
 use derive::Sanitize;
 use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilterTag {
+    pub resource: TagResource,
+    pub resource_id: i32,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTag {
+    pub resource_id: i32,
+    pub key: String,
+    pub value: String,
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

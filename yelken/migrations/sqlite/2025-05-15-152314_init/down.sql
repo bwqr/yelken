@@ -1,5 +1,7 @@
 drop table form_submissions;
 
+drop table tags;
+
 drop table pages;
 
 drop table content_values;
