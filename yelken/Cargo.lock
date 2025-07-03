@@ -184,6 +184,7 @@ dependencies = [
  "rand 0.9.1",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "tokio",
  "unic-langid",
  "url",

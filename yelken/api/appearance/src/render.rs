@@ -1,16 +1,14 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
 use base::db::Pool;
 use base::models::ContentStage;
 use base::runtime::{block_on, IntoSendFuture};
-use base::schema::{content_values, contents, enum_options, fields, model_fields, models};
-use context::{ConfigContext, LocaleContext, PageContext};
+use base::schema::{content_values, contents, fields, model_fields, models};
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};
 use opendal::{EntryMode, Operator};
-use unic_langid::LanguageIdentifier;
 
 use crate::l10n::L10n;
 
@@ -22,89 +20,168 @@ enum RenderError {
 
 pub mod context {
     use minijinja::value::{Object, Value};
-    use std::{collections::BTreeMap, sync::Arc};
+    use std::{
+        collections::BTreeMap,
+        sync::{atomic::AtomicU16, Arc},
+    };
     use unic_langid::LanguageIdentifier;
     use url::Url;
 
     #[derive(Debug)]
+    pub struct Pagination {
+        pub per_page: i64,
+        pub current_page: i64,
+        pub total_pages: i64,
+        pub total_items: i64,
+        pub items: Arc<[Value]>,
+    }
+
+    impl Object for Pagination {
+        fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
+            match key.as_str()? {
+                "per_page" => Some(Value::from(self.per_page)),
+                "current_page" => Some(Value::from(self.current_page)),
+                "total_pages" => Some(Value::from(self.total_pages)),
+                "total_items" => Some(Value::from(self.total_items)),
+                "items" => Some(Value::from_iter(self.items.into_iter().cloned())),
+                _ => None,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct L10n {
+        pub locales: Box<[Arc<Locale>]>,
+        pub default: Arc<Locale>,
+    }
+
+    impl Object for L10n {
+        fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
+            match key.as_str()? {
+                "locales" => Some(Value::from_iter(
+                    self.locales
+                        .iter()
+                        .map(|l| Value::from_dyn_object(Arc::clone(&l))),
+                )),
+                _ => None,
+            }
+        }
+    }
+
+    #[derive(Debug)]
     pub struct Page {
         pub key: String,
-        pub locale: LanguageIdentifier,
+        pub locale: Option<String>,
         pub path: String,
     }
 
     #[derive(Debug)]
-    pub struct PageContext {
-        pub pages: Arc<[Page]>,
-    }
-
-    impl Object for PageContext {}
-
-    #[derive(Debug)]
-    pub struct LocaleContext {
-        pub all: Arc<[LanguageIdentifier]>,
-        pub current: LanguageIdentifier,
-        pub default: LanguageIdentifier,
-    }
-
-    impl Object for LocaleContext {
-        fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
-            match key.as_str()? {
-                "all" => Some(Value::from_iter(
-                    self.all
-                        .iter()
-                        .map(|l| vec![format!("{l}"), format!("{l}")]),
-                )),
-                "current" => Some(Value::from(format!("{}", self.current))),
-                "default" => Some(Value::from(format!("{}", self.default))),
-                _ => None,
-            }
-        }
-    }
-
-    #[derive(Debug)]
-    pub struct ConfigContext {
+    pub struct Internal {
         pub site_url: Url,
+        pub namespace: String,
+        pub pages: Box<[Page]>,
     }
 
-    impl Object for ConfigContext {}
+    impl Object for Internal {}
 
-    #[derive(Debug)]
-    pub struct RenderContext {
-        config: Arc<ConfigContext>,
-        locale: Arc<LocaleContext>,
-        pages: Arc<PageContext>,
-        params: Arc<BTreeMap<String, String>>,
-        namespace: String,
+    #[derive(Clone, Debug)]
+    pub struct Locale {
+        pub id: LanguageIdentifier,
+        pub key: Arc<str>,
+        pub name: Arc<str>,
     }
 
-    impl RenderContext {
-        pub fn new(
-            config: Arc<ConfigContext>,
-            locale: Arc<LocaleContext>,
-            pages: Arc<PageContext>,
-            params: Arc<BTreeMap<String, String>>,
-            namespace: String,
-        ) -> Self {
-            Self {
-                config,
-                locale,
-                pages,
-                params,
-                namespace,
+    impl Object for Locale {
+        fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
+            match key.as_str()? {
+                "key" => Some(Value::from(Arc::clone(&self.key))),
+                "name" => Some(Value::from(Arc::clone(&self.name))),
+                _ => None,
             }
         }
     }
 
-    impl Object for RenderContext {
+    #[derive(Debug)]
+    pub struct Request {
+        pub locale: Arc<Locale>,
+        pub params: Arc<BTreeMap<String, String>>,
+        pub search_params: Arc<BTreeMap<String, String>>,
+    }
+
+    impl Object for Request {
         fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
             match key.as_str()? {
-                "config" => Some(Value::from_dyn_object(self.config.clone())),
-                "locale" => Some(Value::from_dyn_object(self.locale.clone())),
-                "pages" => Some(Value::from_dyn_object(Arc::clone(&self.pages))),
+                "locale" => Some(Value::from_dyn_object(Arc::clone(&self.locale))),
                 "params" => Some(Value::from_dyn_object(Arc::clone(&self.params))),
-                "namespace" => Some(Value::from(self.namespace.clone())),
+                "search_params" => Some(Value::from_dyn_object(Arc::clone(&self.search_params))),
                 _ => None,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Response {
+        pub status: AtomicU16,
+    }
+
+    impl Object for Response {
+        fn call_method(
+            self: &Arc<Self>,
+            _: &minijinja::State<'_, '_>,
+            method: &str,
+            args: &[Value],
+        ) -> Result<Value, minijinja::Error> {
+            match method {
+                "set_status" => {
+                    let code = args
+                        .get(0)
+                        .ok_or_else(|| {
+                            minijinja::Error::from(minijinja::ErrorKind::MissingArgument)
+                        })?
+                        .as_i64()
+                        .ok_or_else(|| {
+                            minijinja::Error::from(minijinja::ErrorKind::InvalidOperation)
+                        })? as u16;
+
+                    self.status
+                        .store(code, std::sync::atomic::Ordering::Relaxed);
+
+                    Ok(Value::from(Option::<()>::None))
+                }
+                _ => Err(minijinja::Error::from(minijinja::ErrorKind::UnknownMethod)),
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct Context {
+        request: Arc<Request>,
+        response: Arc<Response>,
+        l10n: Arc<L10n>,
+        internal: Arc<Internal>,
+    }
+
+    impl Object for Context {
+        fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
+            match key.as_str()? {
+                "request" => Some(Value::from_dyn_object(Arc::clone(&self.request))),
+                "response" => Some(Value::from_dyn_object(Arc::clone(&self.response))),
+                "l10n" => Some(Value::from_dyn_object(Arc::clone(&self.l10n))),
+                "__internal__" => Some(Value::from_dyn_object(Arc::clone(&self.internal))),
+                _ => None,
+            }
+        }
+    }
+
+    impl Context {
+        pub fn new(request: Request, l10n: L10n, internal: Internal) -> Self {
+            Self {
+                request: Arc::new(request),
+                l10n: Arc::new(l10n),
+                internal: Arc::new(internal),
+                response: Arc::new(Response {
+                    status: AtomicU16::new(0),
+                }),
             }
         }
     }
@@ -237,15 +314,30 @@ impl Render {
         Ok(())
     }
 
-    pub fn render(&self, template: &str, ctx: Value) -> Result<String, Error> {
-        (*self.env).load().get_template(template)?.render(ctx)
+    pub fn render(
+        &self,
+        template: &str,
+        ctx: context::Context,
+    ) -> Result<(String, Option<u16>), Error> {
+        let env = (*self.env).load();
+
+        let template = env.get_template(template)?;
+
+        let (html, state) = template.render_and_return_state(Value::from_object(ctx))?;
+
+        let response: Arc<context::Response> = state
+            .lookup("response")
+            .expect("could not find response in render context")
+            .downcast_object()
+            .expect("response variable does not have expected type");
+
+        let status = response.status.load(std::sync::atomic::Ordering::Relaxed);
+
+        Ok((html, (status != 0).then_some(status)))
     }
 }
 
 fn register_functions(env: &mut Environment, resources: FnResources) {
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
-
     #[cfg(feature = "plugin")]
     let (l10n, pool, plugin_host) = resources;
     #[cfg(not(feature = "plugin"))]
@@ -254,15 +346,15 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     env.add_function(
         "localize",
         move |state: &State, key: String, kwargs: Kwargs| -> Option<String> {
-            let locale: Arc<LocaleContext> = state
-                .lookup("locale")
-                .expect("could not find locale in render context")
+            let request: Arc<context::Request> = state
+                .lookup("request")
+                .expect("could not find request in render context")
                 .downcast_object()
-                .expect("locale variable does not have expected type");
+                .expect("request variable does not have expected type");
 
             let args = kwargs.args().map(|arg| (arg, kwargs.get(arg).unwrap()));
 
-            l10n.localize(&locale.current, &key, args)
+            l10n.localize(&request.locale.id, &key, args)
         },
     );
 
@@ -270,10 +362,10 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         "asset_url",
         |state: &State, path: String, kwargs: Kwargs| {
             let base_url = state
-                .lookup("config")
-                .expect("could not find config in render context")
-                .downcast_object::<ConfigContext>()
-                .expect("config variable does not have expected type")
+                .lookup("__internal__")
+                .expect("could not find __internal__ in render context")
+                .downcast_object::<context::Internal>()
+                .expect("__internal__ variable does not have expected type")
                 .site_url
                 .clone();
 
@@ -290,7 +382,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                         .push(kind)
                         .extend(path.split('/'));
 
-                    Ok(base_url.as_str().to_string())
+                    Ok(Value::from_safe_string(base_url.to_string()))
                 }
                 unknown => Err(Error::new(
                     ErrorKind::InvalidOperation,
@@ -301,36 +393,45 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     );
 
     env.add_function("get_url", |state: &State, args: Kwargs| {
-        let base_url: String = state.lookup("config")
-            .expect("could not find config in render context")
-            .downcast_object::<ConfigContext>()
-            .expect("config variable does not have expected type")
-            .site_url
-            .path()
-            .to_string();
+        let internal: Arc<context::Internal> = state
+            .lookup("__internal__")
+            .expect("could not find __internal__ in render context")
+            .downcast_object::<context::Internal>()
+            .expect("__internal__ variable does not have expected type");
 
-        let locale: Arc<LocaleContext> = state
-            .lookup("locale")
-            .expect("could not find locale in render context")
+        let request: Arc<context::Request> = state
+            .lookup("request")
+            .expect("could not find request in render context")
             .downcast_object()
-            .expect("locale variable does not have expected type");
+            .expect("request variable does not have expected type");
+
+        let l10n: Arc<context::L10n> = state
+            .lookup("l10n")
+            .expect("could not find l10n in render context")
+            .downcast_object()
+            .expect("l10n variable does not have expected type");
+
+        let mut url = internal.site_url.clone();
 
         if let Some(key) = args.get::<'_, Option<String>>("page")? {
-            let page_context: Arc<PageContext> = state
-                .lookup("pages")
-                .expect("could not find pages in render context")
-                .downcast_object()
-                .expect("pages variable does not have expected type");
-
             let path_params: Vec<String> = args.get("params")?;
 
-            for p in page_context.pages.into_iter() {
-                if key != p.key || locale.current != p.locale {
+            for p in internal.pages.iter() {
+                if key != p.key
+                    || !p
+                        .locale
+                        .as_ref()
+                        .map(|l| *l == &*request.locale.key)
+                        .unwrap_or(false)
+                {
                     continue;
                 }
 
                 let Some(path) = replace_params(&p.path, &path_params) else {
-                    log::warn!("Invalid path or param is received while in localize_url, {}, {path_params:?}", p.path);
+                    log::warn!(
+                        "Invalid path or param is received while in get_url, {}, {path_params:?}",
+                        p.path
+                    );
 
                     return Err(Error::new(
                         ErrorKind::InvalidOperation,
@@ -338,60 +439,46 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     ));
                 };
 
-                let mut path = append_locale_to_path(&locale.current, &locale.default, &path);
+                {
+                    let mut path_segments = url.path_segments_mut().unwrap();
+                    path_segments.pop_if_empty();
 
-                if base_url != "/" {
-                    path = format!("{base_url}{path}");
+                    if request.locale.key != l10n.default.key {
+                        path_segments.push(&*request.locale.key);
+                    }
+
+                    path_segments.extend(path.split('/').filter(|p| !p.is_empty()));
                 }
 
-                return Ok(Value::from(path));
+                return Ok(Value::from_safe_string(url.to_string()));
             }
 
-            return Err(Error::new(
-                ErrorKind::InvalidOperation,
-                "page not found",
-            ));
-        } else if let Some(mut path) = args.get::<'_, Option<String>>("path")? {
-            let localize = args.get::<'_, Option<bool>>("localize").unwrap_or(Some(true)).unwrap_or(true);
+            return Err(Error::new(ErrorKind::InvalidOperation, "page not found"));
+        } else if let Some(path) = args.get::<'_, Option<String>>("path")? {
+            let localize = args
+                .get::<'_, Option<bool>>("localize")
+                .unwrap_or(Some(true))
+                .unwrap_or(true);
 
-            if localize {
-                path = append_locale_to_path(&locale.current, &locale.default, &path)
+            {
+                let mut path_segments = url.path_segments_mut().unwrap();
+                path_segments.pop_if_empty();
+
+                if localize && request.locale.key != l10n.default.key {
+                    path_segments.push(&*request.locale.key);
+                }
+
+                path_segments.extend(path.split('/').filter(|p| !p.is_empty()));
             }
 
-            if base_url != "/" {
-                path = format!("{base_url}{path}");
-            }
-
-            return Ok(Value::from(path));
+            return Ok(Value::from_safe_string(url.to_string()));
         }
 
         return Err(Error::new(
-                ErrorKind::InvalidOperation,
-                "invalid parameters",
-            ));
+            ErrorKind::InvalidOperation,
+            "invalid parameters",
+        ));
     });
-
-    {
-        let pool = pool.clone();
-
-        env.add_function("get_enum_id", move |field: String, value: String| {
-            let pool = pool.clone();
-
-            let id: Result<i32, RenderError> = block_on(async move {
-                enum_options::table
-                    .inner_join(fields::table)
-                    .filter(fields::key.eq(field))
-                    .filter(enum_options::value.eq(value))
-                    .select(enum_options::id)
-                    .first::<i32>(&mut pool.get().await.map_err(RenderError::Pool)?)
-                    .await
-                    .map_err(RenderError::Database)
-            });
-
-            id.map(|id| Value::from(id))
-                .map_err(|e| Error::new(ErrorKind::InvalidOperation, format!("{e:?}")))
-        });
-    }
 
     {
         let pool = pool.clone();
@@ -399,141 +486,44 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         env.add_function(
             "get_content",
             move |state: &State, model: String, field: String, value: String| {
-                let locale: Arc<LocaleContext> = state
-                    .lookup("locale")
-                    .expect("could not find locale in render context")
+                let internal: Arc<context::Internal> = state
+                    .lookup("__internal__")
+                    .expect("could not find __internal__ in render context")
                     .downcast_object()
-                    .expect("locale variable does not have expected type");
+                    .expect("__internal__ variable does not have expected type");
 
-                let namespace = state
-                    .lookup("namespace")
-                    .expect("could not find namespace in render context");
+                let request: Arc<context::Request> = state
+                    .lookup("request")
+                    .expect("could not find request in render context")
+                    .downcast_object()
+                    .expect("request variable does not have expected type");
 
-                let namespace = namespace
-                    .as_str()
-                    .expect("namespace variable does not have expected type");
+                let value = block_on(
+                    ContentSource {
+                        pool: pool.clone(),
+                        namespace: internal.namespace.clone(),
+                        locale: request.locale.key.to_string(),
+                        model,
+                        fields: None,
+                        filter: Some((field, value)),
+                        limit: Some(1),
+                        offset: None,
+                        count: false,
+                    }
+                    .get(),
+                )
+                .inspect_err(|e| match e {
+                    RenderError::Database(e) => {
+                        log::error!("Database error occurred during rendering, {e:?}")
+                    }
+                    RenderError::Pool(e) => {
+                        log::error!("Pool error occurred during rendering, {e:?}")
+                    }
+                })
+                .map(|values| values.map(|v| v.0).and_then(|mut v| v.pop()))
+                .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"));
 
-                let pool = pool.clone();
-
-                let content: Result<Option<BTreeMap<String, Value>>, RenderError> =
-                    block_on(async move {
-                        let mut conn = pool.get().await.map_err(RenderError::Pool)?;
-
-                        let Some(model_id) = models::table
-                            .filter(
-                                models::key.eq(model).and(
-                                    models::namespace
-                                        .is_null()
-                                        .or(models::namespace.eq(&namespace)),
-                                ),
-                            )
-                            .select(models::id)
-                            .first::<i32>(&mut conn)
-                            .await
-                            .optional()
-                            .map_err(RenderError::Database)?
-                        else {
-                            return Ok(None);
-                        };
-
-                        let model_fields = model_fields::table
-                            .inner_join(fields::table)
-                            .filter(model_fields::model_id.eq(model_id))
-                            .select((
-                                model_fields::id,
-                                model_fields::key,
-                                model_fields::multiple,
-                                fields::kind,
-                            ))
-                            .load::<(i32, String, bool, String)>(&mut conn)
-                            .await
-                            .map_err(RenderError::Database)?;
-
-                        let content = if field == "id" {
-                            let Ok(id) = str::parse::<i32>(&value) else {
-                                return Ok(None);
-                            };
-
-                            contents::table
-                                .select(contents::id)
-                                .filter(contents::id.eq(id))
-                                .first::<i32>(&mut conn)
-                                .await
-                                .optional()
-                                .map_err(RenderError::Database)?
-                        } else {
-                            let Some(model_field) = model_fields.iter().find(|mf| mf.1 == field)
-                            else {
-                                return Ok(None);
-                            };
-
-                            contents::table
-                                .select(contents::id)
-                                .inner_join(content_values::table)
-                                .filter(
-                                    content_values::model_field_id
-                                        .eq(model_field.0)
-                                        .and(content_values::value.eq(value)),
-                                )
-                                .first::<i32>(&mut conn)
-                                .await
-                                .optional()
-                                .map_err(RenderError::Database)?
-                        };
-
-                        let Some(content) = content else {
-                            return Ok(None);
-                        };
-
-                        let content_values = content_values::table
-                            .filter(content_values::content_id.eq(content))
-                            .filter(
-                                content_values::locale
-                                    .eq(format!("{}", locale.current))
-                                    .or(content_values::locale.is_null()),
-                            )
-                            .order((content_values::content_id.asc(), content_values::id.asc()))
-                            .select((content_values::model_field_id, content_values::value))
-                            .load::<(i32, String)>(&mut conn)
-                            .await
-                            .map_err(RenderError::Database)?;
-
-                        let mut content = BTreeMap::new();
-
-                        for (model_field_id, model_field_key, multiple, kind) in model_fields {
-                            let mut values =
-                                content_values.iter().filter(|cv| cv.0 == model_field_id);
-
-                            let value = if multiple {
-                                Some(Value::from(
-                                    values
-                                        .map(|v| str_to_value(&kind, &v.1))
-                                        .collect::<Vec<_>>(),
-                                ))
-                            } else {
-                                values
-                                    .next()
-                                    .map(|v| Value::from(str_to_value(&kind, &v.1)))
-                            };
-
-                            if let Some(value) = value {
-                                content.insert(model_field_key.clone(), value);
-                            }
-                        }
-
-                        Ok(Some(content))
-                    });
-
-                content
-                    .inspect_err(|e| match e {
-                        RenderError::Database(e) => {
-                            log::error!("Database error occurred during rendering, {e:?}")
-                        }
-                        RenderError::Pool(e) => {
-                            log::error!("Pool error occurred during rendering, {e:?}")
-                        }
-                    })
-                    .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
+                value
             },
         );
     };
@@ -542,13 +532,87 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         let pool = pool.clone();
 
         env.add_function(
+            "paginate",
+            move |state: &State, model: String, fields: Vec<String>, args: Kwargs| {
+                let internal: Arc<context::Internal> = state
+                    .lookup("__internal__")
+                    .expect("could not find __internal__ in render context")
+                    .downcast_object()
+                    .expect("__internal__ variable does not have expected type");
+
+                let request: Arc<context::Request> = state
+                    .lookup("request")
+                    .expect("could not find request in render context")
+                    .downcast_object()
+                    .expect("request variable does not have expected type");
+
+                let per_page = args.get::<Option<i64>>("per_page")?.unwrap_or(20);
+                let limit = std::cmp::min(per_page, 100);
+
+                let page = args.get::<Option<i64>>("page")?.unwrap_or(1);
+                let offset = std::cmp::max(page - 1, 0) * per_page;
+
+                block_on(
+                    ContentSource {
+                        pool: pool.clone(),
+                        namespace: internal.namespace.clone(),
+                        locale: request.locale.key.to_string(),
+                        model,
+                        fields: Some(fields),
+                        filter: None,
+                        limit: Some(limit),
+                        offset: Some(offset),
+                        count: true,
+                    }
+                    .get(),
+                )
+                .inspect_err(|e| match e {
+                    RenderError::Database(e) => {
+                        log::error!("Database error occurred during rendering, {e:?}")
+                    }
+                    RenderError::Pool(e) => {
+                        log::error!("Pool error occurred during rendering, {e:?}")
+                    }
+                })
+                .map(|values| {
+                    values.map(|(values, total_items)| {
+                        let total_items = total_items.unwrap_or(0);
+                        let total_pages = (total_items as f64 / per_page as f64).ceil() as i64;
+
+                        Value::from_dyn_object(Arc::new(context::Pagination {
+                            per_page,
+                            current_page: page,
+                            total_pages,
+                            total_items,
+                            items: values.into(),
+                        }))
+                    })
+                })
+                .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
+            },
+        );
+    }
+
+    {
+        let pool = pool.clone();
+
+        env.add_function(
             "get_contents",
             move |state: &State, model: String, fields: Vec<String>, args: Kwargs| {
-                let locale: Arc<LocaleContext> = state
-                    .lookup("locale")
-                    .expect("could not find locale in render context")
+                let internal: Arc<context::Internal> = state
+                    .lookup("__internal__")
+                    .expect("could not find __internal__ in render context")
                     .downcast_object()
-                    .expect("locale variable does not have expected type");
+                    .expect("__internal__ variable does not have expected type");
+
+                let request: Arc<context::Request> = state
+                    .lookup("request")
+                    .expect("could not find request in render context")
+                    .downcast_object()
+                    .expect("request variable does not have expected type");
+
+                let limit: Option<i64> = args.get("limit")?;
+                let offset: Option<i64> = args.get("offset")?;
 
                 let filter: Option<Vec<String>> = args.get("filter")?;
 
@@ -559,180 +623,40 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     ));
                 }
 
-                let namespace = state
-                    .lookup("namespace")
-                    .expect("could not find namespace in render context");
-
-                let namespace = namespace
-                    .as_str()
-                    .expect("namespace variable does not have expected type");
-
-                let pool = pool.clone();
-
-                let values: Result<Option<Vec<Value>>, RenderError> = block_on(async move {
-                    let mut conn = pool.get().await.map_err(RenderError::Pool)?;
-
-                    let Some(model_id) = models::table
-                        .filter(
-                            models::key.eq(model).and(
-                                models::namespace
-                                    .is_null()
-                                    .or(models::namespace.eq(&namespace)),
-                            ),
-                        )
-                        .select(models::id)
-                        .first::<i32>(&mut conn)
-                        .await
-                        .optional()
-                        .map_err(RenderError::Database)?
-                    else {
-                        return Ok(None);
-                    };
-
-                    let model_fields = model_fields::table
-                        .inner_join(fields::table)
-                        .filter(model_fields::model_id.eq(model_id))
-                        .filter(model_fields::key.eq_any(&fields))
-                        .select((
-                            model_fields::id,
-                            model_fields::key,
-                            model_fields::multiple,
-                            fields::kind,
-                        ))
-                        .load::<(i32, String, bool, String)>(&mut conn)
-                        .await
-                        .map_err(RenderError::Database)?;
-
-                    let content_values = if let Some(filter) = filter {
-                        let (c1, c2) = diesel::alias!(contents as c1, contents as c2);
-                        let (mf1, mf2) = diesel::alias!(model_fields as mf1, model_fields as mf2);
-                        let (cv1, cv2) =
-                            diesel::alias!(content_values as cv1, content_values as cv2);
-
-                        c1.inner_join(models::table)
-                            .inner_join(cv1.inner_join(mf1))
-                            .filter(models::id.eq(model_id))
-                            .filter(
-                                mf1.field(model_fields::id).eq_any(
-                                    &model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>(),
-                                ),
-                            )
-                            .filter(c1.field(contents::stage).eq(ContentStage::Published))
-                            .filter(
-                                cv1.field(content_values::locale)
-                                    .eq(format!("{}", locale.current))
-                                    .or(cv1.field(content_values::locale).is_null()),
-                            )
-                            .filter(
-                                c1.field(contents::id).eq_any(
-                                    c2.select(c2.field(contents::id))
-                                        .inner_join(cv2.inner_join(mf2))
-                                        .filter(
-                                            c2.field(contents::stage).eq(ContentStage::Published),
-                                        )
-                                        .filter(mf2.field(model_fields::key).eq(&filter[0]))
-                                        .filter(cv2.field(content_values::value).eq(&filter[1])),
-                                ),
-                            )
-                            .order((
-                                cv1.field(content_values::content_id).asc(),
-                                cv1.field(content_values::id).asc(),
-                            ))
-                            .select((
-                                c1.field(contents::id),
-                                cv1.field(content_values::model_field_id),
-                                cv1.field(content_values::value),
-                            ))
-                            .load::<(i32, i32, String)>(&mut conn)
-                            .await
-                            .map_err(RenderError::Database)?
-                    } else {
-                        contents::table
-                            .inner_join(models::table)
-                            .inner_join(content_values::table.inner_join(model_fields::table))
-                            .filter(models::id.eq(model_id))
-                            .filter(
-                                model_fields::id.eq_any(
-                                    &model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>(),
-                                ),
-                            )
-                            .filter(contents::stage.eq(ContentStage::Published))
-                            .filter(
-                                content_values::locale
-                                    .eq(format!("{}", locale.current))
-                                    .or(content_values::locale.is_null()),
-                            )
-                            .order((content_values::content_id.asc(), content_values::id.asc()))
-                            .select((
-                                contents::id,
-                                content_values::model_field_id,
-                                content_values::value,
-                            ))
-                            .load::<(i32, i32, String)>(&mut conn)
-                            .await
-                            .map_err(RenderError::Database)?
-                    };
-
-                    let mut contents = Vec::<Value>::new();
-
-                    // Use BTreeSet to preserve the insertion order
-                    let content_ids =
-                        BTreeSet::<i32>::from_iter(content_values.iter().map(|cv| cv.0));
-
-                    for id in content_ids {
-                        let mut content = BTreeMap::<String, Value>::from_iter([(
-                            "id".to_string(),
-                            Value::from(id),
-                        )]);
-
-                        let values = content_values.iter().filter(|v| v.0 == id);
-
-                        for model_field in model_fields.iter() {
-                            let mut values = values.clone().filter(|v| v.1 == model_field.0);
-
-                            let value = if model_field.2 {
-                                Some(Value::from(
-                                    values
-                                        .map(|v| str_to_value(model_field.3.as_str(), &v.2))
-                                        .collect::<Vec<_>>(),
-                                ))
-                            } else {
-                                values.next().map(|v| {
-                                    Value::from(str_to_value(model_field.3.as_str(), &v.2))
-                                })
-                            };
-
-                            if let Some(value) = value {
-                                content.insert(model_field.1.clone(), value);
-                            }
-                        }
-
-                        contents.push(Value::from(content));
+                block_on(
+                    ContentSource {
+                        pool: pool.clone(),
+                        namespace: internal.namespace.clone(),
+                        locale: request.locale.key.to_string(),
+                        model,
+                        fields: Some(fields),
+                        filter: None,
+                        limit,
+                        offset,
+                        count: false,
                     }
-
-                    Ok(Some(contents))
-                });
-
-                values
-                    .inspect_err(|e| match e {
-                        RenderError::Database(e) => {
-                            log::error!("Database error occurred during rendering, {e:?}")
-                        }
-                        RenderError::Pool(e) => {
-                            log::error!("Pool error occurred during rendering, {e:?}")
-                        }
-                    })
-                    .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
+                    .get(),
+                )
+                .inspect_err(|e| match e {
+                    RenderError::Database(e) => {
+                        log::error!("Database error occurred during rendering, {e:?}")
+                    }
+                    RenderError::Pool(e) => {
+                        log::error!("Pool error occurred during rendering, {e:?}")
+                    }
+                })
+                .map(|values| values.map(|v| v.0))
+                .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
             },
         );
     }
 }
 
-fn str_to_value(kind: &str, value: &str) -> Value {
+fn string_to_value(kind: &str, value: String) -> Value {
     match kind {
         "string" => Value::from(value),
         "asset" => Value::from(value),
-        "integer" => Value::from(str::parse::<i64>(value).unwrap_or(0)),
+        "int" => Value::from(str::parse::<i64>(&value).unwrap_or(0)),
         unknown => {
             log::error!("Unhandled field kind is found, {unknown}");
 
@@ -765,19 +689,188 @@ fn replace_params(mut path: &str, mut params: &[String]) -> Option<String> {
     Some(path_with_params)
 }
 
-fn append_locale_to_path<'a>(
-    locale: &LanguageIdentifier,
-    default_locale: &LanguageIdentifier,
-    path: &str,
-) -> String {
-    if locale == default_locale {
-        return path.to_string();
-    }
+struct ContentSource {
+    pool: Pool,
+    namespace: String,
+    locale: String,
+    model: String,
+    fields: Option<Vec<String>>,
+    filter: Option<(String, String)>,
+    limit: Option<i64>,
+    offset: Option<i64>,
+    count: bool,
+}
 
-    if path == "/" {
-        format!("/{locale}")
-    } else {
-        format!("/{locale}{path}")
+impl ContentSource {
+    async fn get(self) -> Result<Option<(Vec<Value>, Option<i64>)>, RenderError> {
+        use diesel::prelude::*;
+        use diesel_async::RunQueryDsl;
+
+        let mut conn = self.pool.get().await.map_err(RenderError::Pool)?;
+
+        let Some(model_id) = models::table
+            .filter(
+                models::key.eq(&self.model).and(
+                    models::namespace
+                        .is_null()
+                        .or(models::namespace.eq(self.namespace)),
+                ),
+            )
+            .select(models::id)
+            .first::<i32>(&mut conn)
+            .await
+            .optional()
+            .map_err(RenderError::Database)?
+        else {
+            log::debug!("Could not find model {}", self.model);
+
+            return Ok(None);
+        };
+
+        let mfs_query = model_fields::table
+            .inner_join(fields::table)
+            .filter(model_fields::model_id.eq(model_id))
+            .select((
+                model_fields::id,
+                model_fields::key,
+                model_fields::multiple,
+                fields::kind,
+            ));
+
+        let model_fields: Vec<(i32, String, bool, String)> = if let Some(f) = &self.fields {
+            mfs_query
+                .filter(model_fields::key.eq_any(f))
+                .load(&mut conn)
+        } else {
+            mfs_query.load(&mut conn)
+        }
+        .await
+        .map_err(RenderError::Database)?;
+
+        let contents_query = contents::table
+            .filter(
+                contents::model_id
+                    .eq(model_id)
+                    .and(contents::stage.eq(ContentStage::Published)),
+            )
+            .order(contents::id.asc())
+            .select(contents::id);
+
+        let mut contents_query = if let Some(filter) = self.filter {
+            if filter.0 == "id" {
+                let Ok(id) = str::parse::<i32>(&filter.1) else {
+                    log::debug!("Could not parse value as integer, filtering \"id\" requires value to be a string containing an integer");
+
+                    return Ok(None);
+                };
+
+                contents_query.filter(contents::id.eq(id)).into_boxed()
+            } else {
+                contents_query
+                    .filter(
+                        contents::id.eq_any(
+                            content_values::table
+                                .inner_join(model_fields::table)
+                                .filter(
+                                    model_fields::model_id
+                                        .eq(model_id)
+                                        .and(model_fields::key.eq(filter.0)),
+                                )
+                                .filter(content_values::value.eq(filter.1))
+                                .select(content_values::content_id),
+                        ),
+                    )
+                    .into_boxed()
+            }
+        } else {
+            contents_query.into_boxed()
+        };
+
+        if let Some(limit) = self.limit {
+            contents_query = contents_query.limit(limit);
+        }
+
+        if let Some(offset) = self.offset {
+            contents_query = contents_query.offset(offset);
+        }
+
+        let (content_ids, total) = if self.count {
+            let content_ids = contents_query
+                .select((contents::id, base::paginate::CountStarOver))
+                .load::<(i32, i64)>(&mut conn)
+                .await
+                .map_err(RenderError::Database)?;
+
+            let total = content_ids.get(0).map(|x| x.1);
+
+            (content_ids.into_iter().map(|x| x.0).collect(), total)
+        } else {
+            (
+                contents_query
+                    .select(contents::id)
+                    .load::<i32>(&mut conn)
+                    .await
+                    .map_err(RenderError::Database)?,
+                None,
+            )
+        };
+
+        let mut content_values = content_values::table
+            .filter(content_values::content_id.eq_any(&content_ids))
+            .filter(
+                content_values::model_field_id
+                    .eq_any(model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>()),
+            )
+            .filter(
+                content_values::locale
+                    .eq(&self.locale)
+                    .or(content_values::locale.is_null()),
+            )
+            .order((content_values::content_id.asc(), content_values::id.asc()))
+            .select((
+                content_values::content_id,
+                content_values::model_field_id,
+                content_values::value,
+            ))
+            .load::<(i32, i32, String)>(&mut conn)
+            .await
+            .map_err(RenderError::Database)?;
+
+        let contents = content_ids
+            .into_iter()
+            .map(|id| {
+                let mut content =
+                    BTreeMap::<String, Value>::from_iter([("id".to_string(), Value::from(id))]);
+
+                let mut values = content_values
+                    .extract_if(.., |v| v.0 == id)
+                    .collect::<Vec<_>>();
+
+                for model_field in model_fields.iter() {
+                    let mut values = values.extract_if(.., |v| v.1 == model_field.0);
+
+                    let value = if model_field.2 {
+                        Some(Value::from(
+                            values
+                                .map(|v| string_to_value(model_field.3.as_str(), v.2))
+                                .collect::<Vec<_>>(),
+                        ))
+                    } else {
+                        values
+                            .next()
+                            .map(|v| Value::from(string_to_value(model_field.3.as_str(), v.2)))
+                    };
+
+                    if let Some(value) = value {
+                        content.insert(model_field.1.clone(), value);
+                    }
+                }
+
+                Value::from(content)
+            })
+            .collect();
+
+        Ok(Some((contents, total)))
     }
 }
 
