@@ -418,10 +418,10 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
             for p in internal.pages.iter() {
                 if key != p.key
-                    || !p
-                        .locale
+                    || p.locale
                         .as_ref()
-                        .map(|l| *l == &*request.locale.key)
+                        .map(|l| *l != &*request.locale.key)
+                        // If page does not have a locale, still match it
                         .unwrap_or(false)
                 {
                     continue;
@@ -498,7 +498,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     .downcast_object()
                     .expect("request variable does not have expected type");
 
-                let value = block_on(
+                block_on(
                     ContentSource {
                         pool: pool.clone(),
                         namespace: internal.namespace.clone(),
@@ -521,9 +521,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     }
                 })
                 .map(|values| values.map(|v| v.0).and_then(|mut v| v.pop()))
-                .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"));
-
-                value
+                .map_err(|_| Error::new(ErrorKind::InvalidOperation, "RenderError"))
             },
         );
     };
@@ -776,7 +774,13 @@ impl ContentSource {
                                         .eq(model_id)
                                         .and(model_fields::key.eq(filter.0)),
                                 )
-                                .filter(content_values::value.eq(filter.1))
+                                .filter(
+                                    content_values::value.eq(filter.1).and(
+                                        content_values::locale
+                                            .eq(&self.locale)
+                                            .or(content_values::locale.is_null()),
+                                    ),
+                                )
                                 .select(content_values::content_id),
                         ),
                     )
