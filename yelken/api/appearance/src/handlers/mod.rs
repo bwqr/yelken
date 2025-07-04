@@ -7,17 +7,19 @@ use axum::{
     response::{Html, IntoResponse, Response},
     Extension,
 };
-use base::{config::Options, responses::HttpError, schema::pages, AppState};
+use base::{
+    config::Options,
+    models::Locale,
+    responses::HttpError,
+    schema::{locales, pages},
+    AppState,
+};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use matchit::{Match, Router};
-use minijinja::Value;
 use unic_langid::LanguageIdentifier;
 
-use crate::render::{
-    context::{ConfigContext, LocaleContext, Page, PageContext, RenderContext},
-    Render,
-};
+use crate::render::Render;
 
 pub mod page;
 pub mod template;
@@ -25,17 +27,17 @@ pub mod theme;
 
 fn resolve_locale<'a>(
     req: &'a Request,
-    locales: &'a [LanguageIdentifier],
-    default_locale: &'a LanguageIdentifier,
-) -> &'a LanguageIdentifier {
-    if locales.len() == 0 {
-        return default_locale;
+    locales: impl Iterator<Item = &'a crate::render::context::Locale> + Clone,
+    default: &'a crate::render::context::Locale,
+) -> &'a crate::render::context::Locale {
+    if locales.clone().next().is_none() {
+        return default;
     }
 
     let path = req.uri().path();
 
     if !path.starts_with('/') {
-        return default_locale;
+        return default;
     }
 
     // Path based resolution
@@ -45,10 +47,8 @@ fn resolve_locale<'a>(
         .map(|split| split.0)
         .unwrap_or(locale_segment);
 
-    if let Ok(locale) = locale_segment.parse::<LanguageIdentifier>() {
-        if let Some(locale) = locales.iter().find(|id| id.matches(&locale, true, true)) {
-            return locale;
-        }
+    if let Some(locale) = locales.clone().find(|l| &*l.key == locale_segment) {
+        return locale;
     }
 
     // Cookie based resolution
@@ -59,11 +59,11 @@ fn resolve_locale<'a>(
         .and_then(|cookie| cookie.split_once("yelken_locale=").map(|split| split.1))
     {
         let locale = cookie
-            .split_once(";")
+            .split_once(';')
             .map(|split| split.0)
             .unwrap_or(cookie);
 
-        if let Some(locale) = locales.iter().find(|id| locale == id.language.as_str()) {
+        if let Some(locale) = locales.clone().find(|l| &*l.key == locale) {
             return locale;
         }
     }
@@ -77,13 +77,13 @@ fn resolve_locale<'a>(
         for lang in accept_language.split(',') {
             let lang = lang.split_once(';').map(|split| split.0).unwrap_or(lang);
 
-            if let Some(locale) = locales.iter().find(|id| lang == id.language.as_str()) {
+            if let Some(locale) = locales.clone().find(|l| &*l.key == lang) {
                 return locale;
             }
         }
     }
 
-    default_locale
+    default
 }
 
 pub async fn serve_page(
@@ -109,45 +109,78 @@ pub async fn serve_page(
             .map_err(|_| HttpError::internal_server_error("reload_templates_failed"))?;
     }
 
+    let (locales, pages) = {
+        let mut conn = state.pool.get().await?;
+
+        let pages = pages::table
+            .filter(
+                pages::namespace
+                    .is_null()
+                    .or(pages::namespace.eq(&*options.theme())),
+            )
+            .select((pages::key, pages::path, pages::template, pages::locale))
+            .load::<(String, String, String, Option<String>)>(&mut conn)
+            .await?;
+
+        let locales = locales::table
+            .filter(locales::disabled.eq(false))
+            .load::<Locale>(&mut conn)
+            .await?
+            .into_iter()
+            .filter_map(|l| {
+                let id = l.key.parse::<LanguageIdentifier>().ok()?;
+
+                Some(Arc::new(crate::render::context::Locale {
+                    id,
+                    key: l.key.into(),
+                    name: l.name.into(),
+                }))
+            })
+            .collect::<Box<[_]>>();
+
+        (locales, pages)
+    };
+
+    let default_locale = locales
+        .iter()
+        .find(|l| options.default_locale().matches(&l.id, true, true))
+        .cloned()
+        .unwrap_or_else(|| {
+            Arc::new(crate::render::context::Locale {
+                id: options.default_locale(),
+                key: options.default_locale().to_string().into(),
+                name: options.default_locale().to_string().into(),
+            })
+        });
+
+    let current_locale = resolve_locale(&req, locales.iter().map(|l| &**l), &default_locale);
+
+    let internal_ctx = crate::render::context::Internal {
+        namespace: options.theme().to_string(),
+        pages: pages
+            .iter()
+            .map(|p| crate::render::context::Page {
+                key: p.0.clone(),
+                path: p.1.clone(),
+                locale: p.3.clone(),
+            })
+            .collect(),
+        site_url: state.config.site_url.clone(),
+    };
+    let l10n_ctx = crate::render::context::L10n {
+        locales: locales.clone(),
+        default: Arc::clone(&default_locale),
+    };
+
     let mut router = Router::new();
 
-    let pages = pages::table
-        .filter(
-            pages::namespace
-                .is_null()
-                .or(pages::namespace.eq(&*options.theme())),
-        )
-        .select((pages::key, pages::path, pages::template, pages::locale))
-        .load::<(String, String, String, Option<String>)>(&mut state.pool.get().await?)
-        .await?;
+    let search_params = serde_urlencoded::de::from_str(req.uri().query().unwrap_or(""))
+        .unwrap_or(BTreeMap::<String, String>::new());
 
-    let supported_locales = options.locales();
-    let default_locale = options.default_locale();
-
-    let current_locale = resolve_locale(&req, &supported_locales, &default_locale);
-
-    let template_pages: Arc<[Page]> = pages
-        .iter()
-        .map(|page| Page {
-            key: page.0.clone(),
-            path: page.1.clone(),
-            locale: page
-                .3
-                .as_ref()
-                .map(|l| l.parse().unwrap_or(current_locale.clone()))
-                .unwrap_or(current_locale.clone()),
-        })
-        .collect();
-
-    pages.into_iter().for_each(|(key, path, template, locale)| {
-        let Ok(locale) = locale.map(|l| l.parse::<LanguageIdentifier>()).transpose() else {
-            log::warn!("invalid language identifier is found in page {key}");
-            return;
-        };
-
+    for (key, path, template, locale) in pages.into_iter() {
         let localized_path = match &locale {
             Some(locale) => {
-                if locale.matches(&default_locale, true, true) {
+                if locale == &*default_locale.key {
                     path.to_string()
                 } else if path == "/" {
                     format!("/{locale}")
@@ -161,14 +194,19 @@ pub async fn serve_page(
         if let Err(e) = router.insert(localized_path, (key.clone(), template, locale)) {
             log::warn!("Failed to add path {path} of page {key} due to {e:?}");
         }
-    });
+    }
 
     let Ok(Match {
         params,
         value: (key, template, page_locale),
     }) = router.at(req.uri().path())
     else {
-        if let Some(redirect) = req.uri().path().strip_prefix(&format!("/{default_locale}")) {
+        if let Some(redirect) = req
+            .uri()
+            .path()
+            .strip_prefix('/')
+            .and_then(|p| p.strip_prefix(&*default_locale.key))
+        {
             if redirect.is_empty() || redirect.starts_with('/') {
                 let mut url = state.config.site_url.clone();
 
@@ -191,25 +229,22 @@ pub async fn serve_page(
             }
         }
 
-        return match render.render(
-            "__404__.html",
-            Value::from_object(RenderContext::new(
-                Arc::new(ConfigContext {
-                    site_url: state.config.site_url.clone(),
-                }),
-                Arc::new(LocaleContext {
-                    all: supported_locales.clone(),
-                    current: current_locale.clone(),
-                    default: default_locale.clone(),
-                }),
-                Arc::new(PageContext {
-                    pages: template_pages,
-                }),
-                Arc::new(BTreeMap::new()),
-                options.theme().to_string(),
-            )),
-        ) {
-            Ok(html) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
+        let ctx = crate::render::context::Context::new(
+            crate::render::context::Request {
+                locale: Arc::new(current_locale.clone()),
+                params: Arc::new(BTreeMap::new()),
+                search_params: Arc::new(search_params),
+            },
+            l10n_ctx,
+            internal_ctx,
+        );
+
+        let res = base::runtime::spawn_blocking(move || render.render("__404__.html", ctx))
+            .await
+            .unwrap();
+
+        return match res {
+            Ok((html, _)) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
             Err(e) => Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Html(format!("Failed to render page, {e:?}")),
@@ -225,7 +260,7 @@ pub async fn serve_page(
 
         {
             let mut path_segments = url.path_segments_mut().unwrap();
-            path_segments.push(&format!("{current_locale}"));
+            path_segments.push(&current_locale.key);
 
             if !(path.is_empty() || path == "/") {
                 path_segments.push(path);
@@ -234,7 +269,7 @@ pub async fn serve_page(
 
         let localized_path = url.path();
 
-        if !page_locale.matches(&current_locale, true, true)
+        if page_locale != &*current_locale.key
             && router
                 .at(localized_path)
                 .map(|localized_route| localized_route.value.0 == *key)
@@ -249,37 +284,37 @@ pub async fn serve_page(
     }
 
     // If page has a locale, overwrite the current locale
-    let current_locale = page_locale.as_ref().unwrap_or(current_locale);
+    let current_locale = page_locale
+        .as_ref()
+        .and_then(|pl| locales.iter().find(|l| &*l.key == pl).map(|l| l).cloned())
+        .unwrap_or(Arc::new(current_locale.clone()));
 
-    let template = template.clone();
-    let ctx = RenderContext::new(
-        Arc::new(ConfigContext {
-            site_url: state.config.site_url.clone(),
-        }),
-        Arc::new(LocaleContext {
-            all: supported_locales.clone(),
-            current: current_locale.clone(),
-            default: default_locale.clone(),
-        }),
-        Arc::new(PageContext {
-            pages: template_pages,
-        }),
-        Arc::new(BTreeMap::from_iter(
-            params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
-        )),
-        options.theme().to_string(),
+    let ctx = crate::render::context::Context::new(
+        crate::render::context::Request {
+            locale: current_locale,
+            params: Arc::new(BTreeMap::from_iter(
+                params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
+            )),
+            search_params: Arc::new(search_params),
+        },
+        l10n_ctx,
+        internal_ctx,
     );
 
-    let res = base::runtime::spawn_blocking(move || {
-        let ctx = Value::from_object(ctx);
+    let template = template.clone();
 
-        render.render(&template, ctx)
-    })
-    .await
-    .unwrap();
+    let res = base::runtime::spawn_blocking(move || render.render(&template, ctx))
+        .await
+        .unwrap();
 
     match res {
-        Ok(html) => Ok(Html(html).into_response()),
+        Ok((html, status)) => Ok((
+            status
+                .and_then(|s| StatusCode::from_u16(s).ok())
+                .unwrap_or(StatusCode::OK),
+            Html(html),
+        )
+            .into_response()),
         Err(e) => {
             log::info!("Could not render template: {:#}", e);
 
