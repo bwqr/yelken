@@ -641,7 +641,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="width: 25%">Key</td>
+                                                    <td>Key</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().key}>
                                                             <input
@@ -656,7 +656,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="width: 25%">Namespace</td>
+                                                    <td>Namespace</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={namespace() ?? '-'}>
                                                             <input
@@ -671,7 +671,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="width: 25%">Description</td>
+                                                    <td>Description</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().desc ?? '-'}>
                                                             <textarea

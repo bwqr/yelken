@@ -10,6 +10,7 @@ import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
 import Exclamation from 'bootstrap-icons/icons/exclamation-diamond.svg';
 import FileEarmarkFill from 'bootstrap-icons/icons/file-earmark-fill.svg';
 import FloppyFill from 'bootstrap-icons/icons/floppy-fill.svg';
+import GearFill from 'bootstrap-icons/icons/gear-fill.svg';
 import Images from 'bootstrap-icons/icons/images.svg';
 import Journals from 'bootstrap-icons/icons/journals.svg';
 import List from 'bootstrap-icons/icons/list.svg';
@@ -42,6 +43,7 @@ export {
     Exclamation,
     FileEarmarkFill,
     FloppyFill,
+    GearFill,
     Images,
     Journals,
     List,

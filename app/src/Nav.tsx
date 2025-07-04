@@ -3,7 +3,7 @@ import { type Component, createEffect, createSignal, For, type JSX, onCleanup, S
 import { Dynamic } from "solid-js/web";
 import * as config from './lib/config';
 import { UserContext } from "./lib/user/context";
-import { Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill, List, XLg } from "./Icons";
+import { Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill, List, XLg, GearFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
 import ProfileIcon from "./components/ProfileIcon";
 import { Permission } from "./lib/models";
@@ -73,6 +73,7 @@ export function SideNav(): JSX.Element {
                     { title: 'Locales', href: '/locales', icon: Translate },
                     { title: 'Roles', href: '/roles', icon: ShieldLock },
                     { title: 'Users & Perms', href: '/users', icon: PeopleFill },
+                    { title: 'Settings', href: '/settings', icon: GearFill },
                 ]
             },
         ]);

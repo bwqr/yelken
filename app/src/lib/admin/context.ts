@@ -26,6 +26,9 @@ export interface AdminStore {
     deleteLocale(key: string): Promise<void>;
     updateLocaleState(key: string, disabled: boolean): Promise<void>;
     setLocaleDefault(key: string): Promise<void>;
+
+    fetchSiteOptions(): Promise<Record<string, string>>;
+    updateSiteOption(req: { key: string, value: string }): Promise<void>;
 }
 
 export const AdminContext: Context<AdminStore | undefined> = createContext();
@@ -118,5 +121,13 @@ export class AdminService implements AdminStore {
 
     async setLocaleDefault(key: string): Promise<void> {
         return Api.put('/admin/locale/default', { locale: key });
+    }
+
+    async fetchSiteOptions(): Promise<Record<string, string>> {
+        return Api.get('/admin/option/site/all');
+    }
+
+    async updateSiteOption(req: { key: string; value: string; }): Promise<void> {
+        return Api.put('/admin/option/site/update', req);
     }
 }

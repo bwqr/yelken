@@ -60,3 +60,9 @@ pub struct UpdateDefaultLocale {
 pub struct UpdateLocale {
     pub name: String,
 }
+
+#[derive(Deserialize)]
+pub struct UpdateSiteOption {
+    pub key: String,
+    pub value: String,
+}

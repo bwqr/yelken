@@ -6,6 +6,7 @@ use base::db::Pool;
 use base::models::ContentStage;
 use base::runtime::{block_on, IntoSendFuture};
 use base::schema::{content_values, contents, fields, model_fields, models};
+use context::Context;
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};
 use opendal::{EntryMode, Operator};
@@ -104,6 +105,7 @@ pub mod context {
     #[derive(Debug)]
     pub struct Request {
         pub locale: Arc<Locale>,
+        pub options: Arc<BTreeMap<String, String>>,
         pub params: Arc<BTreeMap<String, String>>,
         pub search_params: Arc<BTreeMap<String, String>>,
     }
@@ -112,6 +114,7 @@ pub mod context {
         fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
             match key.as_str()? {
                 "locale" => Some(Value::from_dyn_object(Arc::clone(&self.locale))),
+                "options" => Some(Value::from_dyn_object(Arc::clone(&self.options))),
                 "params" => Some(Value::from_dyn_object(Arc::clone(&self.params))),
                 "search_params" => Some(Value::from_dyn_object(Arc::clone(&self.search_params))),
                 _ => None,
@@ -155,10 +158,10 @@ pub mod context {
 
     #[derive(Debug)]
     pub struct Context {
-        request: Arc<Request>,
-        response: Arc<Response>,
-        l10n: Arc<L10n>,
-        internal: Arc<Internal>,
+        pub(super) request: Arc<Request>,
+        pub(super) response: Arc<Response>,
+        pub(super) l10n: Arc<L10n>,
+        pub(super) internal: Arc<Internal>,
     }
 
     impl Object for Context {
@@ -314,24 +317,38 @@ impl Render {
         Ok(())
     }
 
-    pub fn render(
-        &self,
-        template: &str,
-        ctx: context::Context,
-    ) -> Result<(String, Option<u16>), Error> {
+    pub fn render(&self, template: &str, ctx: Context) -> Result<(String, Option<u16>), Error> {
+        #[derive(Debug)]
+        struct Root {
+            ctx: Arc<Context>,
+        }
+
+        impl minijinja::value::Object for Root {
+            fn get_value(self: &Arc<Self>, key: &Value) -> Option<Value> {
+                match key.as_str()? {
+                    "ctx" => Some(Value::from_dyn_object(Arc::clone(&self.ctx))),
+                    _ => self.ctx.get_value(key),
+                }
+            }
+        }
+
         let env = (*self.env).load();
 
         let template = env.get_template(template)?;
 
-        let (html, state) = template.render_and_return_state(Value::from_object(ctx))?;
+        let (html, state) =
+            template.render_and_return_state(Value::from_object(Root { ctx: Arc::new(ctx) }))?;
 
-        let response: Arc<context::Response> = state
-            .lookup("response")
-            .expect("could not find response in render context")
+        let ctx: Arc<Context> = state
+            .lookup("ctx")
+            .expect("could not find render context")
             .downcast_object()
-            .expect("response variable does not have expected type");
+            .expect("context does not have expected type");
 
-        let status = response.status.load(std::sync::atomic::Ordering::Relaxed);
+        let status = ctx
+            .response
+            .status
+            .load(std::sync::atomic::Ordering::Relaxed);
 
         Ok((html, (status != 0).then_some(status)))
     }
@@ -346,28 +363,28 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     env.add_function(
         "localize",
         move |state: &State, key: String, kwargs: Kwargs| -> Option<String> {
-            let request: Arc<context::Request> = state
-                .lookup("request")
-                .expect("could not find request in render context")
+            let ctx: Arc<Context> = state
+                .lookup("ctx")
+                .expect("could not find render context")
                 .downcast_object()
-                .expect("request variable does not have expected type");
+                .expect("context does not have expected type");
 
             let args = kwargs.args().map(|arg| (arg, kwargs.get(arg).unwrap()));
 
-            l10n.localize(&request.locale.id, &key, args)
+            l10n.localize(&ctx.request.locale.id, &key, args)
         },
     );
 
     env.add_function(
         "asset_url",
         |state: &State, path: String, kwargs: Kwargs| {
-            let base_url = state
-                .lookup("__internal__")
-                .expect("could not find __internal__ in render context")
-                .downcast_object::<context::Internal>()
-                .expect("__internal__ variable does not have expected type")
-                .site_url
-                .clone();
+            let ctx: Arc<Context> = state
+                .lookup("ctx")
+                .expect("could not find render context")
+                .downcast_object()
+                .expect("context does not have expected type");
+
+            let base_url = ctx.internal.site_url.clone();
 
             let kind = kwargs.get::<&str>("kind").unwrap_or("theme");
 
@@ -393,34 +410,22 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     );
 
     env.add_function("get_url", |state: &State, args: Kwargs| {
-        let internal: Arc<context::Internal> = state
-            .lookup("__internal__")
-            .expect("could not find __internal__ in render context")
-            .downcast_object::<context::Internal>()
-            .expect("__internal__ variable does not have expected type");
-
-        let request: Arc<context::Request> = state
-            .lookup("request")
-            .expect("could not find request in render context")
+        let ctx: Arc<Context> = state
+            .lookup("ctx")
+            .expect("could not find render context")
             .downcast_object()
-            .expect("request variable does not have expected type");
+            .expect("context does not have expected type");
 
-        let l10n: Arc<context::L10n> = state
-            .lookup("l10n")
-            .expect("could not find l10n in render context")
-            .downcast_object()
-            .expect("l10n variable does not have expected type");
-
-        let mut url = internal.site_url.clone();
+        let mut url = ctx.internal.site_url.clone();
 
         if let Some(key) = args.get::<'_, Option<String>>("page")? {
             let path_params: Vec<String> = args.get("params")?;
 
-            for p in internal.pages.iter() {
+            for p in ctx.internal.pages.iter() {
                 if key != p.key
                     || p.locale
                         .as_ref()
-                        .map(|l| *l != &*request.locale.key)
+                        .map(|l| *l != &*ctx.request.locale.key)
                         // If page does not have a locale, still match it
                         .unwrap_or(false)
                 {
@@ -443,8 +448,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                     let mut path_segments = url.path_segments_mut().unwrap();
                     path_segments.pop_if_empty();
 
-                    if request.locale.key != l10n.default.key {
-                        path_segments.push(&*request.locale.key);
+                    if ctx.request.locale.key != ctx.l10n.default.key {
+                        path_segments.push(&*ctx.request.locale.key);
                     }
 
                     path_segments.extend(path.split('/').filter(|p| !p.is_empty()));
@@ -464,8 +469,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                 let mut path_segments = url.path_segments_mut().unwrap();
                 path_segments.pop_if_empty();
 
-                if localize && request.locale.key != l10n.default.key {
-                    path_segments.push(&*request.locale.key);
+                if localize && ctx.request.locale.key != ctx.l10n.default.key {
+                    path_segments.push(&*ctx.request.locale.key);
                 }
 
                 path_segments.extend(path.split('/').filter(|p| !p.is_empty()));
@@ -486,23 +491,17 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         env.add_function(
             "get_content",
             move |state: &State, model: String, field: String, value: String| {
-                let internal: Arc<context::Internal> = state
-                    .lookup("__internal__")
-                    .expect("could not find __internal__ in render context")
+                let ctx: Arc<Context> = state
+                    .lookup("ctx")
+                    .expect("could not find render context")
                     .downcast_object()
-                    .expect("__internal__ variable does not have expected type");
-
-                let request: Arc<context::Request> = state
-                    .lookup("request")
-                    .expect("could not find request in render context")
-                    .downcast_object()
-                    .expect("request variable does not have expected type");
+                    .expect("context does not have expected type");
 
                 block_on(
                     ContentSource {
                         pool: pool.clone(),
-                        namespace: internal.namespace.clone(),
-                        locale: request.locale.key.to_string(),
+                        namespace: ctx.internal.namespace.clone(),
+                        locale: ctx.request.locale.key.to_string(),
                         model,
                         fields: None,
                         filter: Some((field, value)),
@@ -532,17 +531,11 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         env.add_function(
             "paginate",
             move |state: &State, model: String, fields: Vec<String>, args: Kwargs| {
-                let internal: Arc<context::Internal> = state
-                    .lookup("__internal__")
-                    .expect("could not find __internal__ in render context")
+                let ctx: Arc<Context> = state
+                    .lookup("ctx")
+                    .expect("could not find render context")
                     .downcast_object()
-                    .expect("__internal__ variable does not have expected type");
-
-                let request: Arc<context::Request> = state
-                    .lookup("request")
-                    .expect("could not find request in render context")
-                    .downcast_object()
-                    .expect("request variable does not have expected type");
+                    .expect("context does not have expected type");
 
                 let per_page = args.get::<Option<i64>>("per_page")?.unwrap_or(20);
                 let limit = std::cmp::min(per_page, 100);
@@ -553,8 +546,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                 block_on(
                     ContentSource {
                         pool: pool.clone(),
-                        namespace: internal.namespace.clone(),
-                        locale: request.locale.key.to_string(),
+                        namespace: ctx.internal.namespace.clone(),
+                        locale: ctx.request.locale.key.to_string(),
                         model,
                         fields: Some(fields),
                         filter: None,
@@ -597,17 +590,11 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
         env.add_function(
             "get_contents",
             move |state: &State, model: String, fields: Vec<String>, args: Kwargs| {
-                let internal: Arc<context::Internal> = state
-                    .lookup("__internal__")
-                    .expect("could not find __internal__ in render context")
+                let ctx: Arc<Context> = state
+                    .lookup("ctx")
+                    .expect("could not find render context")
                     .downcast_object()
-                    .expect("__internal__ variable does not have expected type");
-
-                let request: Arc<context::Request> = state
-                    .lookup("request")
-                    .expect("could not find request in render context")
-                    .downcast_object()
-                    .expect("request variable does not have expected type");
+                    .expect("context does not have expected type");
 
                 let limit: Option<i64> = args.get("limit")?;
                 let offset: Option<i64> = args.get("offset")?;
@@ -624,8 +611,8 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
                 block_on(
                     ContentSource {
                         pool: pool.clone(),
-                        namespace: internal.namespace.clone(),
-                        locale: request.locale.key.to_string(),
+                        namespace: ctx.internal.namespace.clone(),
+                        locale: ctx.request.locale.key.to_string(),
                         model,
                         fields: Some(fields),
                         filter: None,

@@ -11,7 +11,7 @@ use base::{
     config::Options,
     models::Locale,
     responses::HttpError,
-    schema::{locales, pages},
+    schema::{locales, options, pages},
     AppState,
 };
 use diesel::prelude::*;
@@ -109,7 +109,7 @@ pub async fn serve_page(
             .map_err(|_| HttpError::internal_server_error("reload_templates_failed"))?;
     }
 
-    let (locales, pages) = {
+    let (locales, pages, site_options) = {
         let mut conn = state.pool.get().await?;
 
         let pages = pages::table
@@ -138,7 +138,19 @@ pub async fn serve_page(
             })
             .collect::<Box<[_]>>();
 
-        (locales, pages)
+        let site_options = options::table
+            .filter(
+                options::namespace
+                    .is_null()
+                    .or(options::namespace.eq(&*options.theme())),
+            )
+            .filter(options::key.like("site.%"))
+            .select((options::key, options::value))
+            .load::<(String, String)>(&mut conn)
+            .await
+            .map(|v| BTreeMap::from_iter(v.into_iter()))?;
+
+        (locales, pages, site_options)
     };
 
     let default_locale = locales
@@ -234,6 +246,7 @@ pub async fn serve_page(
                 locale: Arc::new(current_locale.clone()),
                 params: Arc::new(BTreeMap::new()),
                 search_params: Arc::new(search_params),
+                options: Arc::new(site_options),
             },
             l10n_ctx,
             internal_ctx,
@@ -296,6 +309,7 @@ pub async fn serve_page(
                 params.iter().map(|(k, v)| (k.to_string(), v.to_string())),
             )),
             search_params: Arc::new(search_params),
+            options: Arc::new(site_options),
         },
         l10n_ctx,
         internal_ctx,

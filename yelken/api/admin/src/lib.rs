@@ -10,7 +10,7 @@ use base::{
     },
     AppState,
 };
-use handlers::{locale, permission, role, user};
+use handlers::{locale, option, permission, role, user};
 
 mod handlers;
 mod requests;
@@ -61,7 +61,12 @@ pub fn router(state: AppState) -> Router<AppState> {
         .route("/delete/{key}", delete(locale::delete_locale))
         .route("/default", put(locale::update_default_locale));
 
+    let option_read = Router::new().route("/site/all", get(option::fetch_site_options));
+
+    let option_write = Router::new().route("/site/update", put(option::update_site_option));
+
     Router::new()
+        .nest("/option", option_read.merge(option_write))
         .nest("/permission", permission_write)
         .nest("/user", user_read.merge(user_write))
         .nest("/role", role_read.merge(role_write))

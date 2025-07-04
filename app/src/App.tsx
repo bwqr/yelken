@@ -22,6 +22,7 @@ import { CreateRole, Role, Roles } from './admin/Role';
 import { CreateUser, User, Users } from './admin/User';
 import { Asset, Assets, UploadAsset } from './cms/Asset';
 import { AppearanceContext, AppearanceService } from './lib/appearance/context';
+import { Settings } from './admin/Settings';
 
 class ServiceProvider {
     private _cmsCtx: ResourceReturn<CMSStore> | undefined;
@@ -324,6 +325,14 @@ const App: Component = () => {
                         <Route path="/" component={Users} />
                         <Route path="/view/:username" component={User} />
                         <Route path="/create" component={CreateUser} />
+                    </Route>
+
+                    <Route path="/settings" component={(props) => (
+                        <AdminContext.Provider value={new AdminService()}>
+                            {props.children}
+                        </AdminContext.Provider>
+                    )}>
+                        <Route path="/" component={Settings} />
                     </Route>
                 </Route>
                 <Route path="*404" component={() => (
