@@ -9,7 +9,7 @@ use axum::{
 };
 use base::{
     config::Options,
-    models::Locale,
+    models::{Locale, PageKind},
     responses::HttpError,
     schema::{locales, options, pages},
     AppState,
@@ -118,8 +118,14 @@ pub async fn serve_page(
                     .is_null()
                     .or(pages::namespace.eq(&*options.theme())),
             )
-            .select((pages::key, pages::path, pages::template, pages::locale))
-            .load::<(String, String, String, Option<String>)>(&mut conn)
+            .select((
+                pages::key,
+                pages::path,
+                pages::kind,
+                pages::value,
+                pages::locale,
+            ))
+            .load::<(String, String, PageKind, String, Option<String>)>(&mut conn)
             .await?;
 
         let locales = locales::table
@@ -174,7 +180,7 @@ pub async fn serve_page(
             .map(|p| crate::render::context::Page {
                 key: p.0.clone(),
                 path: p.1.clone(),
-                locale: p.3.clone(),
+                locale: p.4.clone(),
             })
             .collect(),
         site_url: state.config.site_url.clone(),
@@ -189,7 +195,7 @@ pub async fn serve_page(
     let search_params = serde_urlencoded::de::from_str(req.uri().query().unwrap_or(""))
         .unwrap_or(BTreeMap::<String, String>::new());
 
-    for (key, path, template, locale) in pages.into_iter() {
+    for (key, path, kind, value, locale) in pages.into_iter() {
         let localized_path = match &locale {
             Some(locale) => {
                 if locale == &*default_locale.key {
@@ -203,14 +209,14 @@ pub async fn serve_page(
             _ => path.to_string(),
         };
 
-        if let Err(e) = router.insert(localized_path, (key.clone(), template, locale)) {
+        if let Err(e) = router.insert(localized_path, (key.clone(), kind, value, locale)) {
             log::warn!("Failed to add path {path} of page {key} due to {e:?}");
         }
     }
 
     let Ok(Match {
         params,
-        value: (key, template, page_locale),
+        value: (key, page_kind, page_value, page_locale),
     }) = router.at(req.uri().path())
     else {
         if let Some(redirect) = req
@@ -266,6 +272,22 @@ pub async fn serve_page(
         };
     };
 
+    if let PageKind::Asset = page_kind {
+        let mut url = state.config.site_url.clone();
+
+        url.path_segments_mut()
+            .unwrap()
+            .push("assets")
+            .push("content")
+            .extend(page_value.split('/'));
+
+        return Ok(Response::builder()
+            .status(StatusCode::FOUND)
+            .header(http::header::LOCATION, url.to_string())
+            .body(Body::empty())
+            .unwrap());
+    }
+
     if let Some(page_locale) = &page_locale {
         let path = req.uri().path();
 
@@ -315,7 +337,7 @@ pub async fn serve_page(
         internal_ctx,
     );
 
-    let template = template.clone();
+    let template = page_value.clone();
 
     let res = base::runtime::spawn_blocking(move || render.render(&template, ctx))
         .await

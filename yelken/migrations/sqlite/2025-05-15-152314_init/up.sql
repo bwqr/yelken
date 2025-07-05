@@ -160,11 +160,13 @@ create table pages(
     name       varchar(128) not null,
     "desc"     text         default null,
     path       varchar(255) not null,
-    template   varchar(128) not null,
+    kind       varchar(16)  not null default 'template',
+    value      varchar(128) not null,
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
     foreign key (locale) references locales (key) on delete no action on update no action,
-    foreign key (namespace) references namespaces (namespace) on delete no action on update no action
+    foreign key (namespace) references namespaces (namespace) on delete no action on update no action,
+    check (kind in ('asset', 'template'))
 );
 
 create table tags(

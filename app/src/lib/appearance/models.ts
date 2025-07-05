@@ -1,5 +1,10 @@
 import { Location } from "../models";
 
+export enum PageKind {
+    Asset = 'asset',
+    Template = 'template',
+}
+
 export interface Page {
     id: number,
     namespace: string | null,
@@ -7,7 +12,8 @@ export interface Page {
     name: string,
     desc: string | null,
     path: string,
-    template: string,
+    kind: PageKind,
+    value: string,
     locale: string | null,
     createdAt: string,
 }

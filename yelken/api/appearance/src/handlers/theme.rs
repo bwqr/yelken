@@ -9,11 +9,12 @@ use base::{
     config::Options,
     db::{BatchQuery, Pool, PooledConnection},
     middlewares::auth::AuthUser,
-    models::{ContentStage, Field, Locale, NamespaceSource, Theme},
+    models::{ContentStage, Field, Locale, NamespaceSource, PageKind, Theme},
     responses::HttpError,
     runtime::{spawn_blocking, IntoSendFuture},
     schema::{
-        content_values, contents, fields, locales, model_fields, models, namespaces, options, pages, themes
+        content_values, contents, fields, locales, model_fields, models, namespaces, options,
+        pages, themes,
     },
     services::SafePath,
     utils::{LocationKind, ResourceKind},
@@ -29,8 +30,8 @@ use opendal::Operator;
 use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
 
-use crate::{L10n, Render};
 use crate::requests::UpdateTheme;
+use crate::{L10n, Render};
 
 pub async fn fetch_themes(State(state): State<AppState>) -> Result<Json<Vec<Theme>>, HttpError> {
     themes::table
@@ -469,7 +470,8 @@ async fn create_theme(
                         pages::name.eq(page.name),
                         pages::desc.eq(page.desc),
                         pages::path.eq(page.path),
-                        pages::template.eq(page.template),
+                        pages::kind.eq(PageKind::Template),
+                        pages::value.eq(page.template),
                         pages::locale.eq(locale),
                     ))
                 })

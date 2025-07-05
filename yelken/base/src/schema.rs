@@ -142,8 +142,10 @@ diesel::table! {
         desc -> Nullable<Text>,
         #[max_length = 255]
         path -> Varchar,
+        #[max_length = 16]
+        kind -> Varchar,
         #[max_length = 128]
-        template -> Varchar,
+        value -> Varchar,
         #[max_length = 8]
         locale -> Nullable<Varchar>,
         created_at -> Timestamp,

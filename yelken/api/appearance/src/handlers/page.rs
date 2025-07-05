@@ -116,7 +116,8 @@ pub async fn create_page(
             pages::name.eq(req.name),
             pages::desc.eq(req.desc),
             pages::path.eq(req.path),
-            pages::template.eq(req.template),
+            pages::kind.eq(req.kind),
+            pages::value.eq(req.value),
             pages::locale.eq(req.locale),
         ))
         .get_result::<Page>(&mut conn)

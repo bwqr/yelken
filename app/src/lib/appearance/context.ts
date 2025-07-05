@@ -1,12 +1,12 @@
 import { type Context, createContext } from "solid-js";
-import type { Page, Template, TemplateDetail, Theme } from "./models";
+import type { Page, PageKind, Template, TemplateDetail, Theme } from "./models";
 import { Location } from "../models";
 import { Api, HttpError } from "../api";
 
 export interface AppearanceStore {
     fetchPages(namespace?: string): Promise<Page[]>
     fetchPage(key: string, namespace?: string): Promise<Page[]>;
-    createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page>;
+    createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, kind: PageKind, value: string, locale: string | null }): Promise<Page>;
     updatePage(key: string, req: { name: string, desc: string | null }, namespace?: string): Promise<void>;
     deletePage(key: string, locale: string | null, namespace?: string): Promise<void>;
 
@@ -44,7 +44,7 @@ export class AppearanceService implements AppearanceStore {
         return Api.get(`/appearance/page/view/${key}?${searchParams.toString()}`);
     }
 
-    async createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, template: string, locale: string | null }): Promise<Page> {
+    async createPage(req: { name: string, key: string, desc: string | null, path: string, namespace: string | null, kind: PageKind, value: string, locale: string | null }): Promise<Page> {
         return Api.post('/appearance/page/create', req);
     }
 

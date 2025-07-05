@@ -200,6 +200,35 @@ pub struct Permission {
     pub created_at: NaiveDateTime,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, AsExpression, FromSqlRow)]
+#[diesel(sql_type = Text)]
+#[serde(rename_all = "snake_case")]
+pub enum PageKind {
+    Asset,
+    Template,
+}
+
+impl ToSql<Text, Backend> for PageKind {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Backend>) -> diesel::serialize::Result {
+        let value = match self {
+            PageKind::Asset => "asset",
+            PageKind::Template => "template",
+        };
+
+        <str as ToSql<Text, Backend>>::to_sql(value, out)
+    }
+}
+
+impl FromSql<Text, Backend> for PageKind {
+    fn from_sql(mut value: BackendValue) -> diesel::deserialize::Result<Self> {
+        match read_value_bytes(&mut value) {
+            b"asset" => Ok(PageKind::Asset),
+            b"template" => Ok(PageKind::Template),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
 #[derive(Queryable, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Page {
@@ -209,7 +238,8 @@ pub struct Page {
     pub name: String,
     pub desc: Option<String>,
     pub path: String,
-    pub template: String,
+    pub kind: PageKind,
+    pub value: String,
     pub locale: Option<String>,
     pub created_at: NaiveDateTime,
 }

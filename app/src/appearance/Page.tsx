@@ -1,6 +1,6 @@
 import { createEffect, createResource, createSignal, For, Match, Show, Switch, useContext } from "solid-js";
 import { AppearanceContext } from "../lib/appearance/context";
-import { type Page as PageModel } from "../lib/appearance/models";
+import { PageKind, type Page as PageModel } from "../lib/appearance/models";
 import { FloppyFill, PencilSquare, PlusLg, XLg } from "../Icons";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";
@@ -16,7 +16,7 @@ interface PageGroup {
     desc: string | null,
     pages: {
         path: string,
-        template: string,
+        value: string,
         locale: string | null
     }[]
 }
@@ -80,7 +80,8 @@ export const CreatePage = () => {
             desc: desc().trim() || null,
             path: path().trim(),
             namespace: namespace()?.trim() || null,
-            template: template().trim(),
+            kind: PageKind.Template,
+            value: template().trim(),
             locale: locale().trim() || null,
         };
 
@@ -316,7 +317,7 @@ function groupPages(pages: PageModel[]): PageGroup[] {
             group.set(page.key, { key: page.key, name: page.name, desc: page.desc, pages: [] });
         }
 
-        group.get(page.key)!.pages.push({ path: page.path, template: page.template, locale: page.locale });
+        group.get(page.key)!.pages.push({ path: page.path, value: page.value, locale: page.locale });
 
         return group;
     }, new Map<string, PageGroup>())
@@ -725,7 +726,7 @@ export const Page = () => {
                                                         <tr>
                                                             <td>{page.path}</td>
                                                             <td>{page.locale ?? '-'}</td>
-                                                            <td>{page.template}</td>
+                                                            <td>{page.value}</td>
                                                             <td class="text-end">
                                                                 <button
                                                                     class="btn text-danger icon-link px-1"

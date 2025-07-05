@@ -18,5 +18,5 @@ insert into content_values (content_id, model_field_id, value, locale) values (1
 insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Nice Day', 'en'), (2, 2, 'Content of nice day article', 'en'), (2, 3, 'nice-day', 'en');
 insert into content_values (content_id, model_field_id, value, locale) values (2, 1, 'Hoş Gün', 'tr'), (2, 2, 'Hoş gün makalesinin içeriği', 'tr'), (2, 3, 'hos-gun', 'tr');
 
-insert into pages (namespace, key, name, path, template, locale) values ('default', 'home', 'Home', '/', 'index.html', 'en'), ('default', 'home', 'Home', '/', 'index.html', 'tr');
-insert into pages (namespace, key, name, path, template, locale) values ('default', 'article', 'Article', '/article/{slug}', 'article.html', 'en'), ('default', 'article', 'Article', '/makale/{slug}', 'article.html', 'tr');
+insert into pages (namespace, key, name, path, value, locale) values ('default', 'home', 'Home', '/', 'index.html', 'en'), ('default', 'home', 'Home', '/', 'index.html', 'tr');
+insert into pages (namespace, key, name, path, value, locale) values ('default', 'article', 'Article', '/article/{slug}', 'article.html', 'en'), ('default', 'article', 'Article', '/makale/{slug}', 'article.html', 'tr');

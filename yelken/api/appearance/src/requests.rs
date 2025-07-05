@@ -1,4 +1,4 @@
-use base::{sanitize::Sanitize, services::SafePath, validate::Validate};
+use base::{models::PageKind, sanitize::Sanitize, services::SafePath, validate::Validate};
 use derive::Sanitize;
 use serde::Deserialize;
 
@@ -10,7 +10,8 @@ pub struct CreatePage {
     pub name: String,
     pub desc: Option<String>,
     pub path: String,
-    pub template: String,
+    pub kind: PageKind,
+    pub value: String,
     pub locale: Option<String>,
 }
 
