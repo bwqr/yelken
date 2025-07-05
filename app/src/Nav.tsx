@@ -135,7 +135,7 @@ export function SideNav(): JSX.Element {
 
                 <div class="highlight-links">
                     <For each={categories}>
-                        {(category) => (
+                        {(category, idx) => (
                             <>
                                 <Show when={category.title}>
                                     <p class="w-100 px-2 text-secondary m-0 text-uppercase d-none d-lg-block" style="font-size: calc(var(--bs-body-font-size) - 0.2rem)">
@@ -143,7 +143,7 @@ export function SideNav(): JSX.Element {
                                     </p>
                                 </Show>
 
-                                <ul class="navbar-nav mb-4">
+                                <ul class="navbar-nav" classList={{ 'mb-4': idx() < categories.length - 1 }}>
                                     <For each={category.links}>
                                         {(link) => (
                                             <li class="nav-item">

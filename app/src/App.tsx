@@ -190,7 +190,7 @@ const App: Component = () => {
                 </Route>
 
                 <Route path="/" component={(props) => (
-                    <div class="d-flex flex-md-row flex-column" style="min-height: 100vh;">
+                    <div class="d-flex flex-md-row flex-column align-items-md-start" style="min-height: 100vh;">
                         <BackgroundServices>
                             <SideNav />
 
