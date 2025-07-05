@@ -35,9 +35,9 @@ async fn handle_req(Extension(index): Extension<Index>, req: Request) -> Respons
     resp
 }
 
-pub fn router(assets_storage: Operator, site_url: Url) -> Router<AppState> {
+pub fn router(app_assets_storage: Operator, site_url: Url) -> Router<AppState> {
     let index =
-        std::io::read_to_string(assets_storage.blocking().read("index.html").unwrap()).unwrap();
+        std::io::read_to_string(app_assets_storage.blocking().read("index.html").unwrap()).unwrap();
 
     let mut api_url = site_url.clone();
     api_url
@@ -67,8 +67,8 @@ pub fn router(assets_storage: Operator, site_url: Url) -> Router<AppState> {
 
     Router::new()
         .nest_service(
-            "/assets",
-            ServeStorageDir::new(assets_storage, || "assets".to_string()),
+            "/static",
+            ServeStorageDir::new(app_assets_storage, || "static".to_string()),
         )
         .fallback(handle_req)
         .layer(Extension(Index(index)))
