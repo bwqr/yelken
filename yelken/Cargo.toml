@@ -9,7 +9,6 @@ members = [
   "app",
   "base",
   "derive",
-  "form",
   "plugin",
   "setup",
   "wasm",
@@ -49,7 +48,6 @@ auth = { path = "api/auth", optional = true }
 base.path = "./base"
 common.path = "api/common"
 cms = { path = "api/cms", optional = true }
-form = { path = "./form", optional = true }
 plugin = { path = "./plugin", optional = true }
 user = { path = "api/user", optional = true }
 setup = { path = "./setup", optional = true, features = ["postgres"] }
@@ -86,7 +84,6 @@ app = ["dep:app"]
 appearance = ["dep:appearance"]
 auth = ["dep:auth", "auth?/email"]
 cms = ["dep:cms"]
-form = ["dep:form"]
 plugin = ["dep:plugin", "appearance?/plugin"]
 setup = ["dep:setup"]
 user = ["dep:user"]

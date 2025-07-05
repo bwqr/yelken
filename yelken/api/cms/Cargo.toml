@@ -17,3 +17,4 @@ rand.workspace = true
 opendal.workspace = true
 serde.workspace = true
 tower.workspace = true
+url.workspace = true

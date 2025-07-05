@@ -5,6 +5,7 @@ use diesel_async::RunQueryDsl;
 
 pub mod asset;
 pub mod content;
+pub mod form;
 pub mod model;
 pub mod tag;
 

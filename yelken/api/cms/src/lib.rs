@@ -16,7 +16,7 @@ mod handlers;
 mod requests;
 mod responses;
 
-pub use handlers::{asset, content, model, tag};
+use handlers::{asset, content, form, model, tag};
 
 pub fn router(state: AppState) -> Router<AppState> {
     let asset_read = Router::new()
@@ -59,6 +59,8 @@ pub fn router(state: AppState) -> Router<AppState> {
             pool: state.pool.clone(),
             perm: Permission::ContentWrite,
         });
+
+    let form_read = Router::new().route("/all", get(form::fetch_forms));
 
     let field_read = Router::new()
         .route("/all", get(handlers::fetch_fields))
@@ -110,6 +112,7 @@ pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .nest("/asset", asset_read.merge(asset_write))
         .nest("/content", content_read.merge(content_write))
+        .nest("/form", form_read)
         .nest("/field", field_read)
         .nest("/model", model_read.merge(model_write))
         .nest(
@@ -117,4 +120,8 @@ pub fn router(state: AppState) -> Router<AppState> {
             tag_read.merge(tag_asset_write).merge(tag_content_write),
         )
         .layer(middleware::from_fn_with_state(state.clone(), from_token))
+}
+
+pub fn form_router() -> Router<AppState> {
+    Router::new().route("/submit/{form}", post(form::handle_form_submissions))
 }

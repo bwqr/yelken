@@ -173,8 +173,8 @@ pub async fn router(
         )
     };
 
-    #[cfg(feature = "form")]
-    let app = app.nest("/yk/form", form::router());
+    #[cfg(feature = "cms")]
+    let app = app.nest("/yk/form", cms::form_router());
 
     #[cfg(feature = "appearance")]
     let (app, layers) = {
