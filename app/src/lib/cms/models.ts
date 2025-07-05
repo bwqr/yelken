@@ -58,6 +58,7 @@ export class Model implements Omit<ModelResponse, 'createdAt'> {
 
 export enum FieldKind {
     String = 'string',
+    Multiline = 'multiline',
     Integer = 'int',
     Asset = 'asset',
 }

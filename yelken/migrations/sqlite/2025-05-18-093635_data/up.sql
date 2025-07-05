@@ -4,7 +4,7 @@ insert into themes (id, version, name) values ('default', '0.1.0', 'Yelken Defau
 
 insert into options (key, value) values ('theme', 'default'), ('default_locale', 'en');
 
-insert into fields (key, name, kind) values ('text', 'Text', 'string'), ('integer', 'Number', 'int'), ('asset', 'Asset', 'asset');
+insert into fields (key, name, kind) values ('text', 'Text', 'string'), ('multiline', 'Multiline', 'multiline'), ('integer', 'Number', 'int'), ('asset', 'Asset', 'asset');
 
 insert into models (namespace, key, name) values ('default', 'article', 'Article');
 insert into model_fields (model_id, field_id, key, name, localized, required) values (1, 1, 'title', 'Title', true, true), (1, 1, 'content', 'Content', true, false), (1, 1, 'slug', 'Slug', true, false);

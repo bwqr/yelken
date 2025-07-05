@@ -127,7 +127,7 @@ const ContentValueModal = (props: {
                                             />
                                         </div>
                                         <div>
-                                            <label for="modelFieldName" class="form-label">Value</label>
+                                            <label for="modelFieldValue" class="form-label">Value</label>
                                             <Switch fallback={<p>Unsupported field</p>}>
                                                 <Match when={field().kind === FieldKind.Asset}>
                                                     <Show when={store.value}>
@@ -166,6 +166,17 @@ const ContentValueModal = (props: {
                                                         Pick Asset
                                                     </button>
                                                 </Match>
+                                                <Match when={field().kind === FieldKind.Multiline}>
+                                                    <textarea
+                                                        id="modelFieldValue"
+                                                        name="modelFieldValue"
+                                                        class="form-control"
+                                                        classList={{ 'is-invalid': validationErrors().has(ValidationError.Value) }}
+                                                        rows="5"
+                                                        value={store.value}
+                                                        onInput={(ev) => setStore('value', ev.target.value)}
+                                                    ></textarea>
+                                                </Match>
                                                 <Match when={field().kind === FieldKind.String || field().kind === FieldKind.Integer}>
                                                     <input
                                                         id="modelFieldValue"
@@ -176,11 +187,11 @@ const ContentValueModal = (props: {
                                                         value={store.value}
                                                         onInput={(ev) => setStore('value', ev.target.value)}
                                                     />
-                                                    <Show when={validationErrors().has(ValidationError.Value)}>
-                                                        <small class="invalid-feedback">Please enter a value for {props.modelField.name}.</small>
-                                                    </Show>
                                                 </Match>
                                             </Switch>
+                                            <Show when={validationErrors().has(ValidationError.Value)}>
+                                                <small class="invalid-feedback">Please specify a value for {props.modelField.name}.</small>
+                                            </Show>
                                         </div>
 
                                         <Show when={props.modelField.localized}>

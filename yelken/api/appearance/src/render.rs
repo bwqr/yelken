@@ -637,9 +637,9 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
     }
 }
 
-fn string_to_value(kind: &str, value: String) -> Value {
-    match kind {
-        "string" => Value::from(value),
+fn string_to_value(field_kind: &str, value: String) -> Value {
+    match field_kind {
+        "string" | "multiline" => Value::from(value),
         "asset" => Value::from(value),
         "int" => Value::from(str::parse::<i64>(&value).unwrap_or(0)),
         unknown => {
