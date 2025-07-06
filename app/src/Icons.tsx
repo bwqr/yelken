@@ -5,6 +5,7 @@ import BoxArrowRight from 'bootstrap-icons/icons/box-arrow-right.svg';
 import CardText from 'bootstrap-icons/icons/card-text.svg';
 import Check from 'bootstrap-icons/icons/check-square.svg';
 import CheckCircleFill from 'bootstrap-icons/icons/check-circle-fill.svg';
+import ClipboardCheckFill from 'bootstrap-icons/icons/clipboard-check-fill.svg';
 import Columns from 'bootstrap-icons/icons/columns.svg';
 import Dashboard from 'bootstrap-icons/icons/speedometer2.svg';
 import Exclamation from 'bootstrap-icons/icons/exclamation-diamond.svg';
@@ -38,6 +39,7 @@ export {
     CardText,
     Check,
     CheckCircleFill,
+    ClipboardCheckFill,
     Columns,
     Dashboard,
     Exclamation,

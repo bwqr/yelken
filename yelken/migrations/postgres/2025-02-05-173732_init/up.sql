@@ -179,6 +179,16 @@ create table tags(
     value       text         default null
 );
 
+create table forms(
+    id         serial primary key not null,
+    namespace  varchar(128) default null,
+    key        varchar(128) not null,
+    name       varchar(128) not null,
+    "desc"     text         default null,
+    created_at timestamp    not null default current_timestamp,
+    constraint fk_models_namespace foreign key (namespace) references namespaces (key) on delete no action on update no action
+);
+
 create table form_submissions(
     id         serial primary key not null,
     name       varchar(128) not null,

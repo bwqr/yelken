@@ -134,3 +134,7 @@ export interface Asset {
     createdAt: string,
     updatedAt: string,
 }
+
+export interface Form {
+    id: number,
+}

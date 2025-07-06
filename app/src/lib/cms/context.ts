@@ -1,6 +1,6 @@
 import { createContext, createSignal, type Accessor, type Context, type Setter } from "solid-js";
 import { PaginationRequest } from '../models';
-import { Content, Model, type ModelResponse, type Asset, type ContentDetails, type ContentStage, type Field, type ModelField, type ContentResponse, type ContentDetailsResponse, type ContentValue } from "./models";
+import { Content, Model, type ModelResponse, type Asset, type ContentDetails, type ContentStage, type Field, type ModelField, type ContentResponse, type ContentDetailsResponse, type ContentValue, type Form } from "./models";
 import type { CreateContent, CreateContentValue, CreateModel, CreateModelField, UpdateModelField } from "./requests";
 import { Api } from "../api";
 import type { Pagination } from "../models";
@@ -33,6 +33,8 @@ export interface CMSStore {
     updateModelField(id: number, req: UpdateModelField): Promise<void>;
     deleteModel(id: number): Promise<void>;
     deleteModelField(id: number): Promise<void>;
+
+    fetchForms(): Promise<Form[]>;
 }
 
 export const CMSContext: Context<CMSStore | undefined> = createContext();
@@ -146,6 +148,10 @@ export class CMSService implements CMSStore {
 
     async deleteContentValue(id: number): Promise<void> {
         return Api.delete(`/cms/content/value/${id}/delete`);
+    }
+
+    async fetchForms(): Promise<Form[]> {
+        return [{ id: 1, }, { id: 2, }, { id: 3, },];
     }
 
     static async fetchFields(): Promise<Field[]> {

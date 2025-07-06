@@ -23,6 +23,7 @@ import { CreateUser, User, Users } from './admin/User';
 import { Asset, Assets, UploadAsset } from './cms/Asset';
 import { AppearanceContext, AppearanceService } from './lib/appearance/context';
 import { Settings } from './admin/Settings';
+import { Forms } from './cms/Form';
 
 class ServiceProvider {
     private _cmsCtx: ResourceReturn<CMSStore> | undefined;
@@ -262,6 +263,22 @@ const App: Component = () => {
                         <Route path="/" component={Assets} />
                         <Route path="/upload" component={UploadAsset} />
                         <Route path="/view/:id" component={Asset} />
+                    </Route>
+
+                    <Route path="/forms" component={(props) => (
+                        <Suspense fallback={
+                            <p class="icon-link justify-content-center w-100">Loading ...</p>
+                        }>
+                            <Show when={useContext(ServiceContext)!.cmsCtx()()}>
+                                {(ctx) => (
+                                    <CMSContext.Provider value={ctx()}>
+                                        {props.children}
+                                    </CMSContext.Provider>
+                                )}
+                            </Show>
+                        </Suspense>
+                    )}>
+                        <Route path="/" component={Forms} />
                     </Route>
 
                     <Route path="/themes" component={(props) => (
