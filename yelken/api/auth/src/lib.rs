@@ -11,9 +11,7 @@ pub fn router() -> Router<AppState> {
         use axum::routing::post;
         use handlers::email;
 
-        router
-            .route("/login", post(email::login))
-            .route("/sign-up", post(email::sign_up))
+        router.route("/login", post(email::login))
     };
 
     #[cfg(feature = "oauth")]

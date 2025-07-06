@@ -19,7 +19,7 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqli
 #[serde(rename_all = "snake_case")]
 pub enum Login {
     Password(String),
-    Cloud,
+    Cloud(String),
 }
 
 #[derive(Deserialize)]
@@ -170,7 +170,7 @@ pub fn create_admin_user(
             .collect::<String>()
             .as_str();
 
-    let (login_kind, password) = match user.login {
+    let (login_kind, openid, password) = match user.login {
         Login::Password(password) => {
             let salt: String = (0..32)
                 .map(|_| rng().sample(Alphanumeric) as char)
@@ -180,10 +180,11 @@ pub fn create_admin_user(
 
             (
                 base::models::LoginKind::Email,
+                None,
                 Some(salt + password.as_str()),
             )
         }
-        Login::Cloud => (base::models::LoginKind::Cloud, None),
+        Login::Cloud(oid) => (base::models::LoginKind::Cloud, Some(oid), None),
     };
 
     conn.transaction(|conn| {
@@ -193,6 +194,7 @@ pub fn create_admin_user(
                 users::name.eq(user.name),
                 users::email.eq(user.email),
                 users::login_kind.eq(login_kind),
+                users::openid.eq(openid),
                 users::password.eq(password),
             ))
             .get_result::<base::models::User>(conn)?;
