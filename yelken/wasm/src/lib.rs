@@ -14,8 +14,6 @@ use axum::{
 use base::{
     crypto::Crypto,
     db::{Connection, SyncConnection},
-    models::User,
-    schema::{permissions, users},
 };
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use futures::StreamExt;
@@ -48,45 +46,6 @@ fn fill_storage(storage: &Operator, path: &str, dir: &'static Dir) {
             }
         }
     }
-}
-
-fn create_user(
-    mut conn: SyncConnection,
-    crypto: &Crypto,
-    name: String,
-    email: String,
-    password: String,
-) {
-    use diesel::prelude::*;
-    use rand::{Rng, distr::Alphanumeric, rng};
-
-    let salt: String = (0..32)
-        .map(|_| rng().sample(Alphanumeric) as char)
-        .collect();
-
-    let password = crypto.sign512((password + salt.as_str()).as_bytes());
-
-    let user = diesel::insert_into(users::table)
-        .values((
-            users::username.eq("yelken_test_user"),
-            users::name.eq(name),
-            users::email.eq(email),
-            users::password.eq(salt + password.as_str()),
-        ))
-        .get_result::<User>(&mut conn)
-        .unwrap();
-
-    let perms = ["admin", "user.read", "content.read", "content.write"];
-
-    diesel::insert_into(permissions::table)
-        .values(
-            perms
-                .into_iter()
-                .map(|perm| (permissions::user_id.eq(user.id), permissions::key.eq(perm)))
-                .collect::<Vec<_>>(),
-        )
-        .execute(&mut conn)
-        .unwrap();
 }
 
 async fn logger(req: Request, next: Next) -> Response {
@@ -132,7 +91,16 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
             .execute(&mut conn)
             .unwrap();
 
-        create_user(conn, &crypto, name, email, password);
+        setup::create_admin_user(
+            &mut conn,
+            &crypto,
+            setup::User {
+                name,
+                email,
+                login: setup::Login::Password(password),
+            },
+        )
+        .unwrap();
 
         fill_storage(&storage, "themes/default", &THEME);
 

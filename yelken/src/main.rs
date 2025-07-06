@@ -7,10 +7,29 @@ use base::{
     crypto::Crypto,
     db::{Connection, SyncConnection},
 };
+use clap::{Parser, Subcommand};
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use yelken::DatabaseConfig;
 
-pub struct ServerConfig {
+#[derive(Clone, Debug, Subcommand)]
+enum Command {
+    Setup {
+        #[arg(long)]
+        admin: bool,
+        #[arg(long)]
+        values: bool,
+    },
+    Migrate,
+    Run,
+}
+
+#[derive(Debug, Parser)]
+struct Args {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+struct ServerConfig {
     pub address: SocketAddrV4,
     pub app_assets_dir: String,
     pub storage_dir: String,
@@ -131,29 +150,50 @@ async fn main() {
 
     env_logger::init();
 
-    let db_config = db_config_from_env().unwrap();
-
-    let command = std::env::args().nth(1).unwrap_or("".to_string());
-
-    if command == "migrate" || command == "migrate-run" {
-        setup::migrate(
-            &mut <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
-        )
-        .unwrap();
-
-        if command != "migrate-run" {
-            return;
-        }
-    }
-
-    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
-    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+    let args = Args::parse();
 
     let crypto = Crypto::new(
         std::env::var("YELKEN_SECRET_KEY")
             .expect("YELKEN_SECRET_KEY is not provided in env")
             .as_str(),
     );
+
+    let db_config = db_config_from_env().unwrap();
+
+    match args.command {
+        Some(Command::Migrate) => {
+            setup::migrate(
+                &mut <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
+            )
+            .unwrap();
+
+            return;
+        }
+        Some(Command::Setup { admin, values }) => {
+            let mut conn =
+                <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap();
+
+            if values {
+                setup::create_default_values(&mut conn).unwrap();
+            }
+
+            if admin {
+                let Ok(user) = serde_json::from_reader::<_, setup::User>(std::io::stdin()) else {
+                    eprintln!("Failed to parse setup information from standart input");
+                    return;
+                };
+
+                setup::create_admin_user(&mut conn, &crypto, user).unwrap();
+            }
+
+            return;
+        }
+        _ => {}
+    }
+
+    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
+    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+
     let config = config_from_env().unwrap();
     let server_config = ServerConfig::from_env().unwrap();
 
