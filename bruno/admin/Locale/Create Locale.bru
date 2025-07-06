@@ -1,0 +1,18 @@
+meta {
+  name: Create Locale
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/admin/locale/create
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "key": "en-US",
+    "name": "English"
+  }
+}

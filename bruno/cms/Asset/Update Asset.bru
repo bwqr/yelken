@@ -1,0 +1,21 @@
+meta {
+  name: Update Asset
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/cms/asset/update/:asset-id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  asset-id: 4
+}
+
+body:json {
+  {
+    "name": ""
+  }
+}

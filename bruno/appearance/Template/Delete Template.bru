@@ -1,0 +1,16 @@
+meta {
+  name: Delete Template
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/appearance/template/delete?namespace=default&path=layouts/base.html
+  body: none
+  auth: inherit
+}
+
+params:query {
+  namespace: default
+  path: layouts/base.html
+}

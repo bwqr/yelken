@@ -1,0 +1,15 @@
+meta {
+  name: Delete Model
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/cms/model/delete/:model-id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  model-id: 4
+}

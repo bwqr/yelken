@@ -1,0 +1,25 @@
+meta {
+  name: Update Model Field
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/cms/model/field/:model-field-id/update
+  body: json
+  auth: inherit
+}
+
+params:path {
+  model-field-id: 4
+}
+
+body:json {
+  {
+    "name": "Updated Model",
+    "desc": "My model field description",
+    "localized": false,
+    "required": true,
+    "multiple": false
+  }
+}

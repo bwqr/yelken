@@ -1,0 +1,15 @@
+meta {
+  name: Plugins
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/plugin/plugins
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Update Locale Resource
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/admin/locale/resource/:key/update?namespace=default
+  body: json
+  auth: inherit
+}
+
+params:query {
+  namespace: default
+}
+
+params:path {
+  key: en
+}
+
+body:json {
+  {
+    "resource": "articles = Makaleler"
+  }
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Create Asset
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/cms/asset/create
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  name: my asset
+  asset: @file(/home/fmk/Downloads/sailing-boat.png)
+}

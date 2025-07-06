@@ -1,0 +1,17 @@
+meta {
+  name: Update Theme
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/appearance/theme/activate
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "theme": "default"
+  }
+}

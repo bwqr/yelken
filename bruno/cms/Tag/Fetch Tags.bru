@@ -1,0 +1,16 @@
+meta {
+  name: Fetch Tags
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/cms/tag/all?resource=asset&resourceId=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  resource: asset
+  resourceId: 1
+}

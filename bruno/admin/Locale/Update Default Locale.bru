@@ -1,0 +1,17 @@
+meta {
+  name: Update Default Locale
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/api/admin/locale/default
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "locale": "tr"
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Uninstall Theme
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/appearance/theme/uninstall/:theme
+  body: none
+  auth: inherit
+}
+
+params:path {
+  theme: yelken.custom
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Fetch User
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/admin/user/view/:username
+  body: none
+  auth: inherit
+}
+
+params:path {
+  username: yenikullanici_Ja5aVVZL70LM
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Update Locale State
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/admin/locale/state/:key
+  body: json
+  auth: inherit
+}
+
+params:path {
+  key: tr
+}
+
+body:json {
+  {
+    "disabled": false
+  }
+}

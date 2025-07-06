@@ -1,0 +1,23 @@
+meta {
+  name: Create Content Value
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/cms/content/value/:content-id/create
+  body: json
+  auth: inherit
+}
+
+params:path {
+  content-id: 1
+}
+
+body:json {
+  {
+    "modelFieldId": 4,
+    "value": "Merhabalar",
+    "locale": "tr"
+  }
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Update User
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/admin/user/update/:user-id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  user-id: 2
+}
+
+body:json {
+  {
+    "name": "Guzel Isim 2",
+    "state": "enabled",
+    "roleId": null
+  }
+}

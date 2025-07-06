@@ -1,0 +1,25 @@
+meta {
+  name: Delete Model Field
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/cms/model/field/:model-field-id/delete
+  body: none
+  auth: inherit
+}
+
+params:path {
+  model-field-id: 4
+}
+
+body:json {
+  {
+    "name": "Updated Model",
+    "desc": "My model field description",
+    "localized": false,
+    "required": true,
+    "multiple": false
+  }
+}

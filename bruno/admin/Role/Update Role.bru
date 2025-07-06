@@ -1,0 +1,22 @@
+meta {
+  name: Update Role
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/admin/role/update/:key
+  body: json
+  auth: inherit
+}
+
+params:path {
+  key: admin
+}
+
+body:json {
+  {
+    "name": "Admin New",
+    "desc": "Good Admins"
+  }
+}

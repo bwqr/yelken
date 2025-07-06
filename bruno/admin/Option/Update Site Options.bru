@@ -1,0 +1,18 @@
+meta {
+  name: Update Site Options
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/admin/option/site/update
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "key": "site.key",
+    "value": "value"
+  }
+}

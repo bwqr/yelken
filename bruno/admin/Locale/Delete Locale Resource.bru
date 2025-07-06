@@ -1,0 +1,19 @@
+meta {
+  name: Delete Locale Resource
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/admin/locale/resource/:key/delete?namespace=default
+  body: none
+  auth: inherit
+}
+
+params:query {
+  namespace: default
+}
+
+params:path {
+  key: en
+}

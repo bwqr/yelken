@@ -1,0 +1,21 @@
+meta {
+  name: Update Content Value
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/cms/content/value/:content-id/update
+  body: json
+  auth: inherit
+}
+
+params:path {
+  content-id: 1
+}
+
+body:json {
+  {
+    "value": "Yeni bir icerik degeri"
+  }
+}

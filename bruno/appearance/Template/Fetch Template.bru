@@ -1,0 +1,17 @@
+meta {
+  name: Fetch Template
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/appearance/template/view?path=layouts/nav.html&kind=theme&namespace=default
+  body: none
+  auth: inherit
+}
+
+params:query {
+  path: layouts/nav.html
+  kind: theme
+  namespace: default
+}

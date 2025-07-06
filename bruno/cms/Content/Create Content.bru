@@ -1,0 +1,34 @@
+meta {
+  name: Create Content
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/cms/content/create
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "modelId": 1,
+    "name": "Yeni bir araba",
+    "values": [
+      {
+        "modelFieldId": 1,
+        "value": "Yeni araba modeli",
+        "locale": "en"
+      },
+      {
+        "modelFieldId": 1,
+        "value": "Yeni araba modeli",
+        "locale": "tr"
+      },
+      {
+        "modelFieldId": 2,
+        "value": "yeni-araba-modeli"
+      }
+    ]
+  }
+}

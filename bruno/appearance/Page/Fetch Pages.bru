@@ -1,0 +1,15 @@
+meta {
+  name: Fetch Pages
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/appearance/page/all?namespace=default
+  body: none
+  auth: inherit
+}
+
+params:query {
+  namespace: default
+}

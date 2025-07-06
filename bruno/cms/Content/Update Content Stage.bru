@@ -1,0 +1,21 @@
+meta {
+  name: Update Content Stage
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/cms/content/stage/:content-id
+  body: json
+  auth: inherit
+}
+
+params:path {
+  content-id: 1
+}
+
+body:json {
+  {
+    "stage": "draft"
+  }
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Fetch Assets
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/cms/asset/all?page=1&perPage=5
+  body: none
+  auth: inherit
+}
+
+params:query {
+  page: 1
+  perPage: 5
+}

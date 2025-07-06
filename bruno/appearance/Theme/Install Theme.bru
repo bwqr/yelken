@@ -1,0 +1,15 @@
+meta {
+  name: Install Theme
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/appearance/theme/install
+  body: multipartForm
+  auth: inherit
+}
+
+body:multipart-form {
+  theme: @file(/home/fmk/projects/next-gen-cms/themes/theme.zip)
+}

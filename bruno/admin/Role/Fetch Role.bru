@@ -1,0 +1,15 @@
+meta {
+  name: Fetch Role
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/admin/role/view/:key
+  body: none
+  auth: inherit
+}
+
+params:path {
+  key: admin
+}

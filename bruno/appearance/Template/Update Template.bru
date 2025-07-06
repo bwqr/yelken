@@ -1,0 +1,19 @@
+meta {
+  name: Update Template
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/appearance/template/update
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "namespace": null,
+    "path": "layouts/nav.html",
+    "template": "{% block body %}My enclosed body{% endblock body %}"
+  }
+}

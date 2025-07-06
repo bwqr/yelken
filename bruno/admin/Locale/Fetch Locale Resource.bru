@@ -1,0 +1,20 @@
+meta {
+  name: Fetch Locale Resource
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/admin/locale/resource/:key?kind=user&namespace=default
+  body: none
+  auth: inherit
+}
+
+params:query {
+  kind: user
+  namespace: default
+}
+
+params:path {
+  key: en
+}

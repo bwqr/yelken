@@ -1,0 +1,15 @@
+meta {
+  name: Fetch Contents
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/cms/content/all?modelId=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  modelId: 1
+}

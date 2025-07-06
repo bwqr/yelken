@@ -1,0 +1,27 @@
+meta {
+  name: Create Model Field
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/cms/model/field/:model-field-id/create
+  body: json
+  auth: inherit
+}
+
+params:path {
+  model-field-id: 1
+}
+
+body:json {
+  {
+    "fieldId": 1,
+    "key": "model23",
+    "name": "Model",
+    "desc": "Year of car manufacturing",
+    "localized": false,
+    "multiple": false,
+    "required": true
+  }
+}

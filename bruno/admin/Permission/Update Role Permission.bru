@@ -1,0 +1,19 @@
+meta {
+  name: Update Role Permission
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/admin/permission/role/:role-id/update
+  body: json
+  auth: inherit
+}
+
+params:path {
+  role-id: 1
+}
+
+body:json {
+  ["cms.read"]
+}

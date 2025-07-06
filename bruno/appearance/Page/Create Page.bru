@@ -1,0 +1,23 @@
+meta {
+  name: Create Page
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/appearance/page/create
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "namespace": null,
+    "key": "home",
+    "name": "Home",
+    "path": "/",
+    "kind": "asset",
+    "value": "index.html",
+    "locale": "en"
+  }
+}

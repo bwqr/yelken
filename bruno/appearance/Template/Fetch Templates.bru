@@ -1,0 +1,15 @@
+meta {
+  name: Fetch Templates
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/appearance/template/all?namespace=default
+  body: none
+  auth: inherit
+}
+
+params:query {
+  namespace: default
+}

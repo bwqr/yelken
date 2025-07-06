@@ -1,0 +1,39 @@
+meta {
+  name: Create Model
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/cms/model/create
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "namespace": null,
+    "key": "car",
+    "name": "Cars",
+    "modelFields": [
+      {
+        "fieldId": 1,
+        "key": "model",
+        "name": "Model",
+        "desc": "Year of car manufacturing",
+        "localized": false,
+        "multiple": false,
+        "required": true
+      },
+      {
+        "fieldId": 1,
+        "key": "description",
+        "name": "Description",
+        "desc": null,
+        "localized": true,
+        "multiple": false,
+        "required": false
+      }
+    ]
+  }
+}
