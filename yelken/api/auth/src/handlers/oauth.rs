@@ -105,14 +105,18 @@ pub async fn redirect_oauth_provider(
 
     let oauth_state_hash = crypto.sign512(oauth_state.as_bytes());
 
+    let mut redirect_uri = state.config.site_url.clone();
+    {
+        let mut segments = redirect_uri.path_segments_mut().unwrap();
+        segments.pop_if_empty();
+        segments.extend("api/auth/oauth/cloud".split('/'));
+    }
+
     let location = Url::parse_with_params(
         &auth_config.cloud.redirect_endpoint,
         &[
             ("client_id", auth_config.cloud.client_id.as_str()),
-            (
-                "redirect_uri",
-                format!("{}/api/auth/oauth/cloud", state.config.site_url).as_str(),
-            ),
+            ("redirect_uri", redirect_uri.as_str()),
             (
                 "state",
                 format!("{}{}", oauth_state, oauth_state_hash).as_str(),
@@ -133,6 +137,13 @@ pub struct OauthProviderResponse {
     error: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct UserInfo {
+    pub id: String,
+    pub name: String,
+    pub email: String,
+}
+
 pub async fn cloud_oauth(
     State(state): State<AppState>,
     Extension(crypto): Extension<Crypto>,
@@ -145,13 +156,6 @@ pub async fn cloud_oauth(
         client_id: &'a str,
         client_secret: &'a str,
         redirect_uri: &'a str,
-    }
-
-    #[derive(serde::Deserialize)]
-    struct UserInfo {
-        id: String,
-        name: String,
-        email: String,
     }
 
     if let Some(error) = query.error {
@@ -178,13 +182,20 @@ pub async fn cloud_oauth(
 
     let client = reqwest::ClientBuilder::default().build().unwrap();
 
+    let mut redirect_uri = state.config.site_url.clone();
+    {
+        let mut segments = redirect_uri.path_segments_mut().unwrap();
+        segments.pop_if_empty();
+        segments.extend("api/auth/oauth/cloud".split('/'));
+    }
+
     let resp = match client
         .post(&auth_config.cloud.token_endpoint)
         .form(&UserInfoRequest {
             code: &code,
             client_id: &auth_config.cloud.client_id,
             client_secret: &auth_config.cloud.client_secret,
-            redirect_uri: format!("{}/api/auth/oauth/cloud", state.config.site_url).as_str(),
+            redirect_uri: redirect_uri.as_str(),
         })
         .send()
         .await
