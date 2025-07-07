@@ -17,9 +17,9 @@ enum Command {
         #[arg(long)]
         admin: bool,
         #[arg(long)]
-        values: bool,
+        defaults: bool,
         #[arg(long)]
-        check: bool,
+        force: bool,
     },
     Migrate,
 }
@@ -155,13 +155,13 @@ async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
         }
         Command::Setup {
             admin,
-            values,
-            check,
+            defaults,
+            force,
         } => {
             let mut conn = <SyncConnection as diesel::Connection>::establish(&db_url).unwrap();
 
             let create_admin =
-                admin && !(check && setup::check_admin_initialized(&mut conn).unwrap());
+                admin && (force || !setup::check_admin_initialized(&mut conn).unwrap());
 
             let admin_user = if create_admin {
                 #[cfg(feature = "cloud")]
@@ -185,9 +185,10 @@ async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
                 None
             };
 
-            let values = values && !(check && setup::check_values_initialized(&mut conn).unwrap());
+            let create_defaults =
+                defaults && (force || !setup::check_defaults_initialized(&mut conn).unwrap());
 
-            setup::initialize_db(&mut conn, &crypto, values, admin_user).unwrap();
+            setup::initialize_db(&mut conn, &crypto, create_defaults, admin_user).unwrap();
         }
     }
 }

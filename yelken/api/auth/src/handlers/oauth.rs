@@ -106,11 +106,11 @@ pub async fn redirect_oauth_provider(
     let oauth_state_hash = crypto.sign512(oauth_state.as_bytes());
 
     let mut redirect_uri = state.config.site_url.clone();
-    {
-        let mut segments = redirect_uri.path_segments_mut().unwrap();
-        segments.pop_if_empty();
-        segments.extend("api/auth/oauth/cloud".split('/'));
-    }
+    redirect_uri
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .extend("api/auth/oauth/cloud".split('/'));
 
     let location = Url::parse_with_params(
         &auth_config.cloud.redirect_endpoint,
@@ -183,11 +183,11 @@ pub async fn cloud_oauth(
     let client = reqwest::ClientBuilder::default().build().unwrap();
 
     let mut redirect_uri = state.config.site_url.clone();
-    {
-        let mut segments = redirect_uri.path_segments_mut().unwrap();
-        segments.pop_if_empty();
-        segments.extend("api/auth/oauth/cloud".split('/'));
-    }
+    redirect_uri
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .extend("api/auth/oauth/cloud".split('/'));
 
     let resp = match client
         .post(&auth_config.cloud.token_endpoint)

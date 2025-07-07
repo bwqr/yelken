@@ -35,7 +35,7 @@ pub fn migrate<DB: Backend>(
     conn.run_pending_migrations(MIGRATIONS).map(|_| ())
 }
 
-pub fn create_default_values(conn: &mut SyncConnection) -> diesel::result::QueryResult<()> {
+pub fn create_defaults(conn: &mut SyncConnection) -> QueryResult<()> {
     diesel::insert_into(themes::table)
         .values((
             themes::id.eq("default"),
@@ -81,7 +81,7 @@ pub fn create_default_values(conn: &mut SyncConnection) -> diesel::result::Query
             ),
             (
                 fields::key.eq("asset"),
-                fields::name.eq("asset"),
+                fields::name.eq("Asset"),
                 fields::kind.eq("asset"),
             ),
         ])
@@ -154,7 +154,7 @@ pub fn create_admin_user(
     conn: &mut SyncConnection,
     crypto: &Crypto,
     user: User,
-) -> diesel::result::QueryResult<()> {
+) -> QueryResult<()> {
     use rand::{Rng, distr::Alphanumeric, rng};
 
     let username = user
@@ -230,16 +230,16 @@ pub fn create_admin_user(
 pub fn initialize_db(
     conn: &mut SyncConnection,
     crypto: &Crypto,
-    create_values: bool,
+    defaults: bool,
     admin: Option<User>,
 ) -> QueryResult<()> {
     conn.transaction(|conn| {
-        if create_values {
-            create_default_values(conn)?;
+        if defaults {
+            create_defaults(conn)?;
 
             diesel::insert_into(options::table)
                 .values((
-                    options::key.eq("setup.default_values_created"),
+                    options::key.eq("setup.defaults_init"),
                     options::value.eq("true"),
                 ))
                 .execute(conn)?;
@@ -250,7 +250,7 @@ pub fn initialize_db(
 
             diesel::insert_into(options::table)
                 .values((
-                    options::key.eq("setup.admin_created"),
+                    options::key.eq("setup.admin_init"),
                     options::value.eq("true"),
                 ))
                 .execute(conn)?;
@@ -274,9 +274,9 @@ fn check_initialized(conn: &mut SyncConnection, key: &str) -> QueryResult<bool> 
 }
 
 pub fn check_admin_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
-    check_initialized(conn, "setup.admin_created")
+    check_initialized(conn, "setup.admin_init")
 }
 
-pub fn check_values_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
-    check_initialized(conn, "setup.default_values_created")
+pub fn check_defaults_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.defaults_init")
 }
