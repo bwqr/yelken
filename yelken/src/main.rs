@@ -18,9 +18,10 @@ enum Command {
         admin: bool,
         #[arg(long)]
         values: bool,
+        #[arg(long)]
+        check: bool,
     },
     Migrate,
-    Run,
 }
 
 #[derive(Debug, Parser)]
@@ -144,6 +145,37 @@ async fn logger(req: Request, next: Next) -> Response {
     res
 }
 
+fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
+    match command {
+        Command::Migrate => {
+            setup::migrate(
+                &mut <SyncConnection as diesel::Connection>::establish(&db_url).unwrap(),
+            )
+            .unwrap();
+        }
+        Command::Setup {
+            admin,
+            values,
+            check,
+        } => {
+            let mut conn = <SyncConnection as diesel::Connection>::establish(&db_url).unwrap();
+
+            let create_admin =
+                admin && !(check && setup::check_admin_initialized(&mut conn).unwrap());
+
+            let admin_user = create_admin.then(|| {
+                serde_json::from_reader::<_, setup::User>(std::io::stdin())
+                    .map_err(|_| "Failed to parse setup information from standart input")
+                    .unwrap()
+            });
+
+            let values = values && !(check && setup::check_values_initialized(&mut conn).unwrap());
+
+            setup::initialize_db(&mut conn, &crypto, values, admin_user).unwrap();
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::from_path("./.env").ok();
@@ -160,35 +192,10 @@ async fn main() {
 
     let db_config = db_config_from_env().unwrap();
 
-    match args.command {
-        Some(Command::Migrate) => {
-            setup::migrate(
-                &mut <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
-            )
-            .unwrap();
+    if let Some(command) = args.command {
+        run_command(command, &crypto, &db_config.url);
 
-            return;
-        }
-        Some(Command::Setup { admin, values }) => {
-            let mut conn =
-                <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap();
-
-            if values {
-                setup::create_default_values(&mut conn).unwrap();
-            }
-
-            if admin {
-                let Ok(user) = serde_json::from_reader::<_, setup::User>(std::io::stdin()) else {
-                    eprintln!("Failed to parse setup information from standart input");
-                    return;
-                };
-
-                setup::create_admin_user(&mut conn, &crypto, user).unwrap();
-            }
-
-            return;
-        }
-        _ => {}
+        return;
     }
 
     let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
