@@ -24,6 +24,20 @@ use super::auth::AuthUser;
 
 use std::str::FromStr;
 
+pub const READ_ONLY_PERMS: [Permission; 2] = [Permission::CMSRead, Permission::AppearanceRead];
+pub const FULL_PERMS: [Permission; 10] = [
+    Permission::Admin,
+    Permission::CMSRead,
+    Permission::AssetWrite,
+    Permission::ContentWrite,
+    Permission::FormWrite,
+    Permission::ModelWrite,
+    Permission::AppearanceRead,
+    Permission::PageWrite,
+    Permission::TemplateWrite,
+    Permission::ThemeWrite,
+];
+
 #[derive(Clone, Copy)]
 pub enum Permission {
     Admin,

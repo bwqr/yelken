@@ -7,7 +7,7 @@ use axum::{
 };
 use base::{
     crypto::Crypto,
-    middlewares::permission::Permission,
+    middlewares::permission::{Permission, FULL_PERMS, READ_ONLY_PERMS},
     models::{LoginKind, User},
     responses::HttpError,
     schema::{permissions, users},
@@ -142,6 +142,7 @@ pub struct UserInfo {
     pub id: String,
     pub name: String,
     pub email: String,
+    pub owner: bool,
 }
 
 pub async fn cloud_oauth(
@@ -263,7 +264,11 @@ pub async fn cloud_oauth(
                             .get_result::<User>(conn)
                             .await?;
 
-                        let perms = [Permission::CMSRead, Permission::AppearanceRead];
+                        let perms: &[Permission] = if user_info.owner {
+                            &FULL_PERMS
+                        } else {
+                            &READ_ONLY_PERMS
+                        };
 
                         diesel::insert_into(permissions::table)
                             .values(

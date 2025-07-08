@@ -1,10 +1,11 @@
 use std::error::Error;
 
+use base::middlewares::permission::FULL_PERMS;
 use base::models::{NamespaceSource, PageKind};
 use base::schema::{
     fields, locales, model_fields, models, namespaces, options, pages, permissions, themes, users,
 };
-use base::{crypto::Crypto, db::SyncConnection, middlewares::permission::Permission};
+use base::{crypto::Crypto, db::SyncConnection};
 use diesel::backend::Backend;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
@@ -196,22 +197,9 @@ pub fn create_admin_user(
         ))
         .get_result::<base::models::User>(conn)?;
 
-    let perms = [
-        Permission::Admin,
-        Permission::CMSRead,
-        Permission::AssetWrite,
-        Permission::ContentWrite,
-        Permission::FormWrite,
-        Permission::ModelWrite,
-        Permission::AppearanceRead,
-        Permission::PageWrite,
-        Permission::TemplateWrite,
-        Permission::ThemeWrite,
-    ];
-
     diesel::insert_into(permissions::table)
         .values(
-            perms
+            FULL_PERMS
                 .into_iter()
                 .map(|perm| {
                     (

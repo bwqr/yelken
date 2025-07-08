@@ -145,7 +145,7 @@ async fn logger(req: Request, next: Next) -> Response {
     res
 }
 
-async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
+fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
     match command {
         Command::Migrate => {
             setup::migrate(
@@ -163,27 +163,11 @@ async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
             let create_admin =
                 admin && (force || !setup::check_admin_initialized(&mut conn).unwrap());
 
-            let admin_user = if create_admin {
-                #[cfg(feature = "cloud")]
-                {
-                    let user = auth::fetch_cloud_app_owner().await.unwrap();
-
-                    Some(setup::User {
-                        name: user.name,
-                        email: user.email,
-                        login: setup::Login::Cloud(user.id),
-                    })
-                }
-
-                #[cfg(not(feature = "cloud"))]
-                Some(
-                    serde_json::from_reader::<_, setup::User>(std::io::stdin())
-                        .map_err(|_| "Failed to parse setup information from standart input")
-                        .unwrap(),
-                )
-            } else {
-                None
-            };
+            let admin_user = create_admin.then(|| {
+                serde_json::from_reader::<_, setup::User>(std::io::stdin())
+                    .map_err(|_| "Failed to parse setup information from standart input")
+                    .unwrap()
+            });
 
             let create_defaults =
                 defaults && (force || !setup::check_defaults_initialized(&mut conn).unwrap());
@@ -210,7 +194,7 @@ async fn main() {
     let db_config = db_config_from_env().unwrap();
 
     if let Some(command) = args.command {
-        run_command(command, &crypto, &db_config.url).await;
+        run_command(command, &crypto, &db_config.url);
 
         return;
     }
