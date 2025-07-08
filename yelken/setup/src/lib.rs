@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use base::middlewares::permission::FULL_PERMS;
-use base::models::{NamespaceSource, PageKind};
+use base::models::{LoginKind, NamespaceSource, PageKind};
 use base::schema::{
     fields, locales, model_fields, models, namespaces, options, pages, permissions, themes, users,
 };
@@ -17,17 +17,10 @@ pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/post
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqlite");
 
 #[derive(Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Login {
-    Password(String),
-    Cloud(String),
-}
-
-#[derive(Deserialize)]
 pub struct User {
     pub name: String,
     pub email: String,
-    pub login: Login,
+    pub password: String,
 }
 
 pub fn migrate<DB: Backend>(
@@ -169,30 +162,18 @@ pub fn create_admin_user(
             .collect::<String>()
             .as_str();
 
-    let (login_kind, openid, password) = match user.login {
-        Login::Password(password) => {
-            let salt: String = (0..32)
-                .map(|_| rng().sample(Alphanumeric) as char)
-                .collect();
+    let salt: String = (0..32)
+        .map(|_| rng().sample(Alphanumeric) as char)
+        .collect();
 
-            let password = crypto.sign512((password + salt.as_str()).as_bytes());
-
-            (
-                base::models::LoginKind::Email,
-                None,
-                Some(salt + password.as_str()),
-            )
-        }
-        Login::Cloud(oid) => (base::models::LoginKind::Cloud, Some(oid), None),
-    };
+    let password = crypto.sign512((user.password + salt.as_str()).as_bytes());
 
     let user = diesel::insert_into(users::table)
         .values((
             users::username.eq(username),
             users::name.eq(user.name),
             users::email.eq(user.email),
-            users::login_kind.eq(login_kind),
-            users::openid.eq(openid),
+            users::login_kind.eq(LoginKind::Email),
             users::password.eq(password),
         ))
         .get_result::<base::models::User>(conn)?;
