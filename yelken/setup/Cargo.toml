@@ -8,6 +8,8 @@ base.path = "../base"
 
 axum.workspace = true
 diesel.workspace = true
+rand.workspace = true
+serde.workspace = true
 
 diesel_migrations = { version = "2.2.0", default-features = false }
 

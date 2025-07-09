@@ -7,10 +7,30 @@ use base::{
     crypto::Crypto,
     db::{Connection, SyncConnection},
 };
+use clap::{Parser, Subcommand};
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use yelken::DatabaseConfig;
 
-pub struct ServerConfig {
+#[derive(Clone, Debug, Subcommand)]
+enum Command {
+    Setup {
+        #[arg(long)]
+        admin: bool,
+        #[arg(long)]
+        defaults: bool,
+        #[arg(long)]
+        force: bool,
+    },
+    Migrate,
+}
+
+#[derive(Debug, Parser)]
+struct Args {
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+struct ServerConfig {
     pub address: SocketAddrV4,
     pub app_assets_dir: String,
     pub storage_dir: String,
@@ -125,35 +145,63 @@ async fn logger(req: Request, next: Next) -> Response {
     res
 }
 
+fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
+    match command {
+        Command::Migrate => {
+            setup::migrate(
+                &mut <SyncConnection as diesel::Connection>::establish(&db_url).unwrap(),
+            )
+            .unwrap();
+        }
+        Command::Setup {
+            admin,
+            defaults,
+            force,
+        } => {
+            let mut conn = <SyncConnection as diesel::Connection>::establish(&db_url).unwrap();
+
+            let create_admin =
+                admin && (force || !setup::check_admin_initialized(&mut conn).unwrap());
+
+            let admin_user = create_admin.then(|| {
+                serde_json::from_reader::<_, setup::User>(std::io::stdin())
+                    .map_err(|_| "Failed to parse setup information from standart input")
+                    .unwrap()
+            });
+
+            let create_defaults =
+                defaults && (force || !setup::check_defaults_initialized(&mut conn).unwrap());
+
+            setup::initialize_db(&mut conn, &crypto, create_defaults, admin_user).unwrap();
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     dotenvy::from_path("./.env").ok();
 
     env_logger::init();
 
-    let db_config = db_config_from_env().unwrap();
-
-    let command = std::env::args().nth(1).unwrap_or("".to_string());
-
-    if command == "migrate" || command == "migrate-run" {
-        setup::migrate(
-            &mut <SyncConnection as diesel::Connection>::establish(&db_config.url).unwrap(),
-        )
-        .unwrap();
-
-        if command != "migrate-run" {
-            return;
-        }
-    }
-
-    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
-    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+    let args = Args::parse();
 
     let crypto = Crypto::new(
         std::env::var("YELKEN_SECRET_KEY")
             .expect("YELKEN_SECRET_KEY is not provided in env")
             .as_str(),
     );
+
+    let db_config = db_config_from_env().unwrap();
+
+    if let Some(command) = args.command {
+        run_command(command, &crypto, &db_config.url);
+
+        return;
+    }
+
+    let db_config = AsyncDieselConnectionManager::<Connection>::new(&db_config.url);
+    let pool = deadpool::Pool::builder(db_config).build().unwrap();
+
     let config = config_from_env().unwrap();
     let server_config = ServerConfig::from_env().unwrap();
 

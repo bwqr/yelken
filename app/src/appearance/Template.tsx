@@ -405,7 +405,7 @@ export const TemplateResource = () => {
     }
 
     return (
-        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
+        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4" style="min-height: 100vh">
             <Switch>
                 <Match when={!path()}>
                     <p class="text-secondary text-center"><strong>Path</strong> is missing from search parameters.</p>

@@ -1,6 +1,5 @@
 use std::{ops::Deref, sync::Arc};
 
-use super::generate_username;
 use axum::{
     extract::{Query, State},
     http::{header, HeaderName, StatusCode},
@@ -8,13 +7,14 @@ use axum::{
 };
 use base::{
     crypto::Crypto,
+    middlewares::permission::{Permission, FULL_PERMS, READ_ONLY_PERMS},
     models::{LoginKind, User},
     responses::HttpError,
-    schema::users,
+    schema::{permissions, users},
     AppState,
 };
 use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
+use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl};
 use rand::{distr::Alphanumeric, rng, Rng};
 use serde::Deserialize;
 use url::Url;
@@ -73,6 +73,19 @@ pub struct RedirectOauthProvider {
 
 const STATE_LENGTH: usize = 32;
 
+fn generate_username(name: &str) -> String {
+    use rand::{distr::Alphanumeric, rng, Rng};
+
+    name.chars()
+        .filter(|ch| ch.is_ascii_alphanumeric())
+        .collect::<String>()
+        + "_"
+        + (0..12)
+            .map(|_| rng().sample(Alphanumeric) as char)
+            .collect::<String>()
+            .as_str()
+}
+
 pub async fn redirect_oauth_provider(
     State(state): State<AppState>,
     crypto: Extension<Crypto>,
@@ -92,14 +105,18 @@ pub async fn redirect_oauth_provider(
 
     let oauth_state_hash = crypto.sign512(oauth_state.as_bytes());
 
+    let mut redirect_uri = state.config.site_url.clone();
+    redirect_uri
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .extend("api/auth/oauth/cloud".split('/'));
+
     let location = Url::parse_with_params(
         &auth_config.cloud.redirect_endpoint,
         &[
             ("client_id", auth_config.cloud.client_id.as_str()),
-            (
-                "redirect_uri",
-                format!("{}/api/auth/oauth/cloud", state.config.backend_origin).as_str(),
-            ),
+            ("redirect_uri", redirect_uri.as_str()),
             (
                 "state",
                 format!("{}{}", oauth_state, oauth_state_hash).as_str(),
@@ -120,6 +137,14 @@ pub struct OauthProviderResponse {
     error: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+pub struct UserInfo {
+    pub id: String,
+    pub name: String,
+    pub email: String,
+    pub owner: bool,
+}
+
 pub async fn cloud_oauth(
     State(state): State<AppState>,
     Extension(crypto): Extension<Crypto>,
@@ -132,13 +157,6 @@ pub async fn cloud_oauth(
         client_id: &'a str,
         client_secret: &'a str,
         redirect_uri: &'a str,
-    }
-
-    #[derive(serde::Deserialize)]
-    struct UserInfo {
-        id: String,
-        name: String,
-        email: String,
     }
 
     if let Some(error) = query.error {
@@ -165,13 +183,20 @@ pub async fn cloud_oauth(
 
     let client = reqwest::ClientBuilder::default().build().unwrap();
 
+    let mut redirect_uri = state.config.site_url.clone();
+    redirect_uri
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty()
+        .extend("api/auth/oauth/cloud".split('/'));
+
     let resp = match client
         .post(&auth_config.cloud.token_endpoint)
         .form(&UserInfoRequest {
             code: &code,
             client_id: &auth_config.cloud.client_id,
             client_secret: &auth_config.cloud.client_secret,
-            redirect_uri: format!("{}/api/auth/oauth/cloud", state.config.backend_origin).as_str(),
+            redirect_uri: redirect_uri.as_str(),
         })
         .send()
         .await
@@ -218,22 +243,52 @@ pub async fn cloud_oauth(
                     .execute(&mut conn)
                     .await
                 {
-                    log::error!("Failed to update email of existing google oauth user with id {user_id} where new email is {}, {e:?}", user_info.email);
+                    log::error!("Failed to update email of existing oauth user with id {user_id} where new email is {}, {e:?}", user_info.email);
                 }
             }
 
             user_id
         }
         None => {
-            let user = diesel::insert_into(users::table)
-                .values((
-                    users::username.eq(generate_username(&user_info.name)),
-                    users::name.eq(user_info.name),
-                    users::email.eq(&user_info.email),
-                    users::login_kind.eq(LoginKind::Cloud),
-                    users::openid.eq(user_info.id),
-                ))
-                .get_result::<User>(&mut conn)
+            let user = conn
+                .transaction(|conn| {
+                    async move {
+                        let user = diesel::insert_into(users::table)
+                            .values((
+                                users::username.eq(generate_username(&user_info.name)),
+                                users::name.eq(user_info.name),
+                                users::email.eq(&user_info.email),
+                                users::login_kind.eq(LoginKind::Cloud),
+                                users::openid.eq(user_info.id),
+                            ))
+                            .get_result::<User>(conn)
+                            .await?;
+
+                        let perms: &[Permission] = if user_info.owner {
+                            &FULL_PERMS
+                        } else {
+                            &READ_ONLY_PERMS
+                        };
+
+                        diesel::insert_into(permissions::table)
+                            .values(
+                                perms
+                                    .into_iter()
+                                    .map(|perm| {
+                                        (
+                                            permissions::user_id.eq(user.id),
+                                            permissions::key.eq(perm.as_str()),
+                                        )
+                                    })
+                                    .collect::<Vec<_>>(),
+                            )
+                            .execute(conn)
+                            .await?;
+
+                        Result::<User, HttpError>::Ok(user)
+                    }
+                    .scope_boxed()
+                })
                 .await?;
 
             user.id
@@ -243,7 +298,7 @@ pub async fn cloud_oauth(
     let token = crypto.encode(&base::middlewares::auth::Token::new(user_id))?;
 
     let location = Url::parse_with_params(
-        &format!("{}/auth/oauth/login", state.config.frontend_origin),
+        &format!("{}/auth/oauth/login", state.config.app_url),
         &[("token", token.as_str()), ("state", client_state)],
     )
     .unwrap()

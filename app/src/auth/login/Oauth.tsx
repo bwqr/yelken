@@ -29,7 +29,7 @@ export const OauthRedirect = () => {
 
     localStorage.setItem(STATE_KEY, JSON.stringify(oauthState));
 
-    window.location.assign(config.resolveURL(config.API_URL, `/auth/oauth/redirect?state=${state}`))
+    window.location.assign(config.resolveURL(config.API_URL, `/api/auth/oauth/redirect?state=${state}`))
 
     return (<></>);
 }

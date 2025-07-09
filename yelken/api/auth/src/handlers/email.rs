@@ -1,18 +1,15 @@
 use axum::{extract::State, http::StatusCode, Extension, Json};
 use base::{
     crypto::Crypto,
-    models::{LoginKind, User, UserState},
+    models::{LoginKind, UserState},
     responses::HttpError,
     schema::users,
     AppState,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use rand::{distr::Alphanumeric, rng, Rng};
 
 use serde::{Deserialize, Serialize};
-
-use super::generate_username;
 
 const SALT_LENGTH: usize = 32;
 
@@ -77,58 +74,6 @@ pub async fn login(
             context: None,
         });
     }
-
-    Ok(Json(Token {
-        token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,
-    }))
-}
-
-#[derive(serde::Deserialize)]
-pub struct SignUp {
-    pub name: String,
-    pub email: String,
-    pub password: String,
-}
-
-pub async fn sign_up(
-    State(state): State<AppState>,
-    crypto: Extension<Crypto>,
-    Json(request): Json<SignUp>,
-) -> Result<Json<Token>, HttpError> {
-    let salt: String = (0..SALT_LENGTH)
-        .map(|_| rng().sample(Alphanumeric) as char)
-        .collect();
-    let password = crypto.sign512((request.password + salt.as_str()).as_bytes());
-
-    let mut conn = state.pool.get().await?;
-
-    let user_id = diesel::insert_into(users::table)
-        .values((
-            users::username.eq(generate_username(&request.name)),
-            users::name.eq(&request.name),
-            users::email.eq(&request.email),
-            users::password.eq(salt + password.as_str()),
-        ))
-        .get_result::<User>(&mut conn)
-        .await
-        .map_err(|e| {
-            if let diesel::result::Error::DatabaseError(
-                diesel::result::DatabaseErrorKind::UniqueViolation,
-                info,
-            ) = &e
-            {
-                if let Some(constraint_name) = info.constraint_name() {
-                    if constraint_name.contains("email") {
-                        return HttpError::conflict("email_already_exists");
-                    } else if constraint_name.contains("username") {
-                        return HttpError::conflict("non_unique_username");
-                    }
-                };
-            }
-
-            e.into()
-        })?
-        .id;
 
     Ok(Json(Token {
         token: crypto.encode(&base::middlewares::auth::Token::new(user_id))?,

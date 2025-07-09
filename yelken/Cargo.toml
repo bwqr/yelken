@@ -60,9 +60,12 @@ dotenvy = "0.15.7"
 env_logger = "0.11.6"
 log.workspace = true
 opendal.workspace = true
+serde_json.workspace = true
 tokio = { workspace = true, optional = true, features = ["full"] }
 tower.workspace = true
 tower-http = { workspace = true, features = ["cors"] }
+
+clap = { version = "4.5.40", optional = true, default-features = true, features = ["derive"] }
 
 [profile.dev]
 debug = false
@@ -82,10 +85,10 @@ default = [
 admin = ["dep:admin"]
 app = ["dep:app"]
 appearance = ["dep:appearance"]
-auth = ["dep:auth", "auth?/email"]
+auth = ["dep:auth", "auth/email"]
 cms = ["dep:cms"]
 plugin = ["dep:plugin", "appearance?/plugin"]
-setup = ["dep:setup"]
+setup = ["dep:clap", "dep:setup"]
 user = ["dep:user"]
 
 # Patched for getting 'sqlite-wasm-rs' update and other sqlite improvements which are not released yet
