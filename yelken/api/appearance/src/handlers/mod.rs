@@ -264,6 +264,9 @@ pub async fn serve_page(
 
         return match res {
             Ok((html, _)) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
+            Err(e) if e.kind() == minijinja::ErrorKind::TemplateNotFound => {
+                Ok((StatusCode::NOT_FOUND, Html("Not Found")).into_response())
+            }
             Err(e) => Ok((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Html(format!("Failed to render page, {e:?}")),
