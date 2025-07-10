@@ -4,6 +4,7 @@ import ProgressSpinner from "../components/ProgressSpinner";
 import { createStore } from "solid-js/store";
 import { AlertContext } from "../lib/context";
 import { FloppyFill } from "../Icons";
+import * as theme from "../theme";
 
 export const Settings = () => {
     enum OptionKey {
@@ -24,6 +25,7 @@ export const Settings = () => {
     const alertCtx = useContext(AlertContext)!;
     const [siteOptions, { mutate }] = createResource(() => adminCtx.fetchSiteOptions().then(buildOptions));
 
+    const [colorMode, setColorMode] = createSignal(theme.getColorMode() ?? theme.ColorMode.Auto);
     const [editOptions, setEditOptions] = createStore(buildOptions({}));
 
     createEffect(() => {
@@ -67,7 +69,47 @@ export const Settings = () => {
 
                         <div class="row g-4">
                             <div class="offset-md-3 col-md-6">
+                                <div class="border rounded p-3 mb-4">
+                                    <h5>Appearance</h5>
+
+                                    <hr />
+
+                                    <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
+                                        <tbody>
+
+                                            <tr>
+                                                <td style="width: 25%;">Theme</td>
+                                                <td class="py-1">
+                                                    <div class="input-group" role="group">
+                                                        <select
+                                                            class="form-select"
+                                                            value={colorMode()}
+                                                            onChange={(ev) => setColorMode(ev.target.value as theme.ColorMode)}
+                                                        >
+                                                            <For each={Object.values(theme.ColorMode)}>
+                                                                {(mode) => (
+                                                                    <option>{mode}</option>
+                                                                )}
+                                                            </For>
+                                                        </select>
+                                                        <button
+                                                            type="button"
+                                                            class="btn btn-primary icon-link py-0 px-2"
+                                                            onClick={() => theme.updateColorMode(colorMode())}
+                                                        >
+                                                            <FloppyFill viewBox="0 0 16 16" />
+                                                            Save
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                        </tbody>
+                                    </table>
+                                </div>
+
                                 <div class="border rounded p-3">
+
                                     <h5>Site Options</h5>
 
                                     <hr />
