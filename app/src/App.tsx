@@ -6,10 +6,9 @@ import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from '
 import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
 import * as config from './lib/config';
-import { createStore, produce, reconcile } from 'solid-js/store';
 import { CMSContext, CMSService, type CMSStore } from './lib/cms/context';
 import { UserContext, UserService } from './lib/user/context';
-import { AlertContext, CommonContext, CommonService, type AlertStore } from './lib/context';
+import { AlertContext, CommonContext, CommonService } from './lib/context';
 import { CreateModel, Model, Models } from './cms/Model';
 import { CreatePage, Page, Pages } from './appearance/Page';
 import { CreateTemplate, TemplateResource, Templates } from './appearance/Template';
@@ -23,6 +22,7 @@ import { CreateUser, User, Users } from './admin/User';
 import { Asset, Assets, UploadAsset } from './cms/Asset';
 import { AppearanceContext, AppearanceService } from './lib/appearance/context';
 import { Settings } from './admin/Settings';
+import { AlertService, AlertState, type DisposableAlert } from './lib/alert';
 
 class ServiceProvider {
     private _cmsCtx: ResourceReturn<CMSStore> | undefined;
@@ -42,20 +42,6 @@ class ServiceProvider {
 }
 
 const ServiceContext: Context<ServiceProvider | undefined> = createContext();
-
-enum AlertState {
-    Success,
-    Failure,
-}
-
-interface Alert {
-    title: string;
-    state: AlertState;
-}
-
-interface DisposableAlert extends Alert {
-    expire: number;
-}
 
 function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: DisposableAlert) => void }) {
     return <Show when={props.alerts.length > 0}>
@@ -96,7 +82,7 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
         <Suspense fallback={<p>Loading ...</p>}>
             <Switch>
                 <Match when={promises.error}>
-                    <span>Error: {promises.error.message}</span>
+                    <p class="text-danger-emphasis">Error while loading: <strong>{promises.error.message}</strong></p>
                 </Match>
                 <Match when={promises()}>
                     {(promises) => {
@@ -125,55 +111,7 @@ const App: Component = () => {
         baseUrl = baseUrl.slice(0, baseUrl.length - 1);
     }
 
-    const [alerts, setAlerts] = createStore<DisposableAlert[]>([]);
-    let timeoutId: NodeJS.Timeout | undefined = undefined;
-    const timeout = 5 * 1000;
-
-    const fireAlert = (state: AlertState, title: string) => {
-        const alert: DisposableAlert = {
-            expire: new Date().getTime() + timeout,
-            title,
-            state,
-        };
-
-        setAlerts(produce((alerts) => alerts.push(alert)));
-
-        if (timeoutId === undefined) {
-            timeoutId = setTimeout(cleanAlerts, timeout);
-        }
-    };
-
-    const alertService: AlertStore = {
-        success: (title) => fireAlert(AlertState.Success, title),
-        fail: (title) => fireAlert(AlertState.Failure, title),
-    };
-
-    function removeAlert(alert: DisposableAlert) {
-        const index = alerts.findIndex((a) => a === alert);
-
-        if (index > -1) {
-            setAlerts(produce((alerts) => alerts.splice(index, 1)));
-        }
-    }
-
-    function cleanAlerts() {
-        const now = new Date().getTime();
-
-        setAlerts(reconcile(alerts.filter((alert) => alert.expire > now)));
-        timeoutId = undefined;
-
-        const earliestExpire = alerts.reduce<number | undefined>((expire, alert) => {
-            if (expire === undefined) {
-                return alert.expire;
-            }
-
-            return alert.expire < expire ? alert.expire : expire;
-        }, undefined);
-
-        if (earliestExpire !== undefined) {
-            timeoutId = setTimeout(cleanAlerts, earliestExpire - now);
-        }
-    }
+    const alertService = new AlertService();
 
     return (
         <AlertContext.Provider value={alertService}>
@@ -343,7 +281,7 @@ const App: Component = () => {
                 )} />
             </Router>
 
-            <Alerts alerts={alerts} removeAlert={removeAlert} />
+            <Alerts alerts={alertService.alerts} removeAlert={(alert) => alertService.removeAlert(alert)} />
         </AlertContext.Provider>
     );
 };

@@ -203,7 +203,7 @@ export const LocaleResource = () => {
     };
 
     return (
-        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4">
+        <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4" style="min-height: 100vh">
             <Switch>
                 <Match when={!locale()}>
                     <p class="text-secondary text-center">Could not find the locale with key <strong>{params.key}</strong>.</p>

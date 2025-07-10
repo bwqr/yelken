@@ -81,7 +81,7 @@ export function SideNav(): JSX.Element {
 
     return (
         <div class="p-md-2 pe-md-0">
-            <button class="d-sm-none btn icon-link p-2 float-end" onClick={() => setShow(!show())}>
+            <button class="d-sm-none btn icon-link p-2 float-end fs-2" onClick={() => setShow(!show())}>
                 <Show when={show()}><XLg viewBox="0 0 16 16" width="12" height="12" /></Show>
                 <Show when={!show()}><List viewBox="0 0 16 16" width="12" height="12" /></Show>
             </button>
@@ -109,28 +109,26 @@ export function SideNav(): JSX.Element {
                         {userCtx.user().name}
                     </button>
 
-                    <Show when={dropdown()}>
-                        <ul id="sidenav-dropdown" class="dropdown-menu mt-1 show shadow highlight-links w-100" style="left: 0;">
-                            <li>
-                                <A class="dropdown-item icon-link py-2" href="/profile">
-                                    <Person viewBox="0 0 16 16" />
-                                    Profile
-                                </A>
-                            </li>
-                            <li>
-                                <a
-                                    class="dropdown-item icon-link py-2"
-                                    href={config.resolveURL(config.BASE_URL, '/auth/login')}
-                                    on:click={_ => localStorage.removeItem('token')}
-                                    rel="external"
-                                >
-                                    <BoxArrowRight viewBox="0 0 16 16" />
+                    <ul id="sidenav-dropdown" class="dropdown-menu mt-1 shadow highlight-links w-100" classList={{ 'show': dropdown() }} style="left: 0;">
+                        <li>
+                            <A class="dropdown-item icon-link py-2" href="/profile">
+                                <Person viewBox="0 0 16 16" />
+                                Profile
+                            </A>
+                        </li>
+                        <li>
+                            <a
+                                class="dropdown-item icon-link py-2"
+                                href={config.resolveURL(config.BASE_URL, '/auth/login')}
+                                on:click={_ => localStorage.removeItem('token')}
+                                rel="external"
+                            >
+                                <BoxArrowRight viewBox="0 0 16 16" />
 
-                                    Logout
-                                </a>
-                            </li>
-                        </ul>
-                    </Show>
+                                Logout
+                            </a>
+                        </li>
+                    </ul>
                 </div>
 
                 <div class="highlight-links">

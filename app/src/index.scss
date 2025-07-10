@@ -90,3 +90,10 @@ table > tbody > tr > td {
     height: 100%;
   }
 }
+
+
+@include media-breakpoint-down(md) {
+  #sidenav-dropdown {
+    position: static;
+  }
+}
