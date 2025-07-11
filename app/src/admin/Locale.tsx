@@ -1,7 +1,8 @@
 import { createEffect, createMemo, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
 import { AdminContext } from "../lib/admin/context";
-import { AlertContext, CommonContext } from "../lib/context";
+import { CommonContext } from "../lib/context";
+import { AlertContext } from "../lib/alert";
 import { dropdownClickListener } from "../lib/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
 import { HttpError } from "../lib/api";

@@ -3,13 +3,6 @@ import { createContext, createSignal } from "solid-js";
 import type { Locale, Namespace, Options } from './models';
 import { Api } from './api';
 
-export interface AlertStore {
-    success(title: string): void;
-    fail(title: string): void;
-}
-
-export const AlertContext: Context<AlertStore | undefined> = createContext();
-
 export interface CommonStore {
     locales: Accessor<Locale[]>,
     loadLocales(): Promise<void>;

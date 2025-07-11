@@ -2,7 +2,7 @@ import { A, useNavigate, useParams } from "@solidjs/router";
 import { FloppyFill, PencilSquare, PlusLg, ThreeDotsVertical, Trash } from "../Icons";
 import { createEffect, createResource, createSignal, For, Match, onCleanup, Show, Switch, useContext } from "solid-js";
 import { AdminContext } from "../lib/admin/context";
-import { AlertContext } from "../lib/context";
+import { AlertContext } from "../lib/alert";
 import { HttpError } from "../lib/api";
 import { type Role as RoleModel } from "../lib/admin/models";
 import { dropdownClickListener } from "../lib/utils";

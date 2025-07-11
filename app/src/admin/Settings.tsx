@@ -2,7 +2,7 @@ import { createEffect, createResource, createSignal, For, Match, Switch, useCont
 import { AdminContext } from "../lib/admin/context";
 import ProgressSpinner from "../components/ProgressSpinner";
 import { createStore } from "solid-js/store";
-import { AlertContext } from "../lib/context";
+import { AlertContext } from "../lib/alert";
 import { FloppyFill } from "../Icons";
 import * as theme from "../theme";
 

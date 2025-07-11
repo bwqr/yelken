@@ -1,7 +1,7 @@
 import { createSignal, Show, useContext, type JSX } from "solid-js";
 import ProgressSpinner from "./ProgressSpinner";
 import { HttpError } from "../lib/api";
-import { AlertContext } from "../lib/context";
+import { AlertContext } from "../lib/alert";
 
 export default function(props: {
     close: () => void,

@@ -2,7 +2,7 @@ import { createEffect, createMemo, createResource, createSignal, For, Match, onC
 import { CMSContext } from "../lib/cms/context";
 import { A, useNavigate, useParams, useSearchParams } from "@solidjs/router";
 import { FileEarmarkFill, FloppyFill, PencilSquare, ThreeDotsVertical, Trash, Upload } from "../Icons";
-import { AlertContext } from "../lib/context";
+import { AlertContext } from "../lib/alert";
 import { Api, HttpError } from "../lib/api";
 import { dropdownClickListener } from "../lib/utils";
 import * as config from '../lib/config';
