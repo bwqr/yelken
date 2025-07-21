@@ -63,7 +63,7 @@ pub async fn login(
     };
 
     // TODO use verify
-    if crypto.sign512((request.password + salt).as_bytes()) != password {
+    if crypto.sign512(format!("{salt}{}", request.password).as_bytes()) != password {
         return Err(INVALID_CREDENTIALS);
     }
 

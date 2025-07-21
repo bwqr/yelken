@@ -166,7 +166,7 @@ pub fn create_admin_user(
         .map(|_| rng().sample(Alphanumeric) as char)
         .collect();
 
-    let password = crypto.sign512((user.password + salt.as_str()).as_bytes());
+    let password = crypto.sign512(format!("{salt}{}", user.password).as_bytes());
 
     let user = diesel::insert_into(users::table)
         .values((
@@ -174,7 +174,7 @@ pub fn create_admin_user(
             users::name.eq(user.name),
             users::email.eq(user.email),
             users::login_kind.eq(LoginKind::Email),
-            users::password.eq(password),
+            users::password.eq(format!("{salt}{password}")),
         ))
         .get_result::<base::models::User>(conn)?;
 
