@@ -1,3 +1,5 @@
+import { fromUTC } from "../utils";
+
 export interface ModelField {
     id: number,
     fieldId: number,
@@ -39,7 +41,7 @@ export class Model implements Omit<ModelResponse, 'createdAt'> {
             response.name,
             response.desc,
             response.fields,
-            new Date(response.createdAt),
+            fromUTC(response.createdAt),
         )
     }
 
@@ -102,8 +104,8 @@ export class Content implements Omit<ContentResponse, 'createdAt' | 'updatedAt'>
             response.name,
             response.stage,
             response.createdBy,
-            new Date(response.createdAt),
-            new Date(response.updatedAt),
+            fromUTC(response.createdAt),
+            fromUTC(response.updatedAt),
         )
     }
 }
