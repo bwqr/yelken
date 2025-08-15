@@ -56,7 +56,7 @@ export class AlertService implements AlertStore {
             state,
         };
 
-        this.setAlerts(produce((alerts) => alerts.push(alert)));
+        this.setAlerts(produce((alerts) => alerts.unshift(alert)));
 
         if (this.timeoutId === undefined) {
             this.timeoutId = setTimeout(() => this.cleanAlerts(), this.timeout);
