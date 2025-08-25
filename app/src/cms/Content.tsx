@@ -14,7 +14,7 @@ import { PaginationRequest } from "../lib/models";
 import { Pagination } from "../components/Pagination";
 import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
-import * as config from '../lib/config';
+import config from '../lib/config';
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import ProfileIcon from "../components/ProfileIcon";
 
@@ -138,7 +138,7 @@ const ContentValueModal = (props: {
                                                             }>
                                                                 <img
                                                                     class="d-block m-auto w-auto"
-                                                                    src={config.resolveURL(config.API_URL, `/assets/content/${store.value}`)}
+                                                                    src={config.resolveSiteURL(`/assets/content/${store.value}`)}
                                                                     alt={store.value}
                                                                     style="max-height: 100%;"
                                                                 />
@@ -556,7 +556,7 @@ export const CreateContent = () => {
                                                                                 <div class="flex-grow-1">
                                                                                     <img
                                                                                         class=""
-                                                                                        src={config.resolveURL(config.API_URL, `/assets/content/${value.value}`)}
+                                                                                        src={config.resolveSiteURL(`/assets/content/${value.value}`)}
                                                                                         alt={value.value}
                                                                                         style="max-width: 100%; max-height: 5rem;"
                                                                                     />
@@ -1025,7 +1025,7 @@ export const Content = () => {
                                                                                         <div class="flex-grow-1">
                                                                                             <img
                                                                                                 class=""
-                                                                                                src={config.resolveURL(config.API_URL, `/assets/content/${value.value}`)}
+                                                                                                src={config.resolveSiteURL(`/assets/content/${value.value}`)}
                                                                                                 alt={value.value}
                                                                                                 style="max-width: 100%; max-height: 5rem;"
                                                                                             />

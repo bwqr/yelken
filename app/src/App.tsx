@@ -5,7 +5,7 @@ import Dashboard from './Dashboard';
 import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './cms/Content';
 import EmailLogin from './auth/login/Email';
 import { OauthLogin, OauthRedirect } from './auth/login/Oauth';
-import * as config from './lib/config';
+import config from './lib/config';
 import { CMSContext, CMSService, type CMSStore } from './lib/cms/context';
 import { UserContext, UserService } from './lib/user/context';
 import { CommonContext, CommonService } from './lib/context';
@@ -104,7 +104,7 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
 };
 
 const App: Component = () => {
-    let baseUrl = config.BASE_URL;
+    let baseUrl = config.baseURL;
 
     // When base is not equal to '/' and it ends with '/', href value for A component turns into `/base//link`.
     // To avoid that, strip '/' from the end. We may need a better solution in the future though.
@@ -119,7 +119,7 @@ const App: Component = () => {
             <Router base={baseUrl} root={(props) => (
                 <>
                     {props.children}
-                    <p style="position: fixed; bottom: 0.5rem; right: 0.75rem; padding: 0; margin: 0; font-size: 0.9rem;">Yelken v{config.APP_VERSION}</p>
+                    <p style="position: fixed; bottom: 0.5rem; right: 0.75rem; padding: 0; margin: 0; font-size: 0.9rem;">Yelken v{config.appVersion}</p>
                 </>
             )}>
                 <Route path="/auth" component={(props) => (<>{props.children}</>)}>

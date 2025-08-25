@@ -1,4 +1,4 @@
-import * as config from "./config";
+import config from "./config";
 
 export class HttpError extends Error {
     constructor(public code: number, public error: string, public context: string | undefined) {
@@ -99,7 +99,7 @@ export class Api {
             headers['Content-Type'] = 'application/json';
         }
 
-        const resp = await fetch(config.resolveURL(config.resolveURL(config.API_URL, 'api'), path), {
+        const resp = await fetch(config.resolveApiURL(path), {
             body: body ? 'data' in body ? JSON.stringify(body.data) : body.formdata : null,
             headers,
             method,
@@ -107,7 +107,7 @@ export class Api {
 
         if (!resp.ok) {
             if (resp.status === 401) {
-                window.location.assign(config.resolveURL(config.BASE_URL, '/auth/login'));
+                window.location.assign(config.resolveBaseUrl('/auth/login'));
             }
 
             const text = await resp.text();

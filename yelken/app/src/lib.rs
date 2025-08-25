@@ -13,7 +13,7 @@ use url::Url;
 #[derive(Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 struct YelkenConfig {
-    api_url: String,
+    site_url: String,
     base_url: String,
 }
 
@@ -39,12 +39,6 @@ pub fn router(app_assets_storage: Operator, site_url: Url) -> Router<AppState> {
     let index =
         std::io::read_to_string(app_assets_storage.blocking().read("index.html").unwrap()).unwrap();
 
-    let mut api_url = site_url.clone();
-    api_url
-        .path_segments_mut()
-        .unwrap()
-        .pop_if_empty();
-
     let mut base_url = site_url.clone();
     base_url
         .path_segments_mut()
@@ -54,10 +48,16 @@ pub fn router(app_assets_storage: Operator, site_url: Url) -> Router<AppState> {
         .push("app")
         .push("");
 
+    let mut site_url = site_url;
+    site_url
+        .path_segments_mut()
+        .unwrap()
+        .pop_if_empty();
+
     let index = index.replace(
         "{YELKEN_CONFIG_STRING}",
         &serde_json::to_string(&YelkenConfig {
-            api_url: api_url.to_string(),
+            site_url: site_url.to_string(),
             base_url: base_url.path().to_string(),
         })
         .unwrap(),

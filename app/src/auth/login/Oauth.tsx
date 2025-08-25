@@ -1,6 +1,6 @@
 import { useSearchParams } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
-import * as config from "../../lib/config";
+import config from "../../lib/config";
 
 const STATE_LENGTH = 32;
 const STATE_KEY = 'oauth_state';
@@ -29,7 +29,7 @@ export const OauthRedirect = () => {
 
     localStorage.setItem(STATE_KEY, JSON.stringify(oauthState));
 
-    window.location.assign(config.resolveURL(config.API_URL, `/api/auth/oauth/redirect?state=${state}`))
+    window.location.assign(config.resolveApiURL(`/auth/oauth/redirect?state=${state}`))
 
     return (<></>);
 }
@@ -76,7 +76,7 @@ export const OauthLogin = () => {
     try {
         finishOauth(searchParams);
 
-        window.location.assign(config.BASE_URL);
+        window.location.assign(config.baseURL);
     } catch (e) {
         setError(`${e}`);
     }

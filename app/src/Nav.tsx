@@ -1,7 +1,7 @@
 import { A, useLocation } from "@solidjs/router";
 import { type Component, createEffect, createSignal, For, type JSX, onCleanup, Show, useContext } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import * as config from './lib/config';
+import config from './lib/config';
 import { UserContext } from "./lib/user/context";
 import { Braces, BoxArrowRight, CardText, Columns, Dashboard, Images, Journals, Person, Stack, Translate, ShieldLock, PeopleFill, List, XLg, GearFill } from "./Icons";
 import { dropdownClickListener } from "./lib/utils";
@@ -119,7 +119,7 @@ export function SideNav(): JSX.Element {
                         <li>
                             <a
                                 class="dropdown-item icon-link py-2"
-                                href={config.resolveURL(config.BASE_URL, '/auth/login')}
+                                href={config.resolveBaseUrl('/auth/login')}
                                 on:click={_ => localStorage.removeItem('token')}
                                 rel="external"
                             >
