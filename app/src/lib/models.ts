@@ -111,3 +111,8 @@ export interface Namespace {
     key: string,
     source: NamespaceSource,
 }
+
+export enum BrowserLocale {
+    English = 'en',
+    Turkish = 'tr',
+}

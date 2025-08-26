@@ -5,6 +5,8 @@ import { createStore } from "solid-js/store";
 import { AlertContext } from "../lib/alert";
 import { FloppyFill } from "../Icons";
 import * as theme from "../theme";
+import { ChangeLocaleContext, LocaleContext } from "../lib/i18n";
+import { BrowserLocale } from "../lib/models";
 
 export const Settings = () => {
     enum OptionKey {
@@ -23,9 +25,12 @@ export const Settings = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
+    const changeLocaleCtx = useContext(ChangeLocaleContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [siteOptions, { mutate }] = createResource(() => adminCtx.fetchSiteOptions().then(buildOptions));
 
     const [colorMode, setColorMode] = createSignal(theme.getColorMode() ?? theme.ColorMode.Auto);
+    const [changingLocale, setChangingLocale] = createSignal(false);
     const [editOptions, setEditOptions] = createStore(buildOptions({}));
 
     createEffect(() => {
@@ -53,6 +58,17 @@ export const Settings = () => {
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
     };
+
+    const changeLocale = (locale: BrowserLocale) => {
+        if (changingLocale()) {
+            return;
+        }
+
+        setChangingLocale(true);
+
+        changeLocaleCtx.setLocale(locale)
+            .finally(() => setChangingLocale(false));
+    }
 
     return (
         <div class="container py-4 px-md-4">
@@ -100,6 +116,26 @@ export const Settings = () => {
                                                             <FloppyFill viewBox="0 0 16 16" />
                                                             Save
                                                         </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td style="width: 25%;">{localeCtx.i18n.admin.settings.locale()}</td>
+                                                <td class="py-1">
+                                                    <div class="input-group" role="group">
+                                                        <select
+                                                            class="form-select"
+                                                            value={localeCtx.locale()}
+                                                            onChange={(ev) => changeLocale(ev.target.value as BrowserLocale)}
+                                                            disabled={changingLocale()}
+                                                        >
+                                                            <For each={Object.values(BrowserLocale)}>
+                                                                {(locale) => (
+                                                                    <option value={locale}>{LOCALES[locale]}</option>
+                                                                )}
+                                                            </For>
+                                                        </select>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -156,3 +192,8 @@ export const Settings = () => {
         </div>
     );
 }
+
+const LOCALES = {
+    [BrowserLocale.English]: 'English',
+    [BrowserLocale.Turkish]: 'Türkçe',
+};

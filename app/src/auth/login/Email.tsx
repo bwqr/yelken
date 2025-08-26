@@ -1,12 +1,15 @@
-import { createSignal, Show } from "solid-js";
+import { createSignal, Show, useContext } from "solid-js";
 import { Api, HttpError } from "../../lib/api";
 import config from "../../lib/config";
+import { LocaleContext } from "../../lib/i18n";
 
 export default function() {
     enum ValidationError {
         Email,
         Password,
     }
+
+    const localeCtx = useContext(LocaleContext)!;
 
     const [email, setEmail] = createSignal('');
     const [password, setPassword] = createSignal('');
@@ -62,19 +65,16 @@ export default function() {
     }
 
     return (
-        <div class="container-fluid">
+        <div class="container-fluid w-100">
             <div class="row">
-                <div class="d-none col-md-4 vh-100 d-md-flex justify-content-center align-items-center bg-primary">
-                    <div>
-                        <h2 class="text-white">Yelken</h2>
-                        <p class="text-white">Login to manage your site</p>
-                    </div>
-                </div>
-                <div class="col vh-100 d-flex justify-content-center align-items-center flex-column">
-                    <h2 class="mb-2">Login</h2>
-                    <form onSubmit={onSubmit}>
-                        <div class="form-group mb-4">
-                            <label for="login-email" class="mb-1">Email</label>
+                <div class="col-lg-6 d-flex flex-column justify-content-center align-items-center" style="min-height: 100vh">
+                    <form onSubmit={onSubmit} style="width: 28rem;">
+                        <div class="mb-4 text-center">
+                            <h3>Log into Yelken</h3>
+                            <small class="text-secondary">Yelken CMS</small>
+                        </div>
+                        <div class="mb-4">
+                            <label for="login-email" class="mb-2">Email</label>
                             <input
                                 id="login-email"
                                 type="email"
@@ -90,7 +90,7 @@ export default function() {
                             </Show>
                         </div>
                         <div class="form-group mb-4">
-                            <label for="login-password" class="mb-1">Password</label>
+                            <label for="login-password" class="mb-2">Password</label>
                             <input
                                 id="login-password"
                                 type="password"
@@ -114,7 +114,7 @@ export default function() {
 
                             <button
                                 type="submit"
-                                class="btn btn-primary w-100 form-group"
+                                class="btn btn-primary icon-link justify-content-center w-100 py-2"
                                 disabled={inProgress()}
                             >
                                 <Show when={inProgress()}>
@@ -122,10 +122,19 @@ export default function() {
                                         <span class="visually-hidden">Loading...</span>
                                     </div>
                                 </Show>
-                                Login
+                                {localeCtx.i18n.auth.login.login()}
                             </button>
                         </div>
                     </form>
+                </div>
+                <div class="col-lg-6 d-none d-lg-flex flex-column justify-content-center align-items-center" style="background: var(--custom-bg)">
+                    <a class="py-3" rel="external" href="/">
+                        <img class="img-fluid" src="/assets/images/logo-blue.png" width="160px" alt="Yelken" />
+                    </a>
+                    <div style="flex-grow: 1"></div>
+                    <h2 class="text-primary mb-4">Yelken</h2>
+                    <p class="text-primary">Login to manage your site.</p>
+                    <div style="flex-grow: 2"></div>
                 </div>
             </div>
         </div>
