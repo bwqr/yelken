@@ -17,6 +17,7 @@ import ProgressSpinner from "../components/ProgressSpinner";
 import config from '../lib/config';
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import ProfileIcon from "../components/ProfileIcon";
+import { LocaleContext } from "../lib/i18n";
 
 function imageFile(filename: string): boolean {
     return ['.bmp', '.png', '.ico', '.tif', '.tiff', '.jpeg', '.jpg', '.webp', '.svg', '.gif'].findIndex((ext) => filename.endsWith(ext)) > -1;
@@ -27,6 +28,7 @@ const ContentValueModal = (props: {
     create: (field: CreateContentValue) => Promise<void> | void;
     modelField: ModelField,
     initial?: CreateContentValue
+    translateError?: (e: string) => string,
 }) => {
     enum ValidationError {
         Value,
@@ -36,6 +38,9 @@ const ContentValueModal = (props: {
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const cmsCtx = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.content;
 
     const [store, setStore] = createStore(props.initial ?? {
         value: '',
@@ -94,10 +99,12 @@ const ContentValueModal = (props: {
 
             promise
                 .catch((e) => {
+                    const msg = props.translateError ? props.translateError(e.message) : e.message;
+
                     if (e instanceof HttpError) {
-                        setServerError(e.error);
+                        setServerError(msg);
                     } else {
-                        alertCtx.fail(e.message);
+                        alertCtx.fail(msg);
                     }
                 })
                 .finally(() => setInProgress(false));
@@ -110,26 +117,27 @@ const ContentValueModal = (props: {
                 <div class="modal-dialog modal-dialog-centered">
                     <form class="modal-content" onSubmit={createValue}>
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{props.initial ? 'Edit Value' : 'Add Value'}</h1>
+                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{props.initial ? i18n.actions.editValue() : i18n.actions.addValue()}</h1>
                         </div>
                         <div class="modal-body">
-                            <Show when={field()} fallback={<p>Unknown field</p>}>
+                            <Show when={field()} fallback={<p>{i18n.labels.unknownField()}</p>}>
                                 {(field) => (
                                     <>
                                         <div class="mb-4">
-                                            <label for="modelFieldName" class="form-label">Field Name</label>
+                                            <label for="modelFieldName" class="form-label">{i18n.labels.fieldName()}</label>
                                             <input
                                                 id="modelFieldName"
                                                 name="modelFieldName"
                                                 type="text"
+                                                placeholder={i18n.labels.fieldName()}
                                                 class="form-control"
                                                 value={props.modelField.name}
                                                 disabled
                                             />
                                         </div>
                                         <div>
-                                            <label for="modelFieldValue" class="form-label">Value</label>
-                                            <Switch fallback={<p>Unsupported field</p>}>
+                                            <label for="modelFieldValue" class="form-label">{i18n.labels.value()}</label>
+                                            <Switch fallback={<p>{i18n.labels.unsupportedField()}</p>}>
                                                 <Match when={field().kind === FieldKind.Asset}>
                                                     <Show when={store.value}>
                                                         <div class="mb-2" style="height: 6rem">
@@ -155,7 +163,7 @@ const ContentValueModal = (props: {
                                                         disabled
                                                     />
                                                     <Show when={validationErrors().has(ValidationError.Value)}>
-                                                        <small class="invalid-feedback">Please pick an asset for {props.modelField.name}.</small>
+                                                        <small class="invalid-feedback">{i18n.validationErrors.valueAsset(props.modelField.name)}.</small>
                                                     </Show>
                                                     <button
                                                         type="button"
@@ -164,7 +172,7 @@ const ContentValueModal = (props: {
                                                         onClick={() => setShowPickAsset(true)}
                                                     >
                                                         <Images viewBox="0 0 16 16" />
-                                                        Pick Asset
+                                                        {i18n.actions.pickAsset()}
                                                     </button>
                                                 </Match>
                                                 <Match when={field().kind === FieldKind.Multiline}>
@@ -191,13 +199,13 @@ const ContentValueModal = (props: {
                                                 </Match>
                                             </Switch>
                                             <Show when={validationErrors().has(ValidationError.Value)}>
-                                                <small class="invalid-feedback">Please specify a value for {props.modelField.name}.</small>
+                                                <small class="invalid-feedback">{i18n.validationErrors.value(props.modelField.name)}.</small>
                                             </Show>
                                         </div>
 
                                         <Show when={props.modelField.localized}>
                                             <div class="mt-4">
-                                                <label for="modelFieldLocale" class="form-label">Locale</label>
+                                                <label for="modelFieldLocale" class="form-label">{localeCtx.i18n.common.labels.locale()}</label>
                                                 <select
                                                     id="modelFieldLocale"
                                                     class="form-select"
@@ -206,7 +214,7 @@ const ContentValueModal = (props: {
                                                     value={store.locale}
                                                     onChange={(ev) => setStore('locale', ev.target.value)}
                                                 >
-                                                    <option value="" disabled selected>Select a locale</option>
+                                                    <option value="" disabled selected>{i18n.actions.selectLocale()}</option>
                                                     <For each={commonCtx.activeLocales()}>
                                                         {(locale) => (
                                                             <option value={locale.key}>{locale.name}</option>
@@ -214,7 +222,7 @@ const ContentValueModal = (props: {
                                                     </For>
                                                 </select>
                                                 <Show when={validationErrors().has(ValidationError.Locale)}>
-                                                    <small class="invalid-feedback">Please select a locale.</small>
+                                                    <small class="invalid-feedback">{i18n.validationErrors.locale()}.</small>
                                                 </Show>
                                             </div>
                                         </Show>
@@ -229,11 +237,11 @@ const ContentValueModal = (props: {
                             </Show>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>Discard</button>
+                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>{localeCtx.i18n.common.actions.discard()}</button>
                             <button type="submit" class="btn btn-primary icon-link" disabled={inProgress()}>
                                 <ProgressSpinner show={inProgress()} />
                                 <Dynamic component={props.initial ? FloppyFill : PlusLg} viewBox="0 0 16 16" />
-                                {props.initial ? 'Save' : 'Add'}
+                                {props.initial ? localeCtx.i18n.common.actions.save() : localeCtx.i18n.common.actions.add()}
                             </button>
                         </div>
                     </form>
@@ -253,17 +261,18 @@ const ContentValueModal = (props: {
             <div class="modal-backdrop show"></div>
         </>
     );
-}
+};
 
 export const ContentRoot = (props: { children?: JSX.Element }) => {
+    const localeCtx = useContext(LocaleContext)!;
     const models = useContext(CMSContext)!.models();
 
     return (
         <div class="d-flex flex-grow-1">
             <nav id="second-nav" class="h-100" style="width: 13rem; border-right: 1px solid #d8d8d8">
-                <p class="ps-3 mt-4 mb-2 text-uppercase"><b>Models</b></p>
+                <p class="ps-3 mt-4 mb-2 text-uppercase"><b>{localeCtx.i18n.nav.links.models()}</b></p>
                 <Show when={models.length > 0} fallback={
-                    <p class="ps-3 mt-4 mb-2 text-secondary">No model found</p>
+                    <p class="ps-3 mt-4 mb-2 text-secondary">{localeCtx.i18n.content.noModelFound()}</p>
                 }>
                     <ul class="navbar-nav mb-4 highlight-links">
                         <For each={models}>
@@ -286,14 +295,16 @@ export const ContentRoot = (props: { children?: JSX.Element }) => {
             </main>
         </div>
     );
-}
+};
 
 export const Contents = () => {
     const cmsCtx = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
     return (
         <div class="container py-4 px-md-4">
             <Show when={cmsCtx.models()[0]} fallback={
-                <p class="text-secondary text-center">A <strong>Model</strong> needs to be created first to create a <strong>Content</strong>. You can create a new model in <A href="/models">Models</A> page.</p>
+                <p class="text-secondary text-center">{localeCtx.i18n.content.noModel()}.</p>
             }>
                 {(model) => (<Navigate href={`/contents/by-model/${model().urlPath()}`} />)}
             </Show>
@@ -303,8 +314,11 @@ export const Contents = () => {
 
 export const ContentsByModel = () => {
     const cmsCtx = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
     const params = useParams();
+
+    const i18n = localeCtx.i18n.content;
 
     const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
@@ -318,12 +332,12 @@ export const ContentsByModel = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Contents</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.contents()}</h1>
                 <Show when={model()}>
                     {(m) => (
                         <A class="btn btn-outline-primary icon-link" href={`/contents/create/${m().urlPath()}`}>
                             <PlusLg viewBox="0 0 16 16" />
-                            Create Content
+                            {i18n.actions.createContent()}
                         </A>
                     )}
                 </Show>
@@ -331,32 +345,32 @@ export const ContentsByModel = () => {
 
             <Switch>
                 <Match when={!model()}>
-                    <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
+                    <p class="text-secondary text-center">{localeCtx.i18n.model.modelNotFound(params.key)}.</p>
                 </Match>
                 <Match when={contents.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={contents.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching contents: <strong>{contents.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.contents())}: <strong>{contents.error.message}</strong></p>
                 </Match>
                 <Match when={contents() && contents()!.currentPage === 1 && contents()!.items.length === 0}>
-                    <p class="text-secondary text-center">There is no content for the <strong>{model()?.name}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button.</p>
+                    <p class="text-secondary text-center">{i18n.noContent(model()?.name ?? '')}.</p>
                 </Match>
                 <Match when={contents()}>
                     {(contents) => (
                         <div class="row">
                             <div class="offset-md-2 col-md-8">
                                 <Show when={contents().items.length > 0} fallback={
-                                    <p class="text-secondary text-center mb-4">There is no content to display for <strong>page {searchParams.page}</strong>.</p>
+                                    <p class="text-secondary text-center mb-4">{i18n.noContentForPage(searchParams.page as string)}.</p>
                                 }>
                                     <table class="table table-hover mb-4 border shadow-sm">
                                         <thead>
                                             <tr>
                                                 <th></th>
                                                 <th scope="col">#</th>
-                                                <th scope="col">Name</th>
-                                                <th scope="col">Stage</th>
-                                                <th scope="col">Created At</th>
+                                                <th scope="col">{localeCtx.i18n.common.labels.name()}</th>
+                                                <th scope="col">{i18n.labels.stage()}</th>
+                                                <th scope="col">{localeCtx.i18n.common.labels.createdAt()}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -367,7 +381,7 @@ export const ContentsByModel = () => {
                                                         <td>{content.id}</td>
                                                         <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
                                                         <td>{content.stage}</td>
-                                                        <td>{content.createdAt.toDateString()}</td>
+                                                        <td>{localeCtx.dateFormat().format(content.createdAt)}</td>
                                                     </tr>
                                                 )}
                                             </For>
@@ -399,8 +413,11 @@ export const CreateContent = () => {
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const cmsCtx = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.content;
 
     const locales = commonCtx.activeLocales();
     const model = createMemo(() => cmsCtx.models().find(Model.searchWithParams(params.namespace, params.key)));
@@ -438,8 +455,13 @@ export const CreateContent = () => {
         setServerError(undefined);
 
         const errors = new Set<ValidationError>();
+        const req = {
+            name: name().trim(),
+            modelId: model()!.id,
+            values: Object.values(unwrap(values)).flat(),
+        };
 
-        if (name().trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
@@ -451,60 +473,66 @@ export const CreateContent = () => {
 
         setInProgress(true);
 
-        cmsCtx.createContent({
-            name: name(),
-            modelId: model()!.id,
-            values: Object.values(unwrap(values)).flat(),
-        })
+        cmsCtx.createContent(req)
             .then((content) => {
-                alertCtx.success(`Content "${content.name}" is created successfully`);
+                alertCtx.success(i18n.actions.contentCreated(content.name));
 
                 navigate(`/contents/view/${content.id}`, { replace: true });
             })
             .catch((e) => {
+                const msg = translateError(e.message);
+
                 if (e instanceof HttpError) {
-                    setServerError(e.error);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
     };
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create Content</h2>
+            <h2 class="mb-5">{i18n.actions.createContent()}</h2>
 
             <div class="row">
                 <Show when={model()} fallback={
-                    <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
+                    <p class="text-secondary text-center">{localeCtx.i18n.model.modelNotFound(params.key)}.</p>
                 }>
                     {(model) => (
                         <form class="offset-md-3 col-md-6" onSubmit={onSubmit}>
                             <div class="border rounded p-3 mb-4">
                                 <div class="mb-4">
-                                    <label for="contentName" class="form-label">Name</label>
+                                    <label for="contentName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                                     <input
                                         type="text"
                                         id="contentName"
                                         class="form-control"
                                         classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                         name="contentName"
+                                        placeholder={localeCtx.i18n.common.labels.name()}
                                         value={name()}
                                         onInput={(ev) => setName(ev.target.value)}
                                     />
                                     <Show when={validationErrors().has(ValidationError.Name)}>
-                                        <small class="invalid-feedback">Please enter a name.</small>
+                                        <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                                     </Show>
                                 </div>
 
                                 <div class="mb-4">
-                                    <label for="modelName" class="form-label">Model</label>
+                                    <label for="modelName" class="form-label">{i18n.labels.model()}</label>
                                     <input
                                         type="text"
                                         id="modelName"
                                         class="form-control"
                                         name="modelName"
+                                        placeholder={i18n.labels.model()}
                                         value={model().title()}
                                         disabled
                                     />
@@ -513,7 +541,7 @@ export const CreateContent = () => {
 
                             <hr />
 
-                            <h5 class="mb-4">Values</h5>
+                            <h5 class="mb-4">{i18n.labels.values()}</h5>
 
                             <For each={model().fields}>
                                 {(mf) => {
@@ -529,7 +557,7 @@ export const CreateContent = () => {
                                                             onClick={() => setShowContentValueModal({ modelField: mf })}
                                                         >
                                                             <PlusSquareDotted viewBox="0 0 16 16" />
-                                                            Add value
+                                                            {i18n.actions.addValue()}
                                                         </button>
                                                     </Show>
                                                 </div>
@@ -594,7 +622,7 @@ export const CreateContent = () => {
 
                             <Show when={serverError()}>
                                 <div class="mb-2">
-                                    <small class="text-danger">{serverError()}</small>
+                                    <small class="text-danger-emphasis">{serverError()}</small>
                                 </div>
                             </Show>
 
@@ -607,7 +635,7 @@ export const CreateContent = () => {
                                 >
                                     <ProgressSpinner show={inProgress()} />
                                     <PlusLg viewBox="0 0 16 16" />
-                                    Create
+                                    {localeCtx.i18n.common.actions.create()}
                                 </button>
                             </div>
                         </form>
@@ -634,12 +662,13 @@ export const CreateContent = () => {
                             setShowContentValueModal(undefined);
                         }}
                         close={() => setShowContentValueModal(undefined)}
+                        translateError={translateError}
                     />
                 )}
             </Show>
         </div >
     );
-}
+};
 
 export const Content = () => {
     enum Action {
@@ -651,11 +680,19 @@ export const Content = () => {
         Name,
     }
 
+    enum Dropdown {
+        Details,
+        Stage,
+    }
+
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const cmsCtx = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.content;
 
     const [content, { mutate }] = createResource(() => parseInt(params.id), (id: number) => cmsCtx.fetchContent(id));
     const model = () => cmsCtx.models().find((m) => m.id === content()?.content.modelId);
@@ -675,11 +712,9 @@ export const Content = () => {
 
     const [validationErrors, setValidationErrors] = createSignal(new Set<ValidationError>());
 
-    const [dropdown, setDropdown] = createSignal(false);
-    onCleanup(dropdownClickListener('content-detail-dropdown', () => setDropdown(false), () => !deletingContent()));
-
-    const [showStageDropdown, setShowStageDropdown] = createSignal(false);
-    onCleanup(dropdownClickListener('stage-detail-dropdown', () => setShowStageDropdown(false), () => inProgress() === undefined));
+    const [dropdown, setDropdown] = createSignal(undefined as Dropdown | undefined);
+    onCleanup(dropdownClickListener('content-detail-dropdown', () => dropdown() === Dropdown.Details && setDropdown(undefined), () => !deletingContent()));
+    onCleanup(dropdownClickListener('stage-detail-dropdown', () => dropdown() === Dropdown.Stage && setDropdown(undefined), () => inProgress() === undefined));
 
     const updateStage = () => {
         const c = content();
@@ -693,9 +728,9 @@ export const Content = () => {
 
         cmsCtx.updateContentStage(c.content.id, stage)
             .then(() => {
-                setShowStageDropdown(false);
+                setDropdown(undefined);
 
-                alertCtx.success(stage === ContentStage.Published ? `Content "${c.content.name}" is published` : `Content "${c.content.name}" is marked as draft`);
+                alertCtx.success(stage === ContentStage.Published ? i18n.actions.published(c.content.name) : i18n.actions.markedDraft(c.content.name));
 
                 mutate({ ...c, content: { ...c.content, stage } });
             })
@@ -711,8 +746,9 @@ export const Content = () => {
         }
 
         const errors = new Set<ValidationError>();
+        const req = { name: contentDetails.name.trim() };
 
-        if (contentDetails.name.trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
@@ -726,14 +762,14 @@ export const Content = () => {
 
         cmsCtx.updateContentDetails(
             c.content.id,
-            contentDetails.name.trim(),
+            req.name,
         )
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Content "${contentDetails.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.contentUpdated(req.name));
 
-                mutate({ ...c, content: { ...c.content, name: contentDetails.name.trim() } })
+                mutate({ ...c, content: { ...c.content, name: req.name } })
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
@@ -751,7 +787,7 @@ export const Content = () => {
             .then((value) => {
                 setCreatingValue(undefined);
 
-                alertCtx.success(`Value for field "${modelField?.name ?? '-'}" is created successfully`);
+                alertCtx.success(i18n.actions.valueCreated(modelField?.name ?? '-'));
 
                 mutate({ ...c, values: [...c.values, value] });
             });
@@ -769,7 +805,7 @@ export const Content = () => {
             .then(() => {
                 setEditingValue(undefined);
 
-                alertCtx.success(`Value for field "${modelField?.name ?? '-'}" is updated successfully`);
+                alertCtx.success(i18n.actions.valueUpdated(modelField?.name ?? '-'));
 
                 const idx = c.values.findIndex((v) => v.id === id);
                 if (idx > -1) {
@@ -794,7 +830,7 @@ export const Content = () => {
             .then(() => {
                 setDeletingContent(false);
 
-                alertCtx.success(`Content "${c.content.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.contentDeleted(c.content.name));
 
                 if (m) {
                     navigate(`/contents/by-model/${m.urlPath()}`, { replace: true });
@@ -810,7 +846,7 @@ export const Content = () => {
             .then(() => {
                 setDeletingValue(undefined);
 
-                alertCtx.success(`Value for "${modelField?.name ?? '-'}" field is deleted successfully`);
+                alertCtx.success(i18n.actions.valueDeleted(modelField?.name ?? '-'));
 
                 if (c) {
                     mutate({ ...c, values: c.values.filter((v) => v.id !== value.id) })
@@ -822,17 +858,23 @@ export const Content = () => {
         { color: 'success', icon: CheckCircleFill } :
         { color: 'secondary', icon: Bookmark };
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
             <Switch>
                 <Match when={content.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={content.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching content: <strong>{content.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.content())}: <strong>{content.error.message}</strong></p>
                 </Match>
                 <Match when={content.state === 'ready' && content() === undefined}>
-                    <p class="text-secondary text-center">Could not find the content with id {params.id}.</p>
+                    <p class="text-secondary text-center">{i18n.contentNotFound(params.id)}.</p>
                 </Match>
                 <Match when={content()}>
                     {(content) => (
@@ -840,17 +882,17 @@ export const Content = () => {
                             <div class="d-flex align-items-center mb-5">
                                 <div class="flex-grow-1">
                                     <h2 class="m-0">{content().content.name}</h2>
-                                    <small>Content</small>
+                                    <small>{i18n.content()}</small>
                                 </div>
                                 <div class="dropdown mx-2">
-                                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
+                                    <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); dropdown() === Dropdown.Details ? setDropdown(undefined) : setDropdown(Dropdown.Details); }}>
                                         <ThreeDotsVertical viewBox="0 0 16 16" />
                                     </button>
-                                    <ul id="content-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() }} style="right: 0;">
+                                    <ul id="content-detail-dropdown" class="dropdown-menu mt-1 shadow" classList={{ 'show': dropdown() === Dropdown.Details }} style="right: 0;">
                                         <li>
                                             <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingContent(true)}>
                                                 <Trash viewBox="0 0 16 16" />
-                                                Delete
+                                                {localeCtx.i18n.common.actions.delete()}
                                             </button>
                                         </li>
                                     </ul>
@@ -860,26 +902,23 @@ export const Content = () => {
                                         <button type="button" class={`btn icon-link btn-outline-${contentStyle().color}`} disabled>
                                             <ProgressSpinner show={inProgress() === Action.UpdateStage} />
                                             <Dynamic component={contentStyle().icon} viewBox="0 0 17 17" />
-                                            <Switch>
-                                                <Match when={content()?.content.stage === ContentStage.Draft}>Draft</Match>
-                                                <Match when={content()?.content.stage === ContentStage.Published}>Published</Match>
-                                            </Switch>
+                                            {i18n.stages[content()?.content.stage ?? ContentStage.Draft]()}
                                         </button>
                                         <button
                                             type="button"
                                             class={`btn btn-outline-${contentStyle().color} dropdown-toggle dropdown-toggle-split`}
-                                            on:click={(ev) => { ev.stopPropagation(); setShowStageDropdown(!showStageDropdown()); }}
-                                            aria-expanded={showStageDropdown()}
+                                            on:click={(ev) => { ev.stopPropagation(); dropdown() === Dropdown.Stage ? setDropdown(undefined) : setDropdown(Dropdown.Stage); }}
+                                            aria-expanded={dropdown() === Dropdown.Stage}
                                         >
                                             <span class="visually-hidden">Toggle Dropdown</span>
                                         </button>
                                     </div>
-                                    <ul id="stage-detail-dropdown" class="dropdown-menu mt-1 show shadow" classList={{ 'show': showStageDropdown() }} style="right: 0;">
+                                    <ul id="stage-detail-dropdown" class="dropdown-menu mt-1 show shadow" classList={{ 'show': dropdown() === Dropdown.Stage }} style="right: 0;">
                                         <li>
                                             <button class="dropdown-item py-2" onClick={updateStage} disabled={inProgress() !== undefined}>
                                                 <Switch>
-                                                    <Match when={content()?.content.stage === ContentStage.Draft}>Publish</Match>
-                                                    <Match when={content()?.content.stage === ContentStage.Published}>Mark as Draft</Match>
+                                                    <Match when={content()?.content.stage === ContentStage.Draft}>{i18n.actions.publish()}</Match>
+                                                    <Match when={content()?.content.stage === ContentStage.Published}>{i18n.actions.markDraft()}</Match>
                                                 </Switch>
                                             </button>
                                         </li>
@@ -891,11 +930,11 @@ export const Content = () => {
                                 <div class="offset-md-1 col-md-4">
                                     <div class="border rounded p-3">
                                         <div class="d-flex justify-content-center">
-                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                             <Show when={editingDetails()} fallback={
                                                 <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                     <PencilSquare viewBox="0 0 16 16" />
-                                                    Edit
+                                                    {localeCtx.i18n.common.actions.edit()}
                                                 </button>
                                             }>
                                                 <button
@@ -903,7 +942,7 @@ export const Content = () => {
                                                     class="btn text-danger icon-link py-0 px-1"
                                                     onClick={() => setEditingDetails(false)}
                                                 >
-                                                    Discard
+                                                    {localeCtx.i18n.common.actions.discard()}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -913,7 +952,7 @@ export const Content = () => {
                                                 >
                                                     <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                    Save
+                                                    {localeCtx.i18n.common.actions.save()}
                                                 </button>
                                             </Show>
                                         </div>
@@ -923,7 +962,7 @@ export const Content = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 35%">Name</td>
+                                                    <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={content().content.name}>
                                                             <input
@@ -939,7 +978,7 @@ export const Content = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Model</td>
+                                                    <td>{localeCtx.i18n.model.model()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={model()?.title() ?? '-'}>
                                                             <input
@@ -952,19 +991,16 @@ export const Content = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Stage</td>
+                                                    <td>{localeCtx.i18n.content.labels.stage()}</td>
                                                     <td class="text-end py-1">
                                                         <p class="icon-link m-0">
                                                             <Dynamic component={contentStyle().icon} class={`text-${contentStyle().color}`} viewBox="0 0 17 17" />
-                                                            <Switch>
-                                                                <Match when={content().content.stage === ContentStage.Draft}>Draft</Match>
-                                                                <Match when={content().content.stage === ContentStage.Published}>Published</Match>
-                                                            </Switch>
+                                                            {i18n.stages[content()?.content.stage ?? ContentStage.Draft]()}
                                                         </p>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Created By</td>
+                                                    <td>{i18n.labels.createdBy()}</td>
                                                     <td class="text-end py-1">
                                                         <p class="icon-link m-0">
                                                             <ProfileIcon name={content().user?.name ?? '-'} />
@@ -978,7 +1014,7 @@ export const Content = () => {
                                 </div>
                                 <div class="offset-md-1 col-md-5">
                                     <div class="border rounded p-3">
-                                        <h5>Values</h5>
+                                        <h5>{i18n.labels.values()}</h5>
 
                                         <hr />
 
@@ -1000,7 +1036,7 @@ export const Content = () => {
                                                                         onClick={() => setCreatingValue(mf)}
                                                                     >
                                                                         <PlusSquareDotted viewBox="0 0 16 16" />
-                                                                        Add value
+                                                                        {i18n.actions.addValue()}
                                                                     </button>
                                                                 </Show>
                                                             </div>
@@ -1090,9 +1126,10 @@ export const Content = () => {
 
             <Show when={deletingContent()}>
                 <DeleteConfirmModal
-                    message={<p>Are you sure about deleting the content <strong>{content()?.content.name}</strong>?</p>}
+                    message={<p>{i18n.actions.confirmDelete(content()?.content.name ?? '')}?</p>}
                     close={() => setDeletingContent(false)}
                     confirm={deleteContent}
+                    translateError={translateError}
                 />
             </Show>
 
@@ -1102,9 +1139,10 @@ export const Content = () => {
 
                     return (
                         <DeleteConfirmModal
-                            message={<p>Are you sure about deleting the value for field <strong>{modelField?.name ?? '-'}</strong>?</p>}
+                            message={<p>{i18n.actions.confirmDeleteValue(modelField?.name ?? '-')}?</p>}
                             close={() => setDeletingValue(undefined)}
                             confirm={() => deleteValue(value())}
+                            translateError={translateError}
                         />
                     )
                 }}

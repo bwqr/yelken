@@ -1,5 +1,6 @@
 import { A } from "@solidjs/router";
 import { ColorMode } from "../theme";
+import { ContentStage } from "../lib/cms/models";
 
 export const auth = {
     login: {
@@ -79,6 +80,7 @@ export const common = {
         details: 'Details',
         global: 'Global',
         key: 'Key',
+        locale: 'Locale',
         name: 'Name',
         namespace: 'Namespace',
         optional: 'optional',
@@ -86,6 +88,57 @@ export const common = {
     loading: 'Loading',
     loadingError: 'Encountered an error while loading',
     loadingItemError: (item: string) => `Encountered an error while loading ${item}`,
+};
+
+export const content = {
+    content: 'Content',
+    actions: {
+        addValue: 'Add Value',
+        confirmDelete: (name: string) => (<>Are you sure about deleting the content <strong>{name}</strong></>),
+        confirmDeleteValue: (name: string) => (<>Are you sure about deleting the value for field <strong>{name}</strong></>),
+        contentCreated: (name: string) => `Content "${name}" is created successfully`,
+        contentDeleted: (name: string) => `Content "${name}" is deleted successfully`,
+        contentUpdated: (name: string) => `Content "${name}" is updated successfully`,
+        createContent: 'Create Content',
+        editValue: 'Edit Value',
+        markDraft: 'Mark as draft',
+        markedDraft: (name: string) => `Content "${name}" is marked as draft`,
+        pickAsset: 'Pick Asset',
+        publish: 'Publish',
+        published: (name: string) => `Content "${name}" is published`,
+        selectLocale: 'Select a locale',
+        valueCreated: (field: string) => `Value for field "${field}" is created successfully`,
+        valueDeleted: (field: string) => `Value for field "${field}" is deleted successfully`,
+        valueUpdated: (field: string) => `Value for field "${field}" is updated successfully`,
+    },
+    labels: {
+        createdBy: 'Created By',
+        fieldName: 'Field Name',
+        model: 'Model',
+        value: 'Value',
+        values: 'Values',
+        stage: 'Stage',
+        unknownField: 'Unknown Field',
+        unsupportedField: 'Unsupported Field',
+    },
+    validationErrors: {
+        locale: 'Please select a locale',
+        name: 'Please enter a name',
+        valueAsset: (field: string) => `Please pick an asset for ${field}`,
+        value: (field: string) => `Please specify a value for ${field}`,
+    },
+    serverErrors: {
+        missing_required_field: 'Missing a required field',
+    },
+    stages: {
+        [ContentStage.Draft]: 'Draft',
+        [ContentStage.Published]: 'Published',
+    },
+    noContent: (model: string) => (<>There is no content for the <strong>{model}</strong> model to display yet. You can create a new one by using <strong>Create Content</strong> button</>),
+    noContentForPage: (page: string) => (<>There is no content to display for <strong>page {page}</strong></>),
+    noModel: () => (<>A <strong>Model</strong> needs to be created first to create a <strong>Content</strong>. You can create a new model in <A href="/models">Models</A> page</>),
+    noModelFound: 'No model found',
+    contentNotFound: (id: string) => (<>Could not find the content with id <strong>{id}</strong></>),
 };
 
 export const dashboard = {

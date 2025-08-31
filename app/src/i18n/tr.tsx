@@ -1,6 +1,7 @@
 import { A } from '@solidjs/router';
 import type * as en from './en';
 import { ColorMode } from "../theme";
+import { ContentStage } from '../lib/cms/models';
 
 export const auth: typeof en.auth = {
     login: {
@@ -80,6 +81,7 @@ export const common: typeof en.common = {
         details: 'Detaylar',
         global: 'Global',
         key: 'Anahtar',
+        locale: 'Yerel',
         name: 'İsim',
         namespace: 'İsim Alanı',
         optional: 'isteğe bağlı',
@@ -87,6 +89,57 @@ export const common: typeof en.common = {
     loading: 'Yükleniyor',
     loadingError: 'Encountered an error while loading',
     loadingItemError: (item: string) => `${item} yüklenmesi sırasında bir hata ile karşılaşıldı`,
+};
+
+export const content: typeof en.content = {
+    content: 'İçerik',
+    actions: {
+        addValue: 'Değer Ekle',
+        confirmDelete: (name: string) => (<><strong>{name}</strong> isimli içeriği silmek istediğinizden emin misiniz</>),
+        confirmDeleteValue: (name: string) => (<><strong>{name}</strong> alanına ait değeri silmek istediğinizden emin misiniz</>),
+        contentCreated: (name: string) => `"${name}" isimli içerik başarılı bir şekilde oluşturuldu`,
+        contentDeleted: (name: string) => `"${name}" isimli içerik başarılı bir şekilde silindi`,
+        contentUpdated: (name: string) => `"${name}" isimli içerik başarılı bir şekilde güncellendi`,
+        createContent: 'İçerik Oluştur',
+        editValue: 'Değer Düzenle',
+        markDraft: 'Taslak olarak işaretle',
+        markedDraft: (name: string) => `"${name}" isimli içerik taslak olarak işaretlendi`,
+        pickAsset: 'Kaynak Seçin',
+        publish: 'Yayınla',
+        published: (name: string) => `"${name}" isimli içerik yayınlandı`,
+        selectLocale: 'Bir yerel seçin',
+        valueCreated: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde oluşturuldu`,
+        valueDeleted: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde silindi`,
+        valueUpdated: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde güncellendi`,
+    },
+    labels: {
+        createdBy: 'Oluşturan',
+        fieldName: 'Alan İsmi',
+        model: 'Model',
+        value: 'Değer',
+        values: 'Değerler',
+        stage: 'Aşama',
+        unknownField: 'Bilinmeyen Alan',
+        unsupportedField: 'Desteklenmeyen Alan',
+    },
+    validationErrors: {
+        locale: 'Lütfen bir yerel seçin',
+        name: 'Lütfen bir isim girin',
+        valueAsset: (field: string) => `Lütfen ${field} için bir kaynak seçin`,
+        value: (field: string) => `Lütfen ${field} için bir değer girin`,
+    },
+    serverErrors: {
+        missing_required_field: 'Zorunlu bir alan eksik',
+    },
+    stages: {
+        [ContentStage.Draft]: 'Taslak',
+        [ContentStage.Published]: 'Yayınlandı',
+    },
+    noContent: (model: string) => (<><strong>{model}</strong> modeline ait herhangi bir içerik bulunamadı. <strong>İçerik Oluştur</strong> butonunu kullanarak yeni bir içerik oluşturabilirsin</>),
+    noContentForPage: (page: string) => (<><strong>Sayfa {page}</strong> için gösterilebilecek herhangi bir içerik bulunmuyor</>),
+    noModel: () => (<><strong>İçerik</strong> oluşturmak için öncelikle bir <strong>Model</strong> oluşturulması gerekiyor. Yeni bir modeli <A href="/models">Modeller</A> sayfasında oluşturabilirsin</>),
+    noModelFound: 'Model bulunamadı',
+    contentNotFound: (id: string) => (<><strong>{id}</strong> ile tanımlanan içerik bulunamadı</>),
 };
 
 export const dashboard: typeof en.dashboard = {
@@ -111,7 +164,7 @@ export const model: typeof en.model = {
         selectField: 'Bir alan seçin',
     },
     labels: {
-        activeTheme: 'Aktif Tema',
+        activeTheme: 'Etkin Tema',
         fields: 'Alanlar',
         field: 'Alan',
     },
@@ -123,7 +176,7 @@ export const model: typeof en.model = {
     },
     fieldFeatures: {
         localized: 'Yerel',
-        required: 'Gerekli',
+        required: 'Zorunlu',
         multiple: 'Çoklu',
     },
     validationErrors: {
