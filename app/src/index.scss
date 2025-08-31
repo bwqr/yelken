@@ -1,9 +1,13 @@
 // 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
 @import "bootstrap/scss/functions";
 
+:root {
+  --custom-bg: #f0f8fb;
+  --custom-highlight-bg: var(--bs-primary-bg-subtle);
+}
+
 // 2. Include any default variable overrides here
 $font-size-base: .85rem;
-$btn-border-radius: 0.5rem;
 
 $spinner-width: 1.3rem;
 $spinner-height: 1.3rem;
@@ -11,12 +15,11 @@ $spinner-border-width: 0.15em;
 $spinner-border-width-sm: 0.12em;
 
 $table-cell-padding-y: 0.85rem;
-$input-padding-y: 0.5rem;
 
-:root {
-  --custom-bg: #f2f6fb;
-  --custom-highlight-bg: var(--bs-primary-bg-subtle);
-}
+$input-padding-y: 0.65rem;
+$input-bg: var(--custom-bg);
+
+$card-cap-bg: var(--custom-bg);
 
 // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
 @import "bootstrap/scss/variables";
@@ -84,6 +87,10 @@ table > tbody > tr > td {
   vertical-align: middle;
 }
 
+#auth-form {
+  width: 28rem;
+}
+
 @include media-breakpoint-up(sm) {
   #sidenav {
     width: 13rem;
@@ -91,9 +98,14 @@ table > tbody > tr > td {
   }
 }
 
-
 @include media-breakpoint-down(md) {
-  #sidenav-dropdown {
+  nav .dropdown > .dropdown-menu {
     position: static;
+  }
+}
+
+@include media-breakpoint-down(sm) {
+  #auth-form {
+    width: 100%;
   }
 }
