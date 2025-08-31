@@ -2,14 +2,17 @@ import { createSignal, Show, useContext, type JSX } from "solid-js";
 import ProgressSpinner from "./ProgressSpinner";
 import { HttpError } from "../lib/api";
 import { AlertContext } from "../lib/alert";
+import { LocaleContext } from "../lib/i18n";
 
 export default function(props: {
     close: () => void,
     confirm: () => Promise<void> | void,
     message: JSX.Element,
     confirmText?: string,
+    translateError?: (e: string) => string,
 }): JSX.Element {
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
 
     const [inProgress, setInProgress] = createSignal(false);
 
@@ -37,10 +40,12 @@ export default function(props: {
 
             promise
                 .catch((e) => {
+                    const msg = props.translateError ? props.translateError(e.message) : e.message;
+
                     if (e instanceof HttpError) {
-                        setServerError(e.error);
+                        setServerError(msg);
                     } else {
-                        alertCtx.fail(e.message);
+                        alertCtx.fail(msg);
                     }
                 })
                 .finally(() => setInProgress(false));
@@ -53,7 +58,7 @@ export default function(props: {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">{props.confirmText ?? 'Delete'} Confirm</h5>
+                            <h5 class="modal-title">{props.confirmText ?? localeCtx.i18n.common.actions.confirm()}</h5>
                         </div>
                         <div class="modal-body">
                             {props.message}
@@ -63,10 +68,10 @@ export default function(props: {
                             </Show>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" onClick={close} disabled={inProgress()}>Cancel</button>
+                            <button type="button" class="btn btn-outline-secondary" onClick={close} disabled={inProgress()}>{localeCtx.i18n.common.actions.cancel()}</button>
                             <button type="button" class="btn btn-danger icon-link" onClick={confirm} disabled={inProgress()}>
                                 <ProgressSpinner show={inProgress()} />
-                                {props.confirmText ?? 'Delete'}
+                                {props.confirmText ?? localeCtx.i18n.common.actions.delete()}
                             </button>
                         </div>
                     </div>

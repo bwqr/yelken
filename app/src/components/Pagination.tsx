@@ -1,4 +1,5 @@
-import { For } from "solid-js";
+import { For, useContext } from "solid-js";
+import { LocaleContext } from "../lib/i18n";
 
 interface Links {
     previous?: number
@@ -7,6 +8,8 @@ interface Links {
 }
 
 export const Pagination = (props: { totalPages: number, page: number, perPage?: number, pageChange: (page: number) => void, }) => {
+    const i18n = useContext(LocaleContext)!.i18n.pagination;
+
     const links: () => Links = () => {
         if (props.totalPages === 0) {
             return { pages: [1] };
@@ -34,7 +37,7 @@ export const Pagination = (props: { totalPages: number, page: number, perPage?: 
                         if (page !== undefined) {
                             props.pageChange(page);
                         }
-                    }}>Previous</button>
+                    }}>{i18n.previous()}</button>
                 </li>
                 <For each={links().pages}>
                     {(page) => (
@@ -54,7 +57,7 @@ export const Pagination = (props: { totalPages: number, page: number, perPage?: 
                         if (page !== undefined) {
                             props.pageChange(page);
                         }
-                    }}>Next</button>
+                    }}>{i18n.next()}</button>
                 </li>
             </ul>
         </nav>

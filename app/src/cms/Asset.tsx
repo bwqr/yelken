@@ -13,10 +13,14 @@ import { createStore } from "solid-js/store";
 import ProgressSpinner from "../components/ProgressSpinner";
 import './Asset.scss';
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { LocaleContext } from "../lib/i18n";
 
 export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) => void, }) => {
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [pagination, setPagination] = createStore<PaginationRequest>({});
+
+    const i18n = localeCtx.i18n.asset;
 
     const [assets] = createResource(() => ({ page: pagination.page, perPage: pagination.perPage }), (pagination) => cmsContext.fetchAssets(pagination));
 
@@ -26,24 +30,24 @@ export const PickAsset = (props: { close: () => void, pick: (asset: AssetModel) 
                 <div class="modal-dialog modal-dialog-centered modal-xl">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">Pick an Asset</h1>
+                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{i18n.actions.pickAsset()}</h1>
                         </div>
                         <div class="modal-body">
                             <Switch>
                                 <Match when={assets.loading}>
-                                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                                 </Match>
                                 <Match when={assets.error}>
-                                    <p class="text-danger-emphasis text-center">Error while fetching assets: <strong>{assets.error.message}</strong></p>
+                                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.assets())}: <strong>{assets.error.message}</strong></p>
                                 </Match>
                                 <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
-                                    <p class="text-secondary text-center">There is no asset to display yet.</p>
+                                    <p class="text-secondary text-center">{i18n.noAsset()}.</p>
                                 </Match>
                                 <Match when={assets()}>
                                     {(assets) => (
                                         <>
                                             <Show when={assets().items.length > 0} fallback={
-                                                <p class="text-secondary text-center mb-4">There is no asset to display for <strong>page {pagination.page}</strong>.</p>
+                                                <p class="text-secondary text-center mb-4">{i18n.noAssetForPage(pagination.page)}.</p>
                                             }>
                                                 <ul class="mb-5 list-unstyled d-flex flex-wrap asset-masonry">
                                                     <For each={assets().items}>
@@ -108,7 +112,10 @@ export const UploadAsset = () => {
     let imageEl: HTMLImageElement | undefined;
 
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.asset;
 
     const [detail, setDetail] = createSignal(undefined as AssetDetail | undefined);
     const [asset, setAsset] = createSignal(undefined as File | undefined);
@@ -191,15 +198,17 @@ export const UploadAsset = () => {
 
         Api.request<unknown, AssetModel>('/cms/asset/create', 'POST', { formdata })
             .then((asset) => {
-                alertCtx.success(`Asset "${asset.name}" is created successfully`);
+                alertCtx.success(i18n.actions.assetUploaded(asset.name));
 
                 navigate(`/assets/view/${asset.id}`, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.message);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(undefined));
@@ -207,13 +216,13 @@ export const UploadAsset = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Upload Asset</h2>
+            <h2 class="mb-5">{i18n.actions.uploadAsset()}</h2>
 
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
                         <div class="mb-4">
-                            <label for="assetFile" class="form-label">Choose an asset file</label>
+                            <label for="assetFile" class="form-label">{i18n.actions.chooseAsset()}</label>
                             <input
                                 id="assetFile"
                                 type="file"
@@ -223,30 +232,30 @@ export const UploadAsset = () => {
                                 onChange={assetChanged}
                             />
                             <Show when={validationErrors().has(ValidationError.Asset)}>
-                                <small class="invalid-feedback">Please choose an asset file.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.asset()}.</small>
                             </Show>
                         </div>
 
                         <Show when={inProgress() === Action.Analyze}>
                             <div class="d-flex justify-content-center mb-4">
                                 <ProgressSpinner show={true} />
-                                <span class="ms-2">Asset is being analyzed.</span>
+                                <span class="ms-2">{i18n.analyzingAsset()}.</span>
                             </div>
                         </Show>
                         <Show when={analysisError()}>
-                            {(error) => (<small class="text-danger mb-4">Analysis Error: {error()}</small>)}
+                            {(error) => (<small class="text-danger mb-4">{i18n.analysisError()}: {error()}</small>)}
                         </Show>
                         <Show when={detail()}>
                             {(detail) => (
                                 <table class="table mb-4 w-100 caption-top" style="table-layout: fixed;">
-                                    <caption class="p-0">Asset Details</caption>
+                                    <caption class="p-0">{i18n.assetDetails()}</caption>
                                     <tbody>
                                         <tr>
-                                            <td style="width: 25%">Type</td>
+                                            <td style="width: 25%">{i18n.labels.type()}</td>
                                             <td>{detail().type}</td>
                                         </tr>
                                         <tr>
-                                            <td>Size</td>
+                                            <td>{i18n.labels.size()}</td>
                                             <td>{Math.ceil(detail().size / 1024)} KB</td>
                                         </tr>
                                     </tbody>
@@ -272,7 +281,7 @@ export const UploadAsset = () => {
                             <button type="submit" class="btn btn-primary icon-link justify-content-center mw-100" style="width: 10rem;" disabled={inProgress() !== undefined}>
                                 <ProgressSpinner show={inProgress() === Action.Upload} />
                                 <Upload viewBox="0 0 16 16" />
-                                Upload
+                                {i18n.actions.upload()}
                             </button>
                         </div>
                     </div>
@@ -284,7 +293,10 @@ export const UploadAsset = () => {
 
 export const Assets = () => {
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const i18n = localeCtx.i18n.asset;
 
     const pagination = createMemo(() => PaginationRequest.fromParams(searchParams.page, searchParams.perPage));
 
@@ -293,27 +305,27 @@ export const Assets = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Assets</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.assets()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/assets/upload">
                     <Upload viewBox="0 0 16 16" />
-                    Upload Asset
+                    {i18n.actions.uploadAsset()}
                 </A>
             </div>
             <Switch>
                 <Match when={assets.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={assets.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching assets: <strong>{assets.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.assets())}: <strong>{assets.error.message}</strong></p>
                 </Match>
                 <Match when={assets() && assets()!.currentPage === 1 && assets()!.items.length === 0}>
-                    <p class="text-secondary text-center">There is no asset to display yet. You can upload a new one by using <strong>Upload Asset</strong> button.</p>
+                    <p class="text-secondary text-center">{i18n.noAsset()}. {i18n.canUploadAsset()}.</p>
                 </Match>
                 <Match when={assets()}>
                     {(assets) => (
                         <>
                             <Show when={assets().items.length > 0} fallback={
-                                <p class="text-secondary text-center mb-4">There is no asset to display for <strong>page {searchParams.page}</strong>.</p>
+                                <p class="text-secondary text-center mb-4">{i18n.noAssetForPage(searchParams.page as string)}.</p>
                             }>
                                 <ul class="mb-5 list-unstyled d-flex flex-wrap asset-masonry">
                                     <For each={assets().items}>
@@ -363,9 +375,12 @@ export const Asset = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
 
     const params = useParams();
+
+    const i18n = localeCtx.i18n.asset;
 
     const [asset, { mutate }] = createResource(() => parseInt(params.id), (id) => cmsContext.fetchAsset(id));
 
@@ -391,8 +406,9 @@ export const Asset = () => {
         }
 
         const errors = new Set<ValidationError>();
+        const req = { name: assetDetails.name.trim() };
 
-        if (assetDetails.name.trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
@@ -406,16 +422,16 @@ export const Asset = () => {
 
         cmsContext.updateAsset(
             a.id,
-            assetDetails.name.trim(),
+            req.name,
         )
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Asset "${assetDetails.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.assetUpdated(req.name));
 
                 mutate({ ...a, name: assetDetails.name.trim() });
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -430,23 +446,29 @@ export const Asset = () => {
             .then(() => {
                 setDeletingAsset(false);
 
-                alertCtx.success(`Asset "${a.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.assetDeleted(a.name));
 
                 navigate('/assets', { replace: true });
             });
     }
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
             <Switch>
                 <Match when={asset.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={asset.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching asset: <strong>{asset.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.assets())}: <strong>{asset.error.message}</strong></p>
                 </Match>
                 <Match when={asset.state === 'ready' && asset() === undefined}>
-                    <p class="text-secondary text-center">Could not find the asset with id {params.id}.</p>
+                    <p class="text-secondary text-center">{i18n.assetNotFound(params.id)}.</p>
                 </Match>
                 <Match when={asset()}>
                     {(asset) => (
@@ -454,7 +476,7 @@ export const Asset = () => {
                             <div class="d-flex align-items-center mb-5">
                                 <div class="flex-grow-1">
                                     <h2 class="m-0">{asset().name}</h2>
-                                    <small>Asset</small>
+                                    <small>{i18n.asset()}</small>
                                 </div>
                                 <div class="dropdown mx-2">
                                     <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
@@ -464,7 +486,7 @@ export const Asset = () => {
                                         <li>
                                             <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingAsset(true)}>
                                                 <Trash viewBox="0 0 16 16" />
-                                                Delete
+                                                {localeCtx.i18n.common.actions.delete()}
                                             </button>
                                         </li>
                                     </ul>
@@ -474,11 +496,11 @@ export const Asset = () => {
                                 <div class="offset-md-1 col-md-4">
                                     <div class="border rounded p-3">
                                         <div class="d-flex justify-content-center">
-                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                             <Show when={editingDetails()} fallback={
                                                 <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                     <PencilSquare viewBox="0 0 16 16" />
-                                                    Edit
+                                                    {localeCtx.i18n.common.actions.edit()}
                                                 </button>
                                             }>
                                                 <button
@@ -486,7 +508,7 @@ export const Asset = () => {
                                                     class="btn text-danger icon-link py-0 px-1"
                                                     onClick={() => setEditingDetails(false)}
                                                 >
-                                                    Discard
+                                                    {localeCtx.i18n.common.actions.discard()}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -496,7 +518,7 @@ export const Asset = () => {
                                                 >
                                                     <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                    Save
+                                                    {localeCtx.i18n.common.actions.save()}
                                                 </button>
                                             </Show>
                                         </div>
@@ -506,7 +528,7 @@ export const Asset = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 35%">Name</td>
+                                                    <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                     <td class="text-end text-truncate" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={asset().name}>
                                                             <input
@@ -522,13 +544,13 @@ export const Asset = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Type</td>
+                                                    <td>{i18n.labels.type()}</td>
                                                     <td class="text-end text-truncate">
                                                         {asset().filetype}
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Link</td>
+                                                    <td>{i18n.labels.link()}</td>
                                                     <td class="text-end text-truncate">
                                                         <a target="_blank" href={config.resolveSiteURL(`/assets/content/${asset().filename}`)}>{asset().filename}</a>
                                                     </td>
@@ -552,9 +574,10 @@ export const Asset = () => {
 
             <Show when={deletingAsset()}>
                 <DeleteConfirmModal
-                    message={<p>Are you sure about deleting the asset <strong>{asset()?.name}</strong>?</p>}
+                    message={<p>{i18n.actions.confirmDelete(asset()?.name ?? '')}?</p>}
                     close={() => setDeletingAsset(false)}
                     confirm={deleteAsset}
+                    translateError={translateError}
                 />
             </Show>
         </div >

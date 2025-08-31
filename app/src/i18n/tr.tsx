@@ -5,7 +5,7 @@ import { ColorMode } from "../theme";
 export const auth: typeof en.auth = {
     login: {
         title: 'Yelken\'e Giriş Yap',
-        subtitle: 'Websitenizi yönetmek için giriş yap',
+        subtitle: 'Websitenizi yönetmek için giriş yapın',
         slogan: 'Websitenizi yönetmenin kolay yolu',
         login: 'Giriş Yap',
         email: 'E-posta',
@@ -31,14 +31,112 @@ export const app: typeof en.app = {
     pageNotFound: () => (<>Sayfa bulunamadı. <A href="/">Ana Sayfaya</A> geri dön.</>),
 };
 
+export const asset: typeof en.asset = {
+    asset: 'Kaynak',
+    actions: {
+        pickAsset: 'Bir Kaynak Seçin',
+        uploadAsset: 'Kaynak Yükle',
+        chooseAsset: 'Bir kaynak dosyası seçin',
+        upload: 'Yükle',
+        assetUploaded: (name: string) => `"${name}" isimli kaynak başarılı bir şekilde yüklendi`,
+        assetUpdated: (name: string) => `"${name}" isimli kaynak başarılı bir şekilde güncellendi`,
+        assetDeleted: (name: string) => `"${name}" isimli kaynak başarılı bir şekilde silindi`,
+        confirmDelete: (name: string) => (<><strong>{name}</strong> isimli kaynağı silmek istediğinizden emin misiniz</>),
+    },
+    labels: {
+        link: 'Link',
+        type: 'Tür',
+        size: 'Boyut',
+    },
+    validationErrors: {
+        asset: 'Lütfen bir kaynak dosyası seçin',
+    },
+    serverErrors: {
+        asset_not_found: 'Kaynak bulunamadı',
+    },
+    analyzingAsset: 'Kaynak inceleniyor',
+    analysisError: 'İnceleme Hatası',
+    assetDetails: 'Kaynak Detayı',
+    canUploadAsset: () => (<><strong>Kaynak Yükle</strong> butonunu kullanarak yeni bir tane yükleyebilirsin</>),
+    noAsset: 'Herhangi bir kaynak bulunmuyor',
+    noAssetForPage: (page?: number | string) => (<><strong>Sayfa {page}</strong> için gösterilebilecek herhangi bir kaynak bulunmuyor</>),
+    assetNotFound: (id: string) => (<><strong>{id}</strong> ile tanımlanan kaynak bulunamadı</>),
+};
+
 export const common: typeof en.common = {
+    actions: {
+        add: 'Ekle',
+        cancel: 'İptal Et',
+        create: 'Oluştur',
+        confirm: 'Onayla',
+        delete: 'Sil',
+        discard: 'İptal Et',
+        edit: 'Düzenle',
+        save: 'Kaydet',
+    },
+    labels: {
+        createdAt: 'Oluşturulma Zamanı',
+        description: 'Açıklama',
+        details: 'Detaylar',
+        global: 'Global',
+        key: 'Anahtar',
+        name: 'İsim',
+        namespace: 'İsim Alanı',
+        optional: 'isteğe bağlı',
+    },
     loading: 'Yükleniyor',
     loadingError: 'Encountered an error while loading',
+    loadingItemError: (item: string) => `${item} yüklenmesi sırasında bir hata ile karşılaşıldı`,
 };
 
 export const dashboard: typeof en.dashboard = {
     loggedIn: (name: string) => (<><strong>{name}</strong> kullanıcısı ile giriş yaptınız</>),
     welcome: 'Başlamak için güzel bir gün',
+};
+
+export const model: typeof en.model = {
+    model: 'Model',
+    actions: {
+        addField: 'Alan Ekle',
+        confirmDeleteModel: (name: string) => (<><strong>{name}</strong> isimli modeli silmek istediğinizden emin misiniz</>),
+        confirmDeleteField: (name: string) => (<><strong>{name}</strong> isimli alanı silmek istediğinizden emin misiniz</>),
+        createModel: 'Model Oluştur',
+        editField: 'Alan Düzenle',
+        fieldCreated: (name: string) => `"${name}" isimli alan başarılı bir şekilde oluşturuldu`,
+        fieldDeleted: (name: string) => `"${name}" isimli alan başarılı bir şekilde silindi`,
+        fieldUpdated: (name: string) => `"${name}" isimli alan başarılı bir şekilde güncellendi`,
+        modelCreated: (name: string) => `"${name}" isimli model başarılı bir şekilde oluşturuldu`,
+        modelDeleted: (name: string) => `"${name}" isimli model başarılı bir şekilde silindi`,
+        modelUpdated: (name: string) => `"${name}" isimli model başarılı bir şekilde güncellendi`,
+        selectField: 'Bir alan seçin',
+    },
+    labels: {
+        activeTheme: 'Aktif Tema',
+        fields: 'Alanlar',
+        field: 'Alan',
+    },
+    fields: {
+        asset: 'Kaynak',
+        integer: 'Sayı',
+        multiline: 'Çoklu Satır Metin',
+        text: 'Metin',
+    },
+    fieldFeatures: {
+        localized: 'Yerel',
+        required: 'Gerekli',
+        multiple: 'Çoklu',
+    },
+    validationErrors: {
+        key: 'Lütfen bir anahtar girin',
+        name: 'Lütfen bir isim girin',
+        field: 'Lütfen en az bir tane alan ekleyin',
+        selectField: 'Lütfen bir alan seçin',
+    },
+    serverErrors: {
+        model_already_exists: 'Belirtilen anahtara ait bir model zaten bulunuyor',
+    },
+    modelNotFound: (key: string) => (<><strong>{key}</strong> anahtarı ile tanımlanan model bulunamadı</>),
+    noModel: () => (<>Herhangi bir model bulunmuyor. <strong>Model Oluştur</strong> butonunu kullanarak yeni bir tane oluşturabilirsin</>),
 };
 
 export const nav: typeof en.nav = {
@@ -66,4 +164,9 @@ export const nav: typeof en.nav = {
         [ColorMode.Light]: 'Açık',
         [ColorMode.Dark]: 'Koyu',
     }
+};
+
+export const pagination = {
+    previous: 'Önceki',
+    next: 'Sonraki',
 };

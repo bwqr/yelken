@@ -29,7 +29,7 @@ export interface CMSStore {
 
     createModel(model: CreateModel): Promise<Model>;
     createModelField(id: number, req: CreateModelField): Promise<ModelField>;
-    updateModelDetails(id: number, name: string, desc: string | null): Promise<void>;
+    updateModelDetails(id: number, req: { name: string, desc: string | null }): Promise<void>;
     updateModelField(id: number, req: UpdateModelField): Promise<void>;
     deleteModel(id: number): Promise<void>;
     deleteModelField(id: number): Promise<void>;
@@ -57,8 +57,8 @@ export class CMSService implements CMSStore {
         return Api.post(`/cms/model/field/${id}/create`, req);
     }
 
-    async updateModelDetails(id: number, name: string, desc: string | null): Promise<void> {
-        return Api.put(`/cms/model/update/${id}`, { name, desc });
+    async updateModelDetails(id: number, req: { name: string, desc: string | null }): Promise<void> {
+        return Api.put(`/cms/model/update/${id}`, req);
     }
 
     async updateModelField(id: number, req: UpdateModelField): Promise<void> {

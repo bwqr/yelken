@@ -67,6 +67,7 @@ export enum FieldKind {
 
 export interface Field {
     id: number,
+    key: string,
     name: string,
     kind: FieldKind,
 }

@@ -12,6 +12,7 @@ import { dropdownClickListener } from "../lib/utils";
 import { Dynamic } from "solid-js/web";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { LocaleContext } from "../lib/i18n";
 
 const ModelFieldModal = (props: {
     close: () => void;
@@ -27,6 +28,9 @@ const ModelFieldModal = (props: {
 
     const alertCtx = useContext(AlertContext)!;
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.model;
 
     const [store, setStore] = createStore(props.initial ?? {
         key: '',
@@ -61,16 +65,25 @@ const ModelFieldModal = (props: {
         setServerError(undefined);
 
         const errors = new Set<ValidationError>();
+        const req = {
+            key: store.key.trim(),
+            name: store.name.trim(),
+            desc: store.desc?.trim() || null,
+            fieldId: store.fieldId!,
+            localized: store.localized,
+            multiple: store.multiple,
+            required: store.required,
+        };
 
-        if (store.key.trim().length === 0) {
+        if (req.key.length === 0) {
             errors.add(ValidationError.Key);
         }
 
-        if (store.name.trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
-        if (store.fieldId === undefined) {
+        if (req.fieldId === undefined) {
             errors.add(ValidationError.Field);
         }
 
@@ -80,25 +93,19 @@ const ModelFieldModal = (props: {
             return;
         }
 
-        const promise = props.create({
-            key: store.key.trim(),
-            name: store.name.trim(),
-            desc: store.desc && store.desc.trim().length > 0 ? store.desc.trim() : null,
-            fieldId: store.fieldId!,
-            localized: store.localized,
-            multiple: store.multiple,
-            required: store.required,
-        });
+        const promise = props.create(req);
 
         if (promise instanceof Promise) {
             setInProgress(true);
 
             promise
                 .catch((e) => {
+                    const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                     if (e instanceof HttpError) {
-                        setServerError(e.error);
+                        setServerError(msg);
                     } else {
-                        alertCtx.fail(e.message);
+                        alertCtx.fail(msg);
                     }
                 })
                 .finally(() => setInProgress(false));
@@ -111,55 +118,58 @@ const ModelFieldModal = (props: {
                 <div class="modal-dialog">
                     <form class="modal-content" onSubmit={createField}>
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{props.initial ? 'Edit Field' : 'Add Field'}</h1>
+                            <h1 class="modal-title fs-5" id="createModelFieldModalLabel">{props.initial ? i18n.actions.editField() : i18n.actions.addField()}</h1>
                         </div>
                         <div class="modal-body">
                             <div class="mb-4">
-                                <label for="modelFieldName" class="form-label">Name</label>
+                                <label for="modelFieldName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                                 <input
                                     type="text"
                                     id="modelFieldName"
                                     class="form-control"
                                     classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                     name="name"
+                                    placeholder={localeCtx.i18n.common.labels.name()}
                                     value={store.name}
                                     onInput={(ev) => setStore('name', ev.target.value)}
                                 />
                                 <Show when={validationErrors().has(ValidationError.Name)}>
-                                    <small class="invalid-feedback">Please enter name.</small>
+                                    <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                                 </Show>
                             </div>
 
                             <div class="mb-4">
-                                <label for="modelFieldKey" class="form-label">Key</label>
+                                <label for="modelFieldKey" class="form-label">{localeCtx.i18n.common.labels.key()}</label>
                                 <input
                                     type="text"
                                     id="modelFieldKey"
                                     class="form-control"
                                     classList={{ 'is-invalid': validationErrors().has(ValidationError.Key) }}
                                     name="key"
+                                    placeholder={localeCtx.i18n.common.labels.key()}
                                     value={store.key}
                                     onInput={(ev) => setStore('key', ev.target.value)}
                                     disabled={props.restrictEdit}
                                 />
                                 <Show when={validationErrors().has(ValidationError.Key)}>
-                                    <small class="invalid-feedback">Please enter key.</small>
+                                    <small class="invalid-feedback">{i18n.validationErrors.key()}.</small>
                                 </Show>
                             </div>
 
                             <div class="mb-4">
-                                <label for="modelFieldDesc" class="form-label">Description <small class="text-secondary">(optional)</small></label>
+                                <label for="modelFieldDesc" class="form-label">{localeCtx.i18n.common.labels.description()} <small class="text-secondary">({localeCtx.i18n.common.labels.optional()})</small></label>
                                 <textarea
                                     id="modelFieldDesc"
                                     class="form-control"
                                     rows="2"
+                                    placeholder={localeCtx.i18n.common.labels.description()}
                                     value={store.desc ?? ''}
                                     onChange={(ev) => setStore('desc', ev.target.value)}
                                 ></textarea>
                             </div>
 
                             <div class="mb-4">
-                                <label for="modelFieldId" class="form-label">Field</label>
+                                <label for="modelFieldId" class="form-label">{i18n.labels.field()}</label>
                                 <select
                                     id="modelFieldId"
                                     class="form-select"
@@ -169,47 +179,47 @@ const ModelFieldModal = (props: {
                                     onChange={(ev) => setStore('fieldId', parseInt(ev.target.value))}
                                     disabled={props.restrictEdit}
                                 >
-                                    <option value="" disabled selected>Select a field</option>
+                                    <option value="" disabled selected>{i18n.actions.selectField()}</option>
                                     <For each={cmsContext.fields()}>
                                         {(field) => (
-                                            <option value={field.id}>{field.name}</option>
+                                            <option value={field.id}>{field.key in i18n.fields ? i18n.fields[field.key as keyof typeof i18n.fields]() : field.name}</option>
                                         )}
                                     </For>
                                 </select>
                                 <Show when={validationErrors().has(ValidationError.Field)}>
-                                    <small class="invalid-feedback">Please select a field.</small>
+                                    <small class="invalid-feedback">{i18n.validationErrors.selectField()}.</small>
                                 </Show>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" checked={store.localized} onChange={(ev) => setStore('localized', ev.target.checked)} id="modelFieldLocalized" />
                                 <label class="form-check-label" for="modelFieldLocalized">
-                                    Localized
+                                    {i18n.fieldFeatures.localized()}
                                 </label>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" checked={store.multiple} onChange={(ev) => setStore('multiple', ev.target.checked)} id="modelFieldMultiple" />
                                 <label class="form-check-label" for="modelFieldMultiple">
-                                    Multiple
+                                    {i18n.fieldFeatures.multiple()}
                                 </label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" checked={store.required} onChange={(ev) => setStore('required', ev.target.checked)} id="modelFieldRequired" />
                                 <label class="form-check-label" for="modelFieldRequired">
-                                    Required
+                                    {i18n.fieldFeatures.required()}
                                 </label>
                             </div>
                             <Show when={serverError()}>
                                 <div class="mb-2">
-                                    <small class="text-danger">{serverError()}</small>
+                                    <small class="text-danger-emphasis">{serverError()}</small>
                                 </div>
                             </Show>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>Discard</button>
+                            <button type="button" class="btn btn-outline-danger" onClick={close} disabled={inProgress()}>{localeCtx.i18n.common.actions.discard()}</button>
                             <button type="submit" class="btn btn-primary icon-link" disabled={inProgress()}>
                                 <ProgressSpinner show={inProgress()} />
                                 <Dynamic component={props.initial ? FloppyFill : PlusLg} viewBox="0 0 16 16" />
-                                {props.initial ? 'Save' : 'Add'}
+                                {props.initial ? localeCtx.i18n.common.actions.save() : localeCtx.i18n.common.actions.add()}
                             </button>
                         </div>
                     </form>
@@ -231,7 +241,10 @@ export const CreateModel = () => {
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.model;
 
     const [key, setKey] = createSignal('');
     const [name, setName] = createSignal('');
@@ -256,16 +269,23 @@ export const CreateModel = () => {
         setServerError(undefined);
 
         const errors = new Set<ValidationError>();
+        const req = {
+            namespace: themeScoped() ? commonCtx.options().theme : null,
+            key: key().trim(),
+            name: name().trim(),
+            desc: desc().trim() || null,
+            modelFields: unwrap(fields),
+        };
 
-        if (key().trim().length < 3) {
+        if (req.key.length < 3) {
             errors.add(ValidationError.Key);
         }
 
-        if (name().trim().length < 3) {
+        if (req.name.length < 3) {
             errors.add(ValidationError.Name);
         }
 
-        if (fields.length === 0) {
+        if (req.modelFields.length === 0) {
             errors.add(ValidationError.Field);
         }
 
@@ -277,27 +297,23 @@ export const CreateModel = () => {
 
         setInProgress(true);
 
-        cmsContext.createModel({
-            namespace: themeScoped() ? commonCtx.options().theme : null,
-            key: key().trim(),
-            name: name().trim(),
-            desc: desc().trim().length > 0 ? desc().trim() : null,
-            modelFields: unwrap(fields),
-        })
+        cmsContext.createModel(req)
             .then(async (model) => {
                 await cmsContext.loadModels();
 
-                alertCtx.success(`Model "${model.name}" is created successfully`);
+                alertCtx.success(i18n.actions.modelCreated(req.name));
 
                 navigate(`/models/view/${model.urlPath()}`, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.error);
+                    setServerError(msg);
                 } else if (e instanceof ValidationErrors) {
                     setServerValidationErrors(e);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
@@ -305,55 +321,58 @@ export const CreateModel = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create Model</h2>
+            <h2 class="mb-5">{i18n.actions.createModel()}</h2>
 
             <div class="row">
                 <form class="offset-md-3 col-md-6" onSubmit={onSubmit}>
                     <div class="border rounded p-3 mb-4">
                         <div class="mb-4">
-                            <label for="modelName" class="form-label">Name</label>
+                            <label for="modelName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                 id="modelName"
                                 name="name"
+                                placeholder={localeCtx.i18n.common.labels.name()}
                                 value={name()}
                                 onInput={(ev) => setName(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Name)}>
-                                <small class="invalid-feedback">Please enter a name.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="modelKey" class="form-label">Key</label>
+                            <label for="modelKey" class="form-label">{localeCtx.i18n.common.labels.key()}</label>
                             <input
                                 type="text"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Key) }}
                                 id="modelKey"
                                 name="key"
+                                placeholder={localeCtx.i18n.common.labels.key()}
                                 value={key()}
                                 onInput={(ev) => setKey(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Key)}>
-                                <small class="invalid-feedback">Please enter a key.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.key()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="modelDesc" class="form-label">Description <small class="text-secondary">(optional)</small></label>
+                            <label for="modelDesc" class="form-label">{localeCtx.i18n.common.labels.description()} <small class="text-secondary">({localeCtx.i18n.common.labels.optional()})</small></label>
                             <textarea
                                 id="modelDesc"
                                 class="form-control"
+                                placeholder={localeCtx.i18n.common.labels.description()}
                                 rows="3"
                                 value={desc()}
                                 onChange={(ev) => setDesc(ev.target.value)}
                             ></textarea>
                         </div>
 
-                        <label class="form-label">Namespace</label>
+                        <label class="form-label">{localeCtx.i18n.common.labels.namespace()}</label>
                         <div>
                             <div class="form-check form-check-inline">
                                 <input
@@ -365,7 +384,7 @@ export const CreateModel = () => {
                                     checked={!themeScoped()}
                                     onChange={() => setThemeScoped(false)}
                                 />
-                                <label class="form-check-label" for="modelScopeGlobal">Global</label>
+                                <label class="form-check-label" for="modelScopeGlobal">{localeCtx.i18n.common.labels.global()}</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input
@@ -377,7 +396,7 @@ export const CreateModel = () => {
                                     checked={themeScoped()}
                                     onChange={() => setThemeScoped(true)}
                                 />
-                                <label class="form-check-label" for="modelScopeTheme">Active Theme ({commonCtx.options().theme})</label>
+                                <label class="form-check-label" for="modelScopeTheme">{i18n.labels.activeTheme()} ({commonCtx.options().theme})</label>
                             </div>
                         </div>
                     </div>
@@ -386,7 +405,7 @@ export const CreateModel = () => {
 
                     <div class="mb-4">
                         <div class="d-flex align-items-center">
-                            <h5 class="flex-grow-1 m-0">Fields</h5>
+                            <h5 class="flex-grow-1 m-0">{i18n.labels.fields()}</h5>
                             <button
                                 type="button"
                                 class="btn btn-secondary icon-link justify-content-center"
@@ -394,17 +413,24 @@ export const CreateModel = () => {
                                 onClick={() => setShowModal(true)}
                             >
                                 <PlusSquareDotted viewBox="0 0 16 16" />
-                                Add field
+                                {i18n.actions.addField()}
                             </button>
                         </div>
                         <Show when={validationErrors().has(ValidationError.Field)}>
-                            <small class="text-danger mt-2">Please add at least one field.</small>
+                            <small class="text-danger-emphasis mt-2">{i18n.validationErrors.field()}.</small>
                         </Show>
                     </div>
 
                     <For each={fields}>
                         {(mf, idx) => {
-                            const field = () => cmsContext.fields().find((f) => f.id === mf.fieldId);
+                            const fieldName = () => {
+                                const field = cmsContext.fields().find((f) => f.id === mf.fieldId)
+                                if (!field) {
+                                    return '-';
+                                }
+
+                                return field.key in i18n.fields ? i18n.fields[field.key as keyof typeof i18n.fields]() : field.name;
+                            };
 
                             return (
                                 <div class="card mb-4">
@@ -418,20 +444,20 @@ export const CreateModel = () => {
                                         </button>
                                     </div>
                                     <ul class="list-group list-group-flush">
-                                        <li class="list-group-item">{field()?.name}</li>
+                                        <li class="list-group-item">{fieldName()}</li>
 
                                         {(() => {
                                             const features = [];
                                             if (mf.localized) {
-                                                features.push('Localized');
+                                                features.push(i18n.fieldFeatures.localized());
                                             }
 
                                             if (mf.required) {
-                                                features.push('Required');
+                                                features.push(i18n.fieldFeatures.required());
                                             }
 
                                             if (mf.multiple) {
-                                                features.push('Multiple');
+                                                features.push(i18n.fieldFeatures.multiple());
                                             }
 
                                             const text = features.join(' - ');
@@ -455,7 +481,7 @@ export const CreateModel = () => {
 
                     <Show when={serverError()}>
                         <div class="mb-2">
-                            <small class="text-danger">{serverError()}</small>
+                            <small class="text-danger-emphasis">{serverError()}</small>
                         </div>
                     </Show>
                     <div class="d-flex justify-content-center">
@@ -467,7 +493,7 @@ export const CreateModel = () => {
                         >
                             <ProgressSpinner show={inProgress()} />
                             <PlusLg viewBox="0 0 16 16" />
-                            Create
+                            {localeCtx.i18n.common.actions.create()}
                         </button>
                     </div>
                 </form>
@@ -500,19 +526,22 @@ export const CreateModel = () => {
 
 export const Models = () => {
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.model;
 
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Models</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.models()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/models/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Create Model
+                    {i18n.actions.createModel()}
                 </A>
             </div>
 
             <Show when={cmsContext.models().length > 0} fallback={
-                <p class="text-secondary text-center">There is no model to display yet. You can create a new one by using <strong>Create Model</strong> button.</p>
+                <p class="text-secondary text-center">{i18n.noModel()}.</p>
             }>
                 <div class="row">
                     <div class="offset-md-3 col-md-6">
@@ -521,9 +550,9 @@ export const Models = () => {
                                 <tr>
                                     <th></th>
                                     <th scope="col">#</th>
-                                    <th scope="col">Namespace</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Created At</th>
+                                    <th scope="col">{localeCtx.i18n.common.labels.namespace()}</th>
+                                    <th scope="col">{localeCtx.i18n.common.labels.name()}</th>
+                                    <th scope="col">{localeCtx.i18n.common.labels.createdAt()}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -538,7 +567,7 @@ export const Models = () => {
                                                     {model.name}
                                                 </A>
                                             </td>
-                                            <td>{model.createdAt.toDateString()}</td>
+                                            <td>{localeCtx.dateFormat().format(model.createdAt)}</td>
                                         </tr>
                                     )}
                                 </For>
@@ -562,8 +591,11 @@ export const Model = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const cmsContext = useContext(CMSContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.model;
 
     const model = createMemo(() => cmsContext.models().find(ModelModel.searchWithParams(params.namespace, params.key)));
 
@@ -597,7 +629,7 @@ export const Model = () => {
             .then(() => {
                 setDeletingModel(false);
 
-                alertCtx.success(`Model "${m.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.modelDeleted(m.name));
 
                 navigate('/models', { replace: true });
             });
@@ -611,8 +643,12 @@ export const Model = () => {
         }
 
         const errors = new Set<ValidationError>();
+        const req = {
+            name: modelDetails.name.trim(),
+            desc: modelDetails.desc.trim() || null,
+        };
 
-        if (modelDetails.name.trim().length === 0) {
+        if (req.name.length === 0) {
             errors.add(ValidationError.Name);
         }
 
@@ -626,16 +662,15 @@ export const Model = () => {
 
         cmsContext.updateModelDetails(
             m.id,
-            modelDetails.name,
-            modelDetails.desc.trim().length > 0 ? modelDetails.desc : null
+            req,
         )
             .then(() => cmsContext.loadModels())
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Model "${modelDetails.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.modelUpdated(modelDetails.name));
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     }
 
@@ -651,7 +686,7 @@ export const Model = () => {
             .then(() => {
                 setEditingField(undefined);
 
-                alertCtx.success(`Field "${updatedField.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.fieldUpdated(updatedField.name));
             });
     };
 
@@ -667,7 +702,7 @@ export const Model = () => {
             .then(() => {
                 setCreatingField(false);
 
-                alertCtx.success(`Field "${newField.name}" is created successfully`);
+                alertCtx.success(i18n.actions.fieldCreated(newField.name));
             });
     };
 
@@ -677,21 +712,27 @@ export const Model = () => {
             .then(() => {
                 setDeletingField(undefined);
 
-                alertCtx.success(`Field "${modelField.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.fieldDeleted(modelField.name));
             });
-    }
+    };
+
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
 
     return (
         <div class="container py-4 px-md-4">
             <Show when={model()} fallback={
-                <p class="text-secondary text-center">Could not find the model with key <strong>{params.key}</strong>.</p>
+                <p class="text-secondary text-center">{i18n.modelNotFound(params.key)}.</p>
             }>
                 {(model) => (
                     <>
                         <div class="d-flex align-items-center mb-5">
                             <div class="flex-grow-1">
                                 <h2 class="m-0">{model().name}</h2>
-                                <small>Model</small>
+                                <small>{i18n.model()}</small>
                             </div>
                             <div class="dropdown mx-2">
                                 <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
@@ -701,7 +742,7 @@ export const Model = () => {
                                     <li>
                                         <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingModel(true)}>
                                             <Trash viewBox="0 0 16 16" />
-                                            Delete
+                                            {localeCtx.i18n.common.actions.delete()}
                                         </button>
                                     </li>
                                 </ul>
@@ -712,11 +753,11 @@ export const Model = () => {
                             <div class="offset-md-1 col-md-4">
                                 <div class="border rounded p-3">
                                     <div class="d-flex justify-content-center">
-                                        <h5 class="flex-grow-1 m-0">Details</h5>
+                                        <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                         <Show when={editingDetails()} fallback={
                                             <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                 <PencilSquare viewBox="0 0 16 16" />
-                                                Edit
+                                                {localeCtx.i18n.common.actions.edit()}
                                             </button>
                                         }>
                                             <button
@@ -724,7 +765,7 @@ export const Model = () => {
                                                 class="btn text-danger icon-link py-0 px-1"
                                                 onClick={() => setEditingDetails(false)}
                                             >
-                                                Discard
+                                                {localeCtx.i18n.common.actions.discard()}
                                             </button>
                                             <button
                                                 type="button"
@@ -734,7 +775,7 @@ export const Model = () => {
                                             >
                                                 <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                 <FloppyFill viewBox="0 0 16 16" />
-                                                Save
+                                                {localeCtx.i18n.common.actions.save()}
                                             </button>
                                         </Show>
                                     </div>
@@ -744,7 +785,7 @@ export const Model = () => {
                                     <table class="table table-borderless w-100 m-0" style="table-layout: fixed">
                                         <tbody>
                                             <tr>
-                                                <td style="width: 35%">Name</td>
+                                                <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={model().name}>
                                                         <input
@@ -760,7 +801,7 @@ export const Model = () => {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Key</td>
+                                                <td>{localeCtx.i18n.common.labels.key()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={model().key}>
                                                         <input
@@ -775,7 +816,7 @@ export const Model = () => {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Namespace</td>
+                                                <td>{localeCtx.i18n.common.labels.namespace()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={model().namespace ?? '-'}>
                                                         <input
@@ -790,7 +831,7 @@ export const Model = () => {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Description</td>
+                                                <td>{localeCtx.i18n.common.labels.description()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={model().desc ?? '-'}>
                                                         <textarea
@@ -811,10 +852,10 @@ export const Model = () => {
                             <div class="offset-md-1 col-md-5">
                                 <div class="border rounded p-3">
                                     <div class="d-flex justify-content-center">
-                                        <h5 class="flex-grow-1 m-0">Fields</h5>
+                                        <h5 class="flex-grow-1 m-0">{i18n.labels.fields()}</h5>
                                         <button type="button" class="btn icon-link py-0 px-1" onClick={() => setCreatingField(true)}>
                                             <PlusSquareDotted viewBox="0 0 16 16" />
-                                            Add field
+                                            {i18n.actions.addField()}
                                         </button>
                                     </div>
 
@@ -822,7 +863,15 @@ export const Model = () => {
 
                                     <For each={model().fields}>
                                         {(mf) => {
-                                            const field = () => cmsContext.fields().find((f) => f.id === mf.fieldId);
+                                            const fieldName = () => {
+                                                const field = cmsContext.fields().find((f) => f.id === mf.fieldId)
+                                                if (!field) {
+                                                    return '-';
+                                                }
+
+                                                return field.key in i18n.fields ? i18n.fields[field.key as keyof typeof i18n.fields]() : field.name;
+                                            };
+
 
                                             return (
                                                 <div class="card mb-4">
@@ -844,20 +893,20 @@ export const Model = () => {
                                                         </button>
                                                     </div>
                                                     <ul class="list-group list-group-flush">
-                                                        <li class="list-group-item">{field()?.name}</li>
+                                                        <li class="list-group-item">{fieldName()}</li>
 
                                                         {(() => {
                                                             const features = [];
                                                             if (mf.localized) {
-                                                                features.push('Localized');
+                                                                features.push(i18n.fieldFeatures.localized());
                                                             }
 
                                                             if (mf.required) {
-                                                                features.push('Required');
+                                                                features.push(i18n.fieldFeatures.required());
                                                             }
 
                                                             if (mf.multiple) {
-                                                                features.push('Multiple');
+                                                                features.push(i18n.fieldFeatures.multiple());
                                                             }
 
                                                             const text = features.join(' - ');
@@ -893,7 +942,7 @@ export const Model = () => {
             </Show>
             <Show when={deletingModel()}>
                 <DeleteConfirmModal
-                    message={<p>Are you sure about deleting the model <strong>{model()?.name}</strong>?</p>}
+                    message={<p>{i18n.actions.confirmDeleteModel(model()?.name ?? '')}?</p>}
                     close={() => setDeletingModel(false)}
                     confirm={deleteModel}
                 />
@@ -901,7 +950,7 @@ export const Model = () => {
             <Show when={deletingField()}>
                 {(field) => (
                     <DeleteConfirmModal
-                        message={<p>Are you sure about deleting the field <strong>{field().name}</strong>?</p>}
+                        message={<p>{i18n.actions.confirmDeleteField(field().name)}?</p>}
                         close={() => setDeletingField(undefined)}
                         confirm={() => deleteField(field())}
                     />
