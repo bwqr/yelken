@@ -93,6 +93,6 @@ export class LocaleService implements LocaleStore, ChangeLocaleStore {
     }
 
     private static async loadI18n(locale: BrowserLocale): Promise<Dictionary> {
-        return import(`../i18n/${locale}.ts`).then((dict) => flatten(dict as typeof EN));
+        return import(`../i18n/${locale}.tsx`).then((dict) => flatten(dict as typeof EN));
     }
 }

@@ -1,5 +1,5 @@
-import { createContext, createResource, For, Match, Show, Suspense, Switch, useContext, type Component, type Context, type JSX, type Resource, type ResourceReturn } from 'solid-js';
-import { Router, Route, A } from "@solidjs/router";
+import { createContext, createEffect, createResource, For, Match, Show, Suspense, Switch, useContext, type Component, type Context, type JSX, type Resource, type ResourceReturn } from 'solid-js';
+import { Router, Route } from "@solidjs/router";
 import { SideNav } from './Nav';
 import Dashboard from './Dashboard';
 import { Content, Contents, ContentRoot, ContentsByModel, CreateContent } from './cms/Content';
@@ -69,6 +69,8 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
 }
 
 const BackgroundServices = (props: { children?: JSX.Element }) => {
+    const localeCtx = useContext(LocaleContext)!;
+
     const [promises] = createResource(() => Promise.all([
         UserService.fetchUser().then((user) => new UserService(user)),
         Promise.all([CommonService.fetchLocales(), CommonService.fetchNamespaces(), CommonService.fetchOptions()]).then(([locales, namespaces, options]) => new CommonService(locales, namespaces, options))
@@ -81,10 +83,10 @@ const BackgroundServices = (props: { children?: JSX.Element }) => {
         .then(([models, fields]) => new CMSService(models, fields));
 
     return (
-        <Suspense fallback={<p>Loading ...</p>}>
+        <Suspense fallback={<p>{localeCtx.i18n.common.loading()} ...</p>}>
             <Switch>
                 <Match when={promises.error}>
-                    <p class="text-danger-emphasis">Error while loading: <strong>{promises.error.message}</strong></p>
+                    <p class="text-danger-emphasis">{localeCtx.i18n.common.loadingError()}: <strong>{promises.error.message}</strong></p>
                 </Match>
                 <Match when={promises()}>
                     {(promises) => {
@@ -116,182 +118,192 @@ const App: Component = () => {
     const alertService = new AlertService();
     const [localeService] = createResource(() => LocaleService.create(LocaleService.detectLocale()));
 
+    createEffect(() => {
+        const locale = localeService()?.locale();
+
+        if (locale) {
+            document.documentElement.setAttribute('lang', locale);
+        }
+    });
+
     return (
-        <Show when={localeService()}>
-            {(localeService) => (
-                <LocaleContext.Provider value={localeService()}> <ChangeLocaleContext.Provider value={localeService()}>
-                    <AlertContext.Provider value={alertService}>
-                        <Router base={baseUrl} root={(props) => (
-                            <>
+        <Router base={baseUrl} root={(props) => (
+            <Show when={localeService()}>
+                {(localeService) => (
+                    <LocaleContext.Provider value={localeService()}>
+                        <ChangeLocaleContext.Provider value={localeService()}>
+                            <AlertContext.Provider value={alertService}>
+
                                 {props.children}
+
                                 <p style="position: fixed; bottom: 0.5rem; right: 0.75rem; padding: 0; margin: 0; font-size: 0.9rem;">Yelken v{config.appVersion}</p>
-                            </>
-                        )}>
-                            <Route path="/auth" component={(props) => (<>{props.children}</>)}>
-                                <Route path="/login" component={EmailLogin} />
-                                <Route path="/oauth/cloud" component={OauthRedirect} />
-                                <Route path="/oauth/login" component={OauthLogin} />
-                            </Route>
 
-                            <Route path="/" component={(props) => (
-                                <div class="d-flex flex-md-row flex-column align-items-md-start" style="min-height: 100vh;">
-                                    <BackgroundServices>
-                                        <SideNav />
+                                <Alerts alerts={alertService.alerts} removeAlert={(alert) => alertService.removeAlert(alert)} />
+                            </AlertContext.Provider>
+                        </ChangeLocaleContext.Provider>
+                    </LocaleContext.Provider>
+                )}
+            </Show >
+        )}>
+            <Route path="/auth" component={(props) => (<>{props.children}</>)}>
+                <Route path="/login" component={EmailLogin} />
+                <Route path="/oauth/cloud" component={OauthRedirect} />
+                <Route path="/oauth/login" component={OauthLogin} />
+            </Route>
 
-                                        <main class="flex-grow-1 d-flex flex-column">
-                                            {props.children}
-                                        </main>
-                                    </BackgroundServices>
-                                </div>
-                            )}>
-                                <Route path="/" component={Dashboard} />
-                                <Route path="/profile" component={(_) => <p>Profile</p>} />
+            <Route path="/" component={(props) => (
+                <div class="d-flex flex-md-row flex-column align-items-md-start" style="min-height: 100vh;">
+                    <BackgroundServices>
+                        <SideNav />
 
-                                <Route path="/models" component={(props) => (
-                                    <Suspense fallback={
-                                        <p class="icon-link justify-content-center w-100">Loading ...</p>
-                                    }>
-                                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
-                                            {(ctx) => (
-                                                <CMSContext.Provider value={ctx()}>
-                                                    {props.children}
-                                                </CMSContext.Provider>
-                                            )}
-                                        </Show>
-                                    </Suspense>
-                                )}>
-                                    <Route path="/" component={Models} />
-                                    <Route path="/view/:namespace/:key" component={Model} />
-                                    <Route path="/view/:key" component={Model} />
-                                    <Route path="/create" component={CreateModel} />
-                                </Route>
+                        <main class="flex-grow-1 d-flex flex-column">
+                            {props.children}
+                        </main>
+                    </BackgroundServices>
+                </div>
+            )}>
+                <Route path="/" component={Dashboard} />
+                <Route path="/profile" component={(_) => <p>Profile</p>} />
 
-                                <Route path="/contents" component={(props) => (
-                                    <Suspense fallback={
-                                        <p class="icon-link justify-content-center w-100">Loading ...</p>
-                                    }>
-                                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
-                                            {(ctx) => (
-                                                <CMSContext.Provider value={ctx()}>
-                                                    {props.children}
-                                                </CMSContext.Provider>
-                                            )}
-                                        </Show>
-                                    </Suspense>
-                                )}>
-                                    <Route path="/" component={ContentRoot}>
-                                        <Route path="/" component={Contents} />
-                                        <Route path="/by-model/:key" component={ContentsByModel} />
-                                        <Route path="/by-model/:namespace/:key" component={ContentsByModel} />
-                                    </Route>
+                <Route path="/models" component={(props) => (
+                    <Suspense fallback={
+                        <p class="icon-link justify-content-center w-100">{useContext(LocaleContext)!.i18n.common.loading()} ...</p>
+                    }>
+                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
+                            {(ctx) => (
+                                <CMSContext.Provider value={ctx()}>
+                                    {props.children}
+                                </CMSContext.Provider>
+                            )}
+                        </Show>
+                    </Suspense>
+                )}>
+                    <Route path="/" component={Models} />
+                    <Route path="/view/:namespace/:key" component={Model} />
+                    <Route path="/view/:key" component={Model} />
+                    <Route path="/create" component={CreateModel} />
+                </Route>
 
-                                    <Route path="/view/:id" component={Content} />
-                                    <Route path="/create/:key" component={CreateContent} />
-                                    <Route path="/create/:namespace/:key" component={CreateContent} />
-                                </Route>
+                <Route path="/contents" component={(props) => (
+                    <Suspense fallback={
+                        <p class="icon-link justify-content-center w-100">{useContext(LocaleContext)!.i18n.common.loading()} ...</p>
+                    }>
+                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
+                            {(ctx) => (
+                                <CMSContext.Provider value={ctx()}>
+                                    {props.children}
+                                </CMSContext.Provider>
+                            )}
+                        </Show>
+                    </Suspense>
+                )}>
+                    <Route path="/" component={ContentRoot}>
+                        <Route path="/" component={Contents} />
+                        <Route path="/by-model/:key" component={ContentsByModel} />
+                        <Route path="/by-model/:namespace/:key" component={ContentsByModel} />
+                    </Route>
 
-                                <Route path="/assets" component={(props) => (
-                                    <Suspense fallback={
-                                        <p class="icon-link justify-content-center w-100">Loading ...</p>
-                                    }>
-                                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
-                                            {(ctx) => (
-                                                <CMSContext.Provider value={ctx()}>
-                                                    {props.children}
-                                                </CMSContext.Provider>
-                                            )}
-                                        </Show>
-                                    </Suspense>
-                                )}>
-                                    <Route path="/" component={Assets} />
-                                    <Route path="/upload" component={UploadAsset} />
-                                    <Route path="/view/:id" component={Asset} />
-                                </Route>
+                    <Route path="/view/:id" component={Content} />
+                    <Route path="/create/:key" component={CreateContent} />
+                    <Route path="/create/:namespace/:key" component={CreateContent} />
+                </Route>
 
-                                <Route path="/themes" component={(props) => (
-                                    <AppearanceContext.Provider value={new AppearanceService()}>
-                                        {props.children}
-                                    </AppearanceContext.Provider>
-                                )}>
-                                    <Route path="/" component={Themes} />
-                                    <Route path="/install" component={InstallTheme} />
-                                </Route>
+                <Route path="/assets" component={(props) => (
+                    <Suspense fallback={
+                        <p class="icon-link justify-content-center w-100">{useContext(LocaleContext)!.i18n.common.loading()} ...</p>
+                    }>
+                        <Show when={useContext(ServiceContext)!.cmsCtx()()}>
+                            {(ctx) => (
+                                <CMSContext.Provider value={ctx()}>
+                                    {props.children}
+                                </CMSContext.Provider>
+                            )}
+                        </Show>
+                    </Suspense>
+                )}>
+                    <Route path="/" component={Assets} />
+                    <Route path="/upload" component={UploadAsset} />
+                    <Route path="/view/:id" component={Asset} />
+                </Route>
 
-                                <Route path="/locales" component={(props) => (
-                                    <AdminContext.Provider value={new AdminService()}>
-                                        {props.children}
-                                    </AdminContext.Provider>
-                                )}>
-                                    <Route path="/" component={Locales} />
-                                    <Route path="/resource/:key/:kind" component={LocaleResource} />
-                                    <Route path="/resource/:key/:kind/:namespace" component={LocaleResource} />
-                                    <Route path="/view/:key" component={Locale} />
-                                    <Route path="/create" component={CreateLocale} />
-                                </Route>
+                <Route path="/themes" component={(props) => (
+                    <AppearanceContext.Provider value={new AppearanceService()}>
+                        {props.children}
+                    </AppearanceContext.Provider>
+                )}>
+                    <Route path="/" component={Themes} />
+                    <Route path="/install" component={InstallTheme} />
+                </Route>
 
-                                <Route path="/pages" component={(props) => (
-                                    <AppearanceContext.Provider value={new AppearanceService()}>
-                                        {props.children}
-                                    </AppearanceContext.Provider>
-                                )}>
-                                    <Route path="/" component={Pages} />
-                                    <Route path="/view/:namespace/:key" component={Page} />
-                                    <Route path="/view/:key" component={Page} />
-                                    <Route path="/create" component={CreatePage} />
-                                </Route>
+                <Route path="/locales" component={(props) => (
+                    <AdminContext.Provider value={new AdminService()}>
+                        {props.children}
+                    </AdminContext.Provider>
+                )}>
+                    <Route path="/" component={Locales} />
+                    <Route path="/resource/:key/:kind" component={LocaleResource} />
+                    <Route path="/resource/:key/:kind/:namespace" component={LocaleResource} />
+                    <Route path="/view/:key" component={Locale} />
+                    <Route path="/create" component={CreateLocale} />
+                </Route>
 
-                                <Route path="/templates" component={(props) => (
-                                    <AppearanceContext.Provider value={new AppearanceService()}>
-                                        {props.children}
-                                    </AppearanceContext.Provider>
-                                )}>
-                                    <Route path="/" component={Templates} />
-                                    <Route path="/resource" component={TemplateResource} />
-                                    <Route path="/resource/:namespace" component={TemplateResource} />
-                                    <Route path="/create" component={CreateTemplate} />
-                                </Route>
+                <Route path="/pages" component={(props) => (
+                    <AppearanceContext.Provider value={new AppearanceService()}>
+                        {props.children}
+                    </AppearanceContext.Provider>
+                )}>
+                    <Route path="/" component={Pages} />
+                    <Route path="/view/:namespace/:key" component={Page} />
+                    <Route path="/view/:key" component={Page} />
+                    <Route path="/create" component={CreatePage} />
+                </Route>
 
-                                <Route path="/roles" component={(props) => (
-                                    <AdminContext.Provider value={new AdminService()}>
-                                        {props.children}
-                                    </AdminContext.Provider>
-                                )}>
-                                    <Route path="/" component={Roles} />
-                                    <Route path="/view/:key" component={Role} />
-                                    <Route path="/create" component={CreateRole} />
-                                </Route>
+                <Route path="/templates" component={(props) => (
+                    <AppearanceContext.Provider value={new AppearanceService()}>
+                        {props.children}
+                    </AppearanceContext.Provider>
+                )}>
+                    <Route path="/" component={Templates} />
+                    <Route path="/resource" component={TemplateResource} />
+                    <Route path="/resource/:namespace" component={TemplateResource} />
+                    <Route path="/create" component={CreateTemplate} />
+                </Route>
 
-                                <Route path="/users" component={(props) => (
-                                    <AdminContext.Provider value={new AdminService()}>
-                                        {props.children}
-                                    </AdminContext.Provider>
-                                )}>
-                                    <Route path="/" component={Users} />
-                                    <Route path="/view/:username" component={User} />
-                                    <Route path="/create" component={CreateUser} />
-                                </Route>
+                <Route path="/roles" component={(props) => (
+                    <AdminContext.Provider value={new AdminService()}>
+                        {props.children}
+                    </AdminContext.Provider>
+                )}>
+                    <Route path="/" component={Roles} />
+                    <Route path="/view/:key" component={Role} />
+                    <Route path="/create" component={CreateRole} />
+                </Route>
 
-                                <Route path="/settings" component={(props) => (
-                                    <AdminContext.Provider value={new AdminService()}>
-                                        {props.children}
-                                    </AdminContext.Provider>
-                                )}>
-                                    <Route path="/" component={Settings} />
-                                </Route>
-                            </Route>
-                            <Route path="*404" component={() => (
-                                <div class="d-flex justify-content-center align-items-center flex-column" style="height: 100vh">
-                                    <h1>404</h1>
-                                    <p>Page not found. Go to <A href="/">Home Page</A>.</p>
-                                </div>
-                            )} />
-                        </Router>
+                <Route path="/users" component={(props) => (
+                    <AdminContext.Provider value={new AdminService()}>
+                        {props.children}
+                    </AdminContext.Provider>
+                )}>
+                    <Route path="/" component={Users} />
+                    <Route path="/view/:username" component={User} />
+                    <Route path="/create" component={CreateUser} />
+                </Route>
 
-                        <Alerts alerts={alertService.alerts} removeAlert={(alert) => alertService.removeAlert(alert)} />
-                    </AlertContext.Provider>
-                </ChangeLocaleContext.Provider> </LocaleContext.Provider>
-            )}
-        </Show>
+                <Route path="/settings" component={(props) => (
+                    <AdminContext.Provider value={new AdminService()}>
+                        {props.children}
+                    </AdminContext.Provider>
+                )}>
+                    <Route path="/" component={Settings} />
+                </Route>
+            </Route>
+            <Route path="*404" component={() => (
+                <div class="d-flex justify-content-center align-items-center flex-column" style="height: 100vh">
+                    <h1>404</h1>
+                    <p>{useContext(LocaleContext)!.i18n.app.pageNotFound()}</p>
+                </div>
+            )} />
+        </Router>
     );
 };
 

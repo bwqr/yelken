@@ -14,6 +14,7 @@ import GearFill from 'bootstrap-icons/icons/gear-fill.svg';
 import Images from 'bootstrap-icons/icons/images.svg';
 import Journals from 'bootstrap-icons/icons/journals.svg';
 import List from 'bootstrap-icons/icons/list.svg';
+import Moon from 'bootstrap-icons/icons/moon.svg';
 import PencilSquare from 'bootstrap-icons/icons/pencil-square.svg';
 import PeopleFill from 'bootstrap-icons/icons/people-fill.svg';
 import PersonCircle from 'bootstrap-icons/icons/person-circle.svg';
@@ -47,6 +48,7 @@ export {
     Images,
     Journals,
     List,
+    Moon,
     PencilSquare,
     PeopleFill,
     PersonCircle,
