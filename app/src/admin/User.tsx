@@ -11,6 +11,7 @@ import { createStore } from "solid-js/store";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { UserState } from "../lib/user/models";
 import { Permission } from "../lib/models";
+import { LocaleContext } from "../lib/i18n";
 
 export const CreateUser = () => {
     enum ValidationError {
@@ -22,7 +23,10 @@ export const CreateUser = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.user;
 
     const [name, setName] = createSignal('');
     const [email, setEmail] = createSignal('');
@@ -72,15 +76,17 @@ export const CreateUser = () => {
 
         adminCtx.createUser(req)
             .then((user) => {
-                alertCtx.success(`User "${req.name}" is created successfully`);
+                alertCtx.success(i18n.actions.userCreated(req.name));
 
                 navigate(`/users/view/${user.username}`, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.error);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
@@ -88,76 +94,76 @@ export const CreateUser = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create User</h2>
+            <h2 class="mb-5">{i18n.actions.createUser()}</h2>
 
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
                         <div class="mb-4">
-                            <label for="userName" class="form-label">Name</label>
+                            <label for="userName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                             <input
                                 id="userName"
                                 type="text"
                                 name="name"
-                                placeholder="Name"
+                                placeholder={localeCtx.i18n.common.labels.name()}
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                 value={name()}
                                 onChange={(ev) => setName(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Name)}>
-                                <small class="invalid-feedback">Please specify a name for user.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="userEmail" class="form-label">Email</label>
+                            <label for="userEmail" class="form-label">{i18n.labels.email()}</label>
                             <input
                                 id="userEmail"
                                 type="email"
-                                name="name"
-                                placeholder="Email"
+                                name="email"
+                                placeholder={i18n.labels.email()}
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Email) }}
                                 value={email()}
                                 onChange={(ev) => setEmail(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Email)}>
-                                <small class="invalid-feedback">Please specify a email for user.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.email()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="userPassword" class="form-label">Password</label>
+                            <label for="userPassword" class="form-label">{i18n.labels.password()}</label>
                             <input
                                 id="userPassword"
                                 type="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder={i18n.labels.password()}
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Password) }}
                                 value={password()}
                                 onChange={(ev) => setPassword(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Password)}>
-                                <small class="invalid-feedback">Please specify a password for user.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.password()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="userPasswordConfirm" class="form-label">Password Confirm</label>
+                            <label for="userPasswordConfirm" class="form-label">{i18n.labels.passwordConfirm()}</label>
                             <input
                                 id="userPasswordConfirm"
                                 type="password"
                                 name="password"
-                                placeholder="Password Confirm"
+                                placeholder={i18n.labels.passwordConfirm()}
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.PasswordMismatch) }}
                                 value={passwordConfirm()}
                                 onChange={(ev) => setPasswordConfirm(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.PasswordMismatch)}>
-                                <small class="invalid-feedback">Does not match the password.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.passwordConfirm()}.</small>
                             </Show>
                         </div>
 
@@ -176,7 +182,7 @@ export const CreateUser = () => {
                             >
                                 <ProgressSpinner show={inProgress()} />
                                 <PlusLg viewBox="0 0 16 16" />
-                                Add
+                                {localeCtx.i18n.common.actions.create()}
                             </button>
                         </div>
                     </div>
@@ -198,7 +204,10 @@ export const User = () => {
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.user;
 
     const params = useParams();
 
@@ -273,11 +282,11 @@ export const User = () => {
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`User "${req.name}" is updated successfully`)
+                alertCtx.success(i18n.actions.userUpdated(req.name))
 
                 mutate({ ...u, name: req.name, state: req.state, roleId: req.roleId });
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -296,11 +305,11 @@ export const User = () => {
             .then(() => {
                 setEditingPermissions(false);
 
-                alertCtx.success(`Permissions of "${u.name}" user are updated successfully`)
+                alertCtx.success(i18n.actions.permissionsUpdated(u.name))
 
                 mutate({ ...u, permissions: newPermissions });
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -309,23 +318,29 @@ export const User = () => {
             .then(() => {
                 setDeleting(false);
 
-                alertCtx.success(`User "${user.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.userDeleted(user.name));
 
                 navigate('/users', { replace: true });
             });
+    };
+
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
     };
 
     return (
         <div class="container py-4 px-md-4">
             <Switch>
                 <Match when={user.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={user.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching user: <strong>{user.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.user())}: <strong>{user.error.message}</strong></p>
                 </Match>
                 <Match when={user.state === 'ready' && user() === undefined}>
-                    <p class="text-secondary text-center">Could not find the user with username {params.username}.</p>
+                    <p class="text-secondary text-center">{i18n.userNotFound(params.username)}.</p>
                 </Match>
                 <Match when={user()}>
                     {(user) => (
@@ -333,7 +348,7 @@ export const User = () => {
                             <div class="d-flex align-items-center mb-5">
                                 <div class="flex-grow-1">
                                     <h2 class="m-0">{user().name}</h2>
-                                    <small>User</small>
+                                    <small>{i18n.user()}</small>
                                 </div>
                                 <div class="dropdown">
                                     <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
@@ -343,7 +358,7 @@ export const User = () => {
                                         <li>
                                             <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeleting(true)}>
                                                 <Trash viewBox="0 0 16 16" />
-                                                Delete
+                                                {localeCtx.i18n.common.actions.delete()}
                                             </button>
                                         </li>
                                     </ul>
@@ -354,11 +369,11 @@ export const User = () => {
                                 <div class="offset-md-1 col-md-4">
                                     <div class="border rounded p-3">
                                         <div class="d-flex justify-content-center">
-                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                             <Show when={editingDetails()} fallback={
                                                 <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                     <PencilSquare viewBox="0 0 16 16" />
-                                                    Edit
+                                                    {localeCtx.i18n.common.actions.edit()}
                                                 </button>
                                             }>
                                                 <button
@@ -366,7 +381,7 @@ export const User = () => {
                                                     class="btn text-danger icon-link py-0 px-1"
                                                     onClick={() => setEditingDetails(false)}
                                                 >
-                                                    Discard
+                                                    {localeCtx.i18n.common.actions.discard()}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -376,7 +391,7 @@ export const User = () => {
                                                 >
                                                     <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                    Save
+                                                    {localeCtx.i18n.common.actions.save()}
                                                 </button>
                                             </Show>
                                         </div>
@@ -386,7 +401,7 @@ export const User = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 35%">Name</td>
+                                                    <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={user().name}>
                                                             <input
@@ -402,7 +417,7 @@ export const User = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Email</td>
+                                                    <td>{i18n.labels.email()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={user().email}>
                                                             <input
@@ -417,30 +432,30 @@ export const User = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>State</td>
+                                                    <td>{i18n.labels.state()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
-                                                        <Show when={editingDetails()} fallback={user().state}>
+                                                        <Show when={editingDetails()} fallback={i18n.userStates[user().state]()}>
                                                             <select
                                                                 class="form-select float-end"
                                                                 value={details.state}
                                                                 onChange={(ev) => setDetails('state', ev.target.value as UserState)}
                                                             >
-                                                                <For each={Object.entries(UserState)}>
-                                                                    {([name, value]) => (<option value={value}>{name}</option>)}
+                                                                <For each={Object.values(UserState)}>
+                                                                    {(state) => (<option value={state}>{i18n.userStates[state]()}</option>)}
                                                                 </For>
                                                             </select>
                                                         </Show>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Role</td>
+                                                    <td>{localeCtx.i18n.role.role()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Switch>
                                                             <Match when={roles.loading}>
-                                                                <p class="icon-link justify-content-end w-100 m-0"><ProgressSpinner show={true} /> Loading Roles ...</p>
+                                                                <p class="icon-link justify-content-end w-100 m-0"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loadingItem(localeCtx.i18n.nav.links.roles())} ...</p>
                                                             </Match>
                                                             <Match when={roles.error}>
-                                                                <p class="text-danger-emphasis text-end m-0">Error while fetching roles: <strong>{roles.error.message}</strong></p>
+                                                                <p class="text-danger-emphasis text-end m-0">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.roles())}: <strong>{roles.error.message}</strong></p>
                                                             </Match>
                                                             <Match when={roles()}>
                                                                 {(roles) => (
@@ -450,7 +465,7 @@ export const User = () => {
                                                                             value={details.roleId ?? ''}
                                                                             onChange={(ev) => setDetails('roleId', isNaN(parseInt(ev.target.value)) ? null : parseInt(ev.target.value))}
                                                                         >
-                                                                            <option value="">-- No role --</option>
+                                                                            <option value="">-- {i18n.labels.noRole()} --</option>
                                                                             <For each={roles()}>
                                                                                 {(role) => (<option value={role.id}>{role.name}</option>)}
                                                                             </For>
@@ -469,11 +484,11 @@ export const User = () => {
                                 <div class="offset-md-1 col-md-5">
                                     <div class="border rounded p-3">
                                         <div class="d-flex align-items-center">
-                                            <h5 class="flex-grow-1 m-0">Explicit Permissions</h5>
+                                            <h5 class="flex-grow-1 m-0">{i18n.labels.additionalPerms()}</h5>
                                             <Show when={editingPermissions()} fallback={
                                                 <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingPermissions(true)}>
                                                     <PencilSquare viewBox="0 0 16 16" />
-                                                    Edit
+                                                    {localeCtx.i18n.common.actions.edit()}
                                                 </button>
                                             }>
                                                 <button
@@ -481,7 +496,7 @@ export const User = () => {
                                                     class="btn text-danger icon-link py-0 px-1"
                                                     onClick={() => setEditingPermissions(false)}
                                                 >
-                                                    Discard
+                                                    {localeCtx.i18n.common.actions.discard()}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -491,7 +506,7 @@ export const User = () => {
                                                 >
                                                     <ProgressSpinner show={inProgress() === Action.UpdatePermissions} small={true} />
                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                    Save
+                                                    {localeCtx.i18n.common.actions.save()}
                                                 </button>
                                             </Show>
                                         </div>
@@ -500,17 +515,17 @@ export const User = () => {
 
                                         <table class="table w-100 m-0">
                                             <tbody>
-                                                <For each={Object.entries(Permission)}>
-                                                    {([perm, value]) => (
+                                                <For each={Object.values(Permission)}>
+                                                    {(perm) => (
                                                         <tr>
-                                                            <td><label for={`perm-${perm}`}>{perm}</label></td>
+                                                            <td><label for={`perm-${perm}`}>{localeCtx.i18n.role.permissions[perm]()}</label></td>
                                                             <td class="text-end">
                                                                 <input
                                                                     id={`perm-${perm}`}
                                                                     class="form-check-input"
                                                                     type="checkbox"
-                                                                    checked={editingPermissions() ? permissions[value] : user().permissions.includes(value)}
-                                                                    onChange={() => setPermissions(value, !permissions[value])}
+                                                                    checked={editingPermissions() ? permissions[perm] : user().permissions.includes(perm)}
+                                                                    onChange={() => setPermissions(perm, !permissions[perm])}
                                                                     disabled={!editingPermissions()}
                                                                 />
                                                             </td>
@@ -524,9 +539,10 @@ export const User = () => {
                             </div>
                             <Show when={deleting()}>
                                 <DeleteConfirmModal
-                                    message={<p>Are you sure about deleting the user <strong>{user().name} ({user().username})</strong>?</p>}
+                                    message={<p>{i18n.actions.confirmDelete(user().name, user().username)}?</p>}
                                     close={() => setDeleting(false)}
                                     confirm={() => deleteUser(user())}
+                                    translateError={translateError}
                                 />
                             </Show>
                         </>
@@ -539,28 +555,31 @@ export const User = () => {
 
 export const Users = () => {
     const adminCtx = useContext(AdminContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.user;
 
     const [usersAndRoles] = createResource(() => Promise.all([adminCtx.fetchUsers(), adminCtx.fetchRoles()]).then(([users, roles]) => ({ users, roles })));
 
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Users</h1>
+                <h1 class="flex-grow-1 m-0">{i18n.users()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/users/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Add User
+                    {i18n.actions.createUser()}
                 </A>
             </div>
 
             <Switch>
                 <Match when={usersAndRoles.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={usersAndRoles.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching users: <strong>{usersAndRoles.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.users())}: <strong>{usersAndRoles.error.message}</strong></p>
                 </Match>
                 <Match when={usersAndRoles()?.users.length === 0}>
-                    <p class="text-secondary text-center">There is no user to display yet. You can create a new one by using <strong>Create User</strong> button.</p>
+                    <p class="text-secondary text-center">{i18n.noUser()}.</p>
                 </Match>
                 <Match when={usersAndRoles()}>
                     {(usersAndRoles) => (
@@ -570,8 +589,8 @@ export const Users = () => {
                                     <thead>
                                         <tr>
                                             <th></th>
-                                            <th scope="col">Name</th>
-                                            <th scope="col">Role</th>
+                                            <th scope="col">{localeCtx.i18n.common.labels.name()}</th>
+                                            <th scope="col">{localeCtx.i18n.role.role()}</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -586,7 +605,7 @@ export const Users = () => {
                                                     <td>{usersAndRoles().roles.find((r) => r.id === user.roleId)?.name ?? '-'}</td>
                                                     <td>
                                                         <Show when={user.state === UserState.Disabled}>
-                                                            <span class="badge border rounded-pill border-danger text-danger ms-2">Disabled</span>
+                                                            <span class="badge border rounded-pill border-danger text-danger ms-2">{localeCtx.i18n.common.labels.disabled()}</span>
                                                         </Show>
                                                     </td>
                                                 </tr>

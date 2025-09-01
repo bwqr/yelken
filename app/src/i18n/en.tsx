@@ -2,6 +2,7 @@ import { A } from "@solidjs/router";
 import { ColorMode } from "../theme";
 import { ContentStage } from "../lib/cms/models";
 import { Permission } from "../lib/models";
+import { UserState } from "../lib/user/models";
 
 export const auth = {
     login: {
@@ -398,4 +399,42 @@ export const theme = {
         unknown_field: 'Unknown field in manifest',
     },
     noTheme: () => (<>There is no theme installed yet. You can install a new one by using <strong>Install Theme</strong> button</>),
+};
+
+export const user = {
+    user: 'User',
+    users: 'Users',
+    actions: {
+        confirmDelete: (name: string, username: string) => (<>Are you sure about deleting the user <strong>{name} ({username})</strong></>),
+        createUser: 'Create User',
+        permissionsUpdated: (name: string) => `"${name}" isimli kullanıcıya ait izinler güncellendi`,
+        userCreated: (name: string) => `User "${name}" is created`,
+        userDeleted: (name: string) => `User "${name}" is deleted`,
+        userUpdated: (name: string) => `User "${name}" is updated`,
+    },
+    labels: {
+        additionalPerms: 'Additional Permissions',
+        email: 'Email',
+        noRole: 'No Role',
+        password: 'Password',
+        passwordConfirm: 'Password Confirm',
+        state: 'State',
+    },
+    validationErrors: {
+        email: 'Please specify a email for user',
+        name: 'Please specify a name for user',
+        password: 'Please specify a password for user',
+        passwordConfirm: 'Does not match the password',
+    },
+    serverErrors: {
+        role_not_found: 'Role could not be found',
+        self_update_not_possible: 'Cannot perform self update',
+        user_not_found: 'User could not be found',
+    },
+    userStates: {
+        [UserState.Enabled]: 'Enabled',
+        [UserState.Disabled]: 'Disabled',
+    },
+    userNotFound: (username: string) => (<>Could not find the user with username <strong>{username}</strong></>),
+    noUser: () => (<>There is no user to display yet. You can create a new one by using <strong>Create User</strong> button</>),
 };

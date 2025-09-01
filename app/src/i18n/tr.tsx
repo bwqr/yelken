@@ -3,6 +3,7 @@ import { A } from '@solidjs/router';
 import { ColorMode } from "../theme";
 import { ContentStage } from '../lib/cms/models';
 import { Permission } from '../lib/models';
+import { UserState } from '../lib/user/models';
 
 export const auth: typeof en.auth = {
     login: {
@@ -305,7 +306,7 @@ export const role: typeof en.role = {
     actions: {
         confirmDelete: (name: string) => (<><strong>{name}</strong> isimli rolü silmek istediğinizden emin misiniz</>),
         createRole: 'Rol Oluştur',
-        permissionsUpdated: (name: string) => `"${name}" isimli rolün izinleri güncellendi`,
+        permissionsUpdated: (name: string) => `"${name}" isimli role ait izinler güncellendi`,
         roleCreated: (name: string) => `"${name}" isimli rol oluşturuldu`,
         roleDeleted: (name: string) => `"${name}" isimli rol silindi`,
         roleUpdated: (name: string) => `"${name}" isimli rol güncellendi`
@@ -399,4 +400,42 @@ export const theme: typeof en.theme = {
         unknown_field: 'Manifest içerisinde bilinmeyen bir alan var',
     },
     noTheme: () => (<>Herhangi bir tema yüklü değil. <strong>Tema Yükle</strong> butonunu kullanarak yeni bir tema yükleyebilirsin</>),
+};
+
+export const user: typeof en.user = {
+    user: 'Kullanıcı',
+    users: 'Kullanıcılar',
+    actions: {
+        confirmDelete: (name: string, username: string) => (<><strong>{name} ({username})</strong> isimli kullanıcıyı silmek istediğinizde emin misiniz</>),
+        createUser: 'Kullanıcı Oluştur',
+        permissionsUpdated: (name: string) => `"${name}" isimli kullanıcıya ait izinler güncellendi`,
+        userCreated: (name: string) => `"${name}" isimli kullanıcı oluşturuldu`,
+        userDeleted: (name: string) => `"${name}" isimli kullanıcı silindi`,
+        userUpdated: (name: string) => `"${name}" isimli kullanıcı güncellendi`,
+    },
+    labels: {
+        additionalPerms: 'Ek İzinler',
+        email: 'E-posta',
+        noRole: 'Role Yok',
+        password: 'Parola',
+        passwordConfirm: 'Parola Onayı',
+        state: 'Durum',
+    },
+    validationErrors: {
+        email: 'Lütfen kullanıcı için bir e-posta belirtin',
+        name: 'Lütfen kullanıcı için bir isim belirtin',
+        password: 'Lütfen kullanıcı için bir parola belirtin',
+        passwordConfirm: 'Lütfen belirttiğiniz parolayı tekrar girin',
+    },
+    serverErrors: {
+        role_not_found: 'Rol bulunamadı',
+        self_update_not_possible: 'Kendini güncelleyemezsin',
+        user_not_found: 'Kullanıcı bulunamadı',
+    },
+    userStates: {
+        [UserState.Enabled]: 'Etkin',
+        [UserState.Disabled]: 'Devre Dışı',
+    },
+    userNotFound: (username: string) => (<><strong>{username}</strong> kullanıcı adına sahip kullanıcı bulunamadı</>),
+    noUser: () => (<>Herhangi bir kullanıcı bulunmuyor. <strong>Kullanıcı Oluştur</strong> butonunu kullanarak yeni bir kullanıcı oluşturabilirsiniz</>),
 };
