@@ -65,8 +65,10 @@ export const common = {
         create: 'Create',
         confirm: 'Confirm',
         delete: 'Delete',
+        disable: 'Disable',
         discard: 'Discard',
         edit: 'Edit',
+        enable: 'Enable',
         install: 'Install',
         save: 'Save',
         uninstall: 'Uninstall',
@@ -75,8 +77,10 @@ export const common = {
         active: 'Active',
         activeTheme: 'Active Theme',
         createdAt: 'Created At',
+        default: 'Default',
         description: 'Description',
         details: 'Details',
+        disabled: 'Disabled',
         global: 'Global',
         key: 'Key',
         locale: 'Locale',
@@ -146,6 +150,43 @@ export const content = {
 export const dashboard = {
     loggedIn: (name: string) => (<>You have logged in as <strong>{name}</strong></>),
     welcome: 'It is a good day to start',
+};
+
+export const locale = {
+    actions: {
+        confirmDelete: (name: string, key: string) => (<>Are you sure about deleting the locale <strong>{name} ({key})</strong></>),
+        createLocale: 'Create Locale',
+        localeCreated: (name: string) => `Locale "${name}" is created`,
+        localeDeleted: (name: string) => `Locale "${name}" is deleted`,
+        localeDisabled: (name: string) => `Locale "${name}" is disabled`,
+        localeEnabled: (name: string) => `Locale "${name}" is enabled`,
+        localeUpdated: (name: string) => `Locale "${name}" is updated`,
+        setDefault: (name: string) => `Locale "${name}" is set as default`,
+        setAsDefault: 'Set as default',
+        translationsUpdated: (name: string) => `Translations of "${name}" locale is updated successfully`,
+    },
+    labels: {
+        editor: 'Editor',
+        globalTranslations: 'Global Translations',
+        namePlaceholder: 'Name of locale, e.g. English',
+        keyPlaceholder: 'Key of locale, e.g. en',
+        themeTranslations: (theme: string) => (<>Theme's <strong>({theme})</strong> Translations</>),
+        themeTranslations2: 'Theme\'s Translations',
+        themeScopedTranslations: (theme: string) => (<>Theme <strong>({theme})</strong> Scoped Translations</>),
+        translations: 'Translations',
+    },
+    validationErrors: {
+        key: 'Please enter key for locale',
+        name: 'Please enter name for locale',
+    },
+    serverErrors: {
+        locale_being_used: 'Locale is being used',
+    },
+    cannotModifyThemeResourceInfo: 'Theme\'s translations cannot be modified. You need to override their values either globally or scoped to each theme',
+    cannotModifyThemeResource: 'Cannot modify theme\'s own resource',
+    localeNotFound: (key: string) => (<>Could not find the locale with key <strong>{key}</strong></>),
+    noLocale: () => (<>There is no locale to display yet. You can create a new one by using <strong>Create Locale</strong> button</>),
+    unknownKind: (kind: string) => (<>Unknown kind <strong>{kind}</strong> found in path or the namespace missing</>),
 };
 
 export const model = {

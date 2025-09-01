@@ -10,6 +10,7 @@ import ProgressSpinner from "../components/ProgressSpinner";
 import { NamespaceSource, type Locale as LocaleModel, LocationKind, Location } from "../lib/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { createStore } from "solid-js/store";
+import { LocaleContext } from "../lib/i18n";
 
 export const CreateLocale = () => {
     enum ValidationError {
@@ -20,7 +21,10 @@ export const CreateLocale = () => {
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const adminCtx = useContext(AdminContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.locale;
 
     const [name, setName] = createSignal('');
     const [key, setKey] = createSignal('');
@@ -61,15 +65,17 @@ export const CreateLocale = () => {
         adminCtx.createLocale(req)
             .then(() => commonCtx.loadLocales())
             .then(() => {
-                alertCtx.success(`Locale "${req.name}" is created successfully`);
+                alertCtx.success(i18n.actions.localeCreated(req.name));
 
                 navigate(`/locales/view/${req.key}`, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.message);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
@@ -77,41 +83,41 @@ export const CreateLocale = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create Locale</h2>
+            <h2 class="mb-5">{i18n.actions.createLocale()}</h2>
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
                         <div class="mb-4">
-                            <label for="localeName" class="form-label">Name</label>
+                            <label for="localeName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                             <input
                                 type="text"
                                 id="localeName"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                                 name="name"
-                                placeholder="Name of locale, e.g. English"
+                                placeholder={i18n.labels.namePlaceholder()}
                                 value={name()}
                                 onInput={(ev) => setName(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Name)}>
-                                <small class="invalid-feedback">Please enter name.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                             </Show>
                         </div>
 
                         <div class="mb-4">
-                            <label for="localeKey" class="form-label">Key</label>
+                            <label for="localeKey" class="form-label">{localeCtx.i18n.common.labels.key()}</label>
                             <input
                                 type="text"
                                 id="localeKey"
                                 class="form-control"
                                 classList={{ 'is-invalid': validationErrors().has(ValidationError.Key) }}
                                 name="key"
-                                placeholder="Key of locale, e.g. en"
+                                placeholder={i18n.labels.keyPlaceholder()}
                                 value={key()}
                                 onInput={(ev) => setKey(ev.target.value)}
                             />
                             <Show when={validationErrors().has(ValidationError.Key)}>
-                                <small class="invalid-feedback">Please enter key for locale.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.key()}.</small>
                             </Show>
                         </div>
 
@@ -130,7 +136,7 @@ export const CreateLocale = () => {
                             >
                                 <ProgressSpinner show={inProgress()} />
                                 <PlusLg viewBox="0 0 16 16" />
-                                Add
+                                {localeCtx.i18n.common.actions.add()}
                             </button>
                         </div>
                     </div>
@@ -146,7 +152,10 @@ export const LocaleResource = () => {
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
+
+    const i18n = localeCtx.i18n.locale;
 
     const location = createMemo(() => Location.fromParams(params.kind, params.namespace));
     const locale = createMemo(() => commonCtx.locales().find((l) => l.key === params.key));
@@ -190,7 +199,7 @@ export const LocaleResource = () => {
         }
 
         if (lt.kind === LocationKind.Theme) {
-            alertCtx.fail('Cannot modify theme\'s own resource');
+            alertCtx.fail(i18n.cannotModifyThemeResource());
 
             return;
         }
@@ -198,7 +207,7 @@ export const LocaleResource = () => {
         setInProgress(true);
 
         adminCtx.updateLocaleResource(lc.key, e.getValue(), lt.namespace)
-            .then(() => alertCtx.success(`Translations of "${lc.name}" locale is updated successfully`))
+            .then(() => alertCtx.success(i18n.actions.translationsUpdated(lc.name)))
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(false));
     };
@@ -207,16 +216,16 @@ export const LocaleResource = () => {
         <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4" style="min-height: 100vh">
             <Switch>
                 <Match when={!locale()}>
-                    <p class="text-secondary text-center">Could not find the locale with key <strong>{params.key}</strong>.</p>
+                    <p class="text-secondary text-center">{i18n.localeNotFound(params.key)}.</p>
                 </Match>
                 <Match when={!location()}>
-                    <p class="text-secondary text-center">Unknown kind <strong>{params.kind}</strong> found in path or the namespace missing.</p>
+                    <p class="text-secondary text-center">{i18n.unknownKind(params.kind)}.</p>
                 </Match>
                 <Match when={editor.loading || resource.loading}>
                     <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
                 </Match>
                 <Match when={editor.error || resource.error}>
-                    <p class="text-danger-emphasis text-center">Error while setting up editor: <strong>{editor.error?.message} {resource.error?.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.labels.editor())}: <strong>{editor.error?.message} {resource.error?.message}</strong></p>
                 </Match>
                 <Match when={locale() && location() ? { locale: locale()!, location: location()! } : undefined}>
                     {(localeAndLocation) => (
@@ -226,13 +235,13 @@ export const LocaleResource = () => {
                                     <h2 class="m-0">{localeAndLocation().locale.name}</h2>
                                     <Switch>
                                         <Match when={localeAndLocation().location.kind === LocationKind.Global}>
-                                            <small>Global Translations</small>
+                                            <small>{i18n.labels.globalTranslations()}</small>
                                         </Match>
                                         <Match when={localeAndLocation().location.kind === LocationKind.Theme}>
-                                            <small>Theme's <strong>({localeAndLocation().location.namespace})</strong> Translations</small>
+                                            <small>{i18n.labels.themeTranslations(localeAndLocation().location.namespace ?? '-')}</small>
                                         </Match>
                                         <Match when={localeAndLocation().location.kind === LocationKind.User}>
-                                            <small>Theme <strong>({localeAndLocation().location.namespace})</strong> Scoped Translations</small>
+                                            <small>{i18n.labels.themeScopedTranslations(localeAndLocation().location.namespace ?? '-')}</small>
                                         </Match>
                                     </Switch>
                                 </div>
@@ -240,13 +249,11 @@ export const LocaleResource = () => {
                                 <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress() || localeAndLocation().location.kind === LocationKind.Theme}>
                                     <ProgressSpinner show={inProgress()} />
                                     <FloppyFill viewBox="0 0 16 16" />
-                                    Save
+                                    {localeCtx.i18n.common.actions.save()}
                                 </button>
                             </div>
                             <Show when={localeAndLocation().location.kind === LocationKind.Theme}>
-                                <div class="alert alert-primary" role="alert">
-                                    Theme's translations cannot be modified. You need to override their values either globally or scoped to each theme.
-                                </div>
+                                <div class="alert alert-primary" role="alert">{i18n.cannotModifyThemeResourceInfo()}</div>
                             </Show>
                         </>
                     )}
@@ -270,8 +277,11 @@ export const Locale = () => {
     const alertCtx = useContext(AlertContext)!;
     const adminCtx = useContext(AdminContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
     const params = useParams();
+
+    const i18n = localeCtx.i18n.locale;
 
     const locale = createMemo(() => commonCtx.locales().find((l) => l.key === params.key));
     const themes = createMemo(() => commonCtx.namespaces().filter((ns) => ns.source === NamespaceSource.Theme));
@@ -320,9 +330,9 @@ export const Locale = () => {
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Locale "${req.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.localeUpdated(req.name));
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -332,23 +342,29 @@ export const Locale = () => {
             .then(() => {
                 setDeletingLocale(false);
 
-                alertCtx.success(`Locale "${locale.name}" is deleted successfully`);
+                alertCtx.success(i18n.actions.localeDeleted(locale.name));
 
                 navigate('/locales', { replace: true });
             });
     }
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
             <Show when={locale()} fallback={
-                <p class="text-secondary text-center">Could not find the locale with key <strong>{params.key}</strong>.</p>
+                <p class="text-secondary text-center">{i18n.localeNotFound(params.key)}.</p>
             }>
                 {(locale) => (
                     <>
                         <div class="d-flex align-items-center mb-5">
                             <div class="flex-grow-1">
                                 <h2 class="m-0">{locale().name}</h2>
-                                <small>Locale</small>
+                                <small>{localeCtx.i18n.common.labels.locale()}</small>
                             </div>
                             <div class="dropdown mx-2">
                                 <button class="btn icon-link px-1" on:click={(ev) => { ev.stopPropagation(); setDropdown(!dropdown()); }}>
@@ -358,7 +374,7 @@ export const Locale = () => {
                                     <li>
                                         <button class="dropdown-item text-danger icon-link py-2" onClick={() => setDeletingLocale(true)}>
                                             <Trash viewBox="0 0 16 16" />
-                                            Delete
+                                            {localeCtx.i18n.common.actions.delete()}
                                         </button>
                                     </li>
                                 </ul>
@@ -369,11 +385,11 @@ export const Locale = () => {
                             <div class="offset-md-1 col-md-4">
                                 <div class="border rounded p-3">
                                     <div class="d-flex justify-content-center">
-                                        <h5 class="flex-grow-1 m-0">Details</h5>
+                                        <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                         <Show when={editingDetails()} fallback={
                                             <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                 <PencilSquare viewBox="0 0 16 16" />
-                                                Edit
+                                                {localeCtx.i18n.common.actions.edit()}
                                             </button>
                                         }>
                                             <button
@@ -381,7 +397,7 @@ export const Locale = () => {
                                                 class="btn text-danger icon-link py-0 px-1"
                                                 onClick={() => setEditingDetails(false)}
                                             >
-                                                Discard
+                                                {localeCtx.i18n.common.actions.discard()}
                                             </button>
                                             <button
                                                 type="button"
@@ -391,7 +407,7 @@ export const Locale = () => {
                                             >
                                                 <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                 <FloppyFill viewBox="0 0 16 16" />
-                                                Save
+                                                {localeCtx.i18n.common.actions.save()}
                                             </button>
                                         </Show>
                                     </div>
@@ -401,7 +417,7 @@ export const Locale = () => {
                                     <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                         <tbody>
                                             <tr>
-                                                <td style="width: 35%">Name</td>
+                                                <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={locale().name}>
                                                         <input
@@ -417,7 +433,7 @@ export const Locale = () => {
                                                 </td>
                                             </tr>
                                             <tr>
-                                                <td>Key</td>
+                                                <td>{localeCtx.i18n.common.labels.key()}</td>
                                                 <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                     <Show when={editingDetails()} fallback={locale().key}>
                                                         <input
@@ -438,14 +454,14 @@ export const Locale = () => {
 
                             <div class="offset-md-1 col-md-5">
                                 <div class="border rounded p-3">
-                                    <h5 class="m-0">Translations</h5>
+                                    <h5 class="m-0">{i18n.labels.translations()}</h5>
 
                                     <hr />
 
                                     <table class="table w-100">
                                         <tbody>
                                             <tr>
-                                                <td>Global</td>
+                                                <td>{localeCtx.i18n.common.labels.global()}</td>
                                                 <td></td>
                                                 <td class="text-end">
                                                     <A href={`/locales/resource/${locale().key}/${LocationKind.Global}`} class="icon-link">
@@ -461,13 +477,13 @@ export const Locale = () => {
                                                                 <strong>
                                                                     {theme.key}
                                                                     &nbsp
-                                                                    (Active Theme)
+                                                                    ({localeCtx.i18n.common.labels.activeTheme()})
                                                                 </strong>
                                                             </Show>
                                                         </td>
                                                         <td>
                                                             <A href={`/locales/resource/${locale().key}/${LocationKind.Theme}/${theme.key}`} class="mx-3">
-                                                                Theme's Translations
+                                                                {i18n.labels.themeTranslations2()}
                                                             </A>
                                                         </td>
                                                         <td class="text-end">
@@ -485,7 +501,7 @@ export const Locale = () => {
                         </div>
                         <Show when={deletingLocale()}>
                             <DeleteConfirmModal
-                                message={<p>Are you sure about deleting the locale <strong>{locale().name} ({locale().key})</strong>?</p>}
+                                message={<p>{i18n.actions.confirmDelete(locale().name, locale().key)}?</p>}
                                 close={() => setDeletingLocale(false)}
                                 confirm={() => deleteLocale(locale())}
                             />
@@ -506,6 +522,9 @@ export const Locales = () => {
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.locale;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
 
@@ -525,7 +544,7 @@ export const Locales = () => {
             .then(() => {
                 setItem(undefined);
 
-                alertCtx.success(`Locale "${locale.name}" is ${disabled ? 'disabled' : 'enabled'} successfully`);
+                alertCtx.success(disabled ? i18n.actions.localeDisabled(locale.name) : i18n.actions.localeEnabled(locale.name));
             })
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(undefined));
@@ -543,10 +562,16 @@ export const Locales = () => {
             .then(() => {
                 setItem(undefined);
 
-                alertCtx.success(`Locale "${locale.name}" is set as default successfully`);
+                alertCtx.success(i18n.actions.setDefault(locale.name));
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
+    };
+
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
     };
 
     return (
@@ -555,12 +580,12 @@ export const Locales = () => {
                 <h1 class="flex-grow-1 m-0">Locales</h1>
                 <A class="btn btn-outline-primary icon-link" href="/locales/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Create Locale
+                    {i18n.actions.createLocale()}
                 </A>
             </div>
 
             <Show when={commonCtx.locales().length > 0} fallback={
-                <p class="text-secondary text-center">There is no locale to display yet. You can create a new one by using <strong>Create Locale</strong> button.</p>
+                <p class="text-secondary text-center">{i18n.noLocale()}.</p>
             }>
                 <div class="row">
                     <div class="offset-md-3 col-md-6">
@@ -568,8 +593,8 @@ export const Locales = () => {
                             <thead>
                                 <tr>
                                     <th></th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Key</th>
+                                    <th scope="col">{localeCtx.i18n.common.labels.name()}</th>
+                                    <th scope="col">{localeCtx.i18n.common.labels.key()}</th>
                                     <th></th>
                                     <th></th>
                                 </tr>
@@ -587,10 +612,10 @@ export const Locales = () => {
                                             <td>{locale.key}</td>
                                             <td class="text-center">
                                                 <Show when={locale.key === commonCtx.options().defaultLocale}>
-                                                    <span class="badge border rounded-pill border-success text-success ms-2">Default</span>
+                                                    <span class="badge border rounded-pill border-success text-success ms-2">{localeCtx.i18n.common.labels.default()}</span>
                                                 </Show>
                                                 <Show when={locale.disabled}>
-                                                    <span class="badge border rounded-pill border-danger text-danger ms-2">Disabled</span>
+                                                    <span class="badge border rounded-pill border-danger text-danger ms-2">{localeCtx.i18n.common.labels.disabled()}</span>
                                                 </Show>
                                             </td>
                                             <td class="dropdown text-end">
@@ -606,18 +631,19 @@ export const Locales = () => {
                                                                 on:click={(ev) => { ev.stopPropagation(); setLocaleDefault(locale); }}
                                                             >
                                                                 <ProgressSpinner show={inProgress() === Action.SetDefault} />
-                                                                Set as Default
+                                                                {i18n.actions.setAsDefault()}
                                                             </button>
                                                         </li>
                                                         <Show when={locale.key !== commonCtx.options().defaultLocale}>
                                                             <li>
                                                                 <button
-                                                                    class="dropdown-item icon-link"
+                                                                    class="btn dropdown-item icon-link"
+                                                                    classList={{ 'text-danger': !locale.disabled }}
                                                                     disabled={inProgress() === Action.UpdateState}
                                                                     on:click={(ev) => { ev.stopPropagation(); updateLocaleState(locale, !locale.disabled); }}
                                                                 >
                                                                     <ProgressSpinner show={inProgress() === Action.UpdateState} />
-                                                                    {locale.disabled ? 'Enable' : 'Disable'}
+                                                                    {locale.disabled ? localeCtx.i18n.common.actions.enable() : localeCtx.i18n.common.actions.disable()}
                                                                 </button>
                                                             </li>
                                                         </Show>

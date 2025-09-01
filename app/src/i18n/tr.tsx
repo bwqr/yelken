@@ -1,5 +1,5 @@
-import { A } from '@solidjs/router';
 import type * as en from './en';
+import { A } from '@solidjs/router';
 import { ColorMode } from "../theme";
 import { ContentStage } from '../lib/cms/models';
 
@@ -66,8 +66,10 @@ export const common: typeof en.common = {
         create: 'Oluştur',
         confirm: 'Onayla',
         delete: 'Sil',
+        disable: 'Devre dışı bırak',
         discard: 'İptal Et',
         edit: 'Düzenle',
+        enable: 'Etkin hale getir',
         install: 'Yükle',
         save: 'Kaydet',
         uninstall: 'Kaldır',
@@ -76,11 +78,13 @@ export const common: typeof en.common = {
         active: 'Etkin',
         activeTheme: 'Etkin Tema',
         createdAt: 'Oluşturulma Zamanı',
+        default: 'Varsayılan',
         description: 'Açıklama',
         details: 'Detaylar',
+        disabled: 'Devre Dışı',
         global: 'Global',
         key: 'Anahtar',
-        locale: 'Yerel',
+        locale: 'Dil',
         name: 'İsim',
         namespace: 'İsim Alanı',
         no: 'Hayır',
@@ -109,7 +113,7 @@ export const content: typeof en.content = {
         pickAsset: 'Kaynak Seçin',
         publish: 'Yayınla',
         published: (name: string) => `"${name}" isimli içerik yayınlandı`,
-        selectLocale: 'Bir yerel seçin',
+        selectLocale: 'Bir dil seçin',
         valueCreated: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde oluşturuldu`,
         valueDeleted: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde silindi`,
         valueUpdated: (field: string) => `"${field}" alanı için olan değer başarılı bir şekilde güncellendi`,
@@ -125,7 +129,7 @@ export const content: typeof en.content = {
         unsupportedField: 'Desteklenmeyen Alan',
     },
     validationErrors: {
-        locale: 'Lütfen bir yerel seçin',
+        locale: 'Lütfen bir dil seçin',
         name: 'Lütfen bir isim girin',
         valueAsset: (field: string) => `Lütfen ${field} için bir kaynak seçin`,
         value: (field: string) => `Lütfen ${field} için bir değer girin`,
@@ -147,6 +151,43 @@ export const content: typeof en.content = {
 export const dashboard: typeof en.dashboard = {
     loggedIn: (name: string) => (<><strong>{name}</strong> kullanıcısı ile giriş yaptınız</>),
     welcome: 'Başlamak için güzel bir gün',
+};
+
+export const locale: typeof en.locale = {
+    actions: {
+        confirmDelete: (name: string, key: string) => (<><strong>{name} ({key})</strong> isimli dili silmek istediğinizden emin misiniz</>),
+        createLocale: 'Dil Oluştur',
+        localeCreated: (name: string) => `"${name}" isimli dil oluşturuldu`,
+        localeDeleted: (name: string) => `"${name}" isimli dil silindi`,
+        localeDisabled: (name: string) => `"${name}" isimli dil devre dışı bırakıldı`,
+        localeEnabled: (name: string) => `"${name}" isimli dil etkin hale getirildi`,
+        localeUpdated: (name: string) => `"${name}" isimli dil güncellendi`,
+        setDefault: (name: string) => `"${name}" isimli dil varsayılan olarak güncelle`,
+        setAsDefault: 'Varsayılan olarak güncelle',
+        translationsUpdated: (name: string) => `"${name}" diline ait çeviriler güncellendi`,
+    },
+    labels: {
+        editor: 'Metin Düzenleyicisi',
+        globalTranslations: 'Global çeviriler',
+        namePlaceholder: 'Dilin ismi, ornk. Türkçe',
+        keyPlaceholder: 'Dili tanımlayacak anahtar, ornk. tr',
+        themeTranslations: (theme: string) => (<><strong>({theme})</strong> isimli temaya ait çeviriler</>),
+        themeTranslations2: 'Temaya Ait Çeviriler',
+        themeScopedTranslations: (theme: string) => (<><strong>({theme})</strong> isimli tema bazında yapılan çeviriler</>),
+        translations: 'Çeviriler',
+    },
+    validationErrors: {
+        key: 'Lütfen dil için bir anahtar belirtin',
+        name: 'Lütfen dil için bir isim belirtin',
+    },
+    serverErrors: {
+        locale_being_used: 'Dil hala kullanılıyor',
+    },
+    cannotModifyThemeResourceInfo: 'Temaya ait çeviriler düzenlenemez. Temadaki çevirileri düzenlemek için tema bazında düzenleme yapmanız gerekir',
+    cannotModifyThemeResource: 'Temaya ait bir kaynak değiştirilemez',
+    localeNotFound: (key: string) => (<><strong>{key}</strong> anahtarı ile tanımlanan dil bulunamadı</>),
+    noLocale: () => (<>Herhangi bir dil bulunmuyor. <strong>Dil Oluştur</strong> butonunu kullanarak yeni bir dil oluşturabilirsin</>),
+    unknownKind: (kind: string) => (<>Uzantıda bilinmeyen tür <strong>{kind}</strong> bulunuyor veya isim alanı bulunamadı</>),
 };
 
 export const model: typeof en.model = {
@@ -176,9 +217,9 @@ export const model: typeof en.model = {
         text: 'Metin',
     },
     fieldFeatures: {
-        localized: 'Yerel',
+        localized: 'Çoklu Dil',
         required: 'Zorunlu',
-        multiple: 'Çoklu',
+        multiple: 'Çoklu Değer',
     },
     validationErrors: {
         key: 'Lütfen bir anahtar girin',
@@ -204,7 +245,7 @@ export const nav: typeof en.nav = {
         templates: 'Şablonlar',
         pages: 'Sayfalar',
         admin: 'Yönetim',
-        locales: 'Yerel Ayarlar',
+        locales: 'Dil Ayarları',
         roles: 'Roller',
         usersPerms: 'Kullanıcılar ve İzinler',
         settings: 'Ayarlar',
@@ -234,14 +275,14 @@ export const page: typeof en.page = {
     labels: {
         entries: 'Girdiler',
         globalPages: 'Global Sayfalar',
-        notLocalized: 'Yerel değil',
+        notLocalized: 'Çoklu dil desteği yok',
         path: 'Uzantı Yolu',
         paths: 'Uzantı Yolları',
         themeScopedPages: 'Tema Bazlı Sayfalar',
     },
     validationErrors: {
         key: 'Lütfen sayfa için bir anahtar belirtin',
-        locale: 'Lütfen sayfa için bir yerel seçin',
+        locale: 'Lütfen sayfa için bir dil seçin',
         name: 'Lütfen sayfa için bir isim belirtin',
         path: 'Lütfen sayfa için bir uzantı yolu belirtin',
         template: 'Lütfen bir şablon seçin',
