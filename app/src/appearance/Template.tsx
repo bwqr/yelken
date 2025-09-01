@@ -9,6 +9,7 @@ import { dropdownClickListener } from "../lib/utils";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { HttpError, ValidationErrors } from "../lib/api";
+import { LocaleContext } from "../lib/i18n";
 
 const locationKindOrder = [LocationKind.User, LocationKind.Global, LocationKind.Theme];
 
@@ -27,7 +28,10 @@ export const CreateTemplate = () => {
     const alertCtx = useContext(AlertContext)!;
     const appearanceCtx = useContext(AppearanceContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.template;
 
     const [path, setPath] = createSignal('');
     const [namespace, setNamespace] = createSignal('');
@@ -69,7 +73,7 @@ export const CreateTemplate = () => {
 
         appearanceCtx.createTemplate(req.path, '', req.namespace)
             .then(() => {
-                alertCtx.success(`Template "${req.path}" is created successfully`);
+                alertCtx.success(i18n.actions.templateCreated(req.path));
 
                 let url = req.namespace ? `/templates/resource/${req.namespace}` : '/templates/resource';
                 url = `${url}?path=${encodeURIComponent(req.path)}`;
@@ -77,25 +81,27 @@ export const CreateTemplate = () => {
                 navigate(url, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.message);
+                    setServerError(msg);
                 } else if (e instanceof ValidationErrors) {
                     setServerValidationErrors(e);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
     };
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create Template</h2>
+            <h2 class="mb-5">{i18n.actions.createTemplate()}</h2>
 
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
                         <div class="mb-4">
-                            <label for="templatePath" class="form-label">Path</label>
+                            <label for="templatePath" class="form-label">{i18n.labels.path()}</label>
                             <input
                                 type="text"
                                 id="templatePath"
@@ -106,16 +112,16 @@ export const CreateTemplate = () => {
                                         || serverValidationErrors()?.fieldMessages.has('path')
                                 }}
                                 name="path"
-                                placeholder="Path of template, e.g. index.html"
+                                placeholder={i18n.labels.pathPlaceholder()}
                                 value={path()}
                                 onInput={(ev) => setPath(ev.target.value)}
                             />
                             <Switch>
                                 <Match when={validationErrors().has(ValidationError.Path)}>
-                                    <small class="invalid-feedback">Please enter a path with at least 3 characters.</small>
+                                    <small class="invalid-feedback">{i18n.validationErrors.path()}.</small>
                                 </Match>
                                 <Match when={validationErrors().has(ValidationError.NotHtmlPath)}>
-                                    <small class="invalid-feedback">Path must end with <strong>.html</strong> .</small>
+                                    <small class="invalid-feedback">{i18n.validationErrors.notHtmlPath()}.</small>
                                 </Match>
                             </Switch>
                             <Show when={serverValidationErrors()?.fieldMessages.get('path')}>
@@ -124,7 +130,7 @@ export const CreateTemplate = () => {
                         </div>
 
                         <div class="mb-4">
-                            <label for="templateNamespace" class="form-label">Namespace</label>
+                            <label for="templateNamespace" class="form-label">{localeCtx.i18n.common.labels.namespace()}</label>
                             <select
                                 id="templateNamespace"
                                 class="form-select"
@@ -133,10 +139,10 @@ export const CreateTemplate = () => {
                                 value={namespace()}
                                 onChange={(ev) => setNamespace(ev.target.value)}
                             >
-                                <option value="">Global</option>
+                                <option value="">{localeCtx.i18n.common.labels.global()}</option>
                                 <For each={commonCtx.namespaces()}>
                                     {(namespace) => (
-                                        <option value={namespace.key}>{namespace.key}{commonCtx.options().theme === namespace.key ? ' (Active Theme)' : ''}</option>
+                                        <option value={namespace.key}>{namespace.key}{commonCtx.options().theme === namespace.key ? ` (${localeCtx.i18n.common.labels.activeTheme()})` : ''}</option>
                                     )}
                                 </For>
                             </select>
@@ -168,7 +174,7 @@ export const CreateTemplate = () => {
                             >
                                 <ProgressSpinner show={inProgress()} />
                                 <PlusLg viewBox="0 0 16 16" />
-                                Add
+                                {localeCtx.i18n.common.actions.add()}
                             </button>
                         </div>
                     </div>
@@ -182,7 +188,10 @@ export const Templates = () => {
     const alertCtx = useContext(AlertContext)!;
     const appearanceCtx = useContext(AppearanceContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const i18n = localeCtx.i18n.template;
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
     const [templates, { refetch }] = createResource(
@@ -208,7 +217,6 @@ export const Templates = () => {
                 return Array.from(map.values()).toSorted((a, b) => a.path < b.path ? -1 : 1);
             })
     );
-    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [deleting, setDeleting] = createSignal(undefined as { path: string, namespace?: string } | undefined);
@@ -222,58 +230,46 @@ export const Templates = () => {
                 setDeleting(undefined);
                 setItem(undefined);
 
-                alertCtx.success(`Template "${path}" is deleted successfully`);
+                alertCtx.success(i18n.actions.templateDeleted(path));
             });
     };
 
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Templates</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.templates()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/templates/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Create Template
+                    {i18n.actions.createTemplate()}
                 </A>
             </div>
 
             <div class="row">
                 <div class="offset-md-3 col-md-6">
-                    <Switch>
-                        <Match when={themes.loading}>
-                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Namespaces ...</p>
-                        </Match>
-                        <Match when={themes.error}>
-                            <p class="text-danger-emphasis text-center">Error while fetching namespaces: <strong>{themes.error.message}</strong></p>
-                        </Match>
-                        <Match when={themes()}>
-                            {(themes) => (
-                                <div class="d-flex justify-content-end align-items-center mb-3">
-                                    <label class="px-2" for="templateNamespace">Namespace</label>
-                                    <select
-                                        id="templateNamespace"
-                                        class="form-select w-auto"
-                                        disabled={templates.loading}
-                                        value={namespace() ?? ''}
-                                        onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
-                                    >
-                                        <option value="">Global</option>
-                                        <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
-                                        </For>
-                                    </select>
-                                </div>
-                            )}
-                        </Match>
-                    </Switch>
+                    <div class="d-flex justify-content-end align-items-center mb-3">
+                        <label class="px-2" for="templateNamespace">{localeCtx.i18n.common.labels.namespace()}</label>
+                        <select
+                            id="templateNamespace"
+                            class="form-select w-auto"
+                            disabled={templates.loading}
+                            value={namespace() ?? ''}
+                            onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
+                        >
+                            <option value="">{localeCtx.i18n.common.labels.global()}</option>
+                            <For each={commonCtx.namespaces()}>
+                                {(namespace) => (<option value={namespace.key}>{namespace.key}{commonCtx.options().theme === namespace.key ? ` (${localeCtx.i18n.common.labels.activeTheme()})` : ''}</option>)}
+                            </For>
+                        </select>
+                    </div>
                     <Switch>
                         <Match when={templates.loading}>
-                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loadingItem(localeCtx.i18n.nav.links.templates())} ...</p>
                         </Match>
                         <Match when={templates.error}>
-                            <p class="text-danger-emphasis text-center">Error while fetching templates: <strong>{templates.error.message}</strong></p>
+                            <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.templates())}: <strong>{templates.error.message}</strong></p>
                         </Match>
                         <Match when={templates()?.length === 0}>
-                            <p class="text-secondary text-center">There is no template for the <strong>{namespace() ?? 'global'}</strong> namespace to display yet. You can create a new one by using <strong>Create Template</strong> button.</p>
+                            <p class="text-secondary text-center">{i18n.noTemplateForNamespace(namespace() ?? localeCtx.i18n.common.labels.global())}.</p>
                         </Match>
                         <Match when={templates()}>
                             {(templates) => (
@@ -281,7 +277,7 @@ export const Templates = () => {
                                     <thead>
                                         <tr>
                                             <th></th>
-                                            <th scope="col">Path</th>
+                                            <th scope="col">{i18n.labels.path()}</th>
                                             <th></th>
                                             <th></th>
                                         </tr>
@@ -294,8 +290,8 @@ export const Templates = () => {
                                                     <td><A href={`/templates/resource${namespace() ? `/${namespace()}` : ''}?path=${encodeURIComponent(template.path)}`}>{template.path}</A></td>
                                                     <td class="text-center">
                                                         <Switch>
-                                                            <Match when={template.effectiveLocation === LocationKind.User}><span class="badge rounded-pill text-bg-light">Modified</span></Match>
-                                                            <Match when={namespace() && template.effectiveLocation === LocationKind.Global}><span class="badge rounded-pill text-bg-light">Overriden Globally</span></Match>
+                                                            <Match when={template.effectiveLocation === LocationKind.User}><span class="badge rounded-pill text-bg-light">{i18n.labels.modified()}</span></Match>
+                                                            <Match when={namespace() && template.effectiveLocation === LocationKind.Global}><span class="badge rounded-pill text-bg-light">{i18n.labels.overridenGlobally()}</span></Match>
                                                         </Switch>
                                                     </td>
                                                     <td class="dropdown text-end">
@@ -307,7 +303,7 @@ export const Templates = () => {
                                                             <ul class="dropdown-menu show" id="template-quick-action" style="right: 0">
                                                                 <li>
                                                                     <button
-                                                                        class="dropdown-item icon-link text-danger"
+                                                                        class="btn dropdown-item icon-link text-danger"
                                                                         disabled={
                                                                             template.effectiveLocation === LocationKind.Theme ||
                                                                             (namespace() !== undefined && template.effectiveLocation === LocationKind.Global)
@@ -315,8 +311,8 @@ export const Templates = () => {
                                                                         onClick={() => setDeleting({ path: template.path, namespace: namespace() })}
                                                                     >
                                                                         <Trash viewBox="0 0 16 16" />
-                                                                        <Show when={template.effectiveLocation === LocationKind.User} fallback={<>Delete</>}>
-                                                                            Revert
+                                                                        <Show when={template.effectiveLocation === LocationKind.User} fallback={<>{localeCtx.i18n.common.actions.delete()}</>}>
+                                                                            {i18n.actions.revert()}
                                                                         </Show>
                                                                     </button>
                                                                 </li>
@@ -338,11 +334,12 @@ export const Templates = () => {
                     <DeleteConfirmModal
                         message={
                             <Show when={namespace()} fallback={
-                                <p>Are you sure about deleting the template <strong>{deleting().path}</strong>?</p>
+                                <p>{i18n.actions.confirmDelete(deleting().path)}?</p>
                             }>
-                                <p>Are you sure about reverting changes applied on the template <strong>{deleting().path}</strong>?</p>
+                                <p>{i18n.actions.confirmRevert(deleting().path)}?</p>
                             </Show>
                         }
+                        confirmText={namespace() ? i18n.actions.revert() : localeCtx.i18n.common.actions.delete()}
                         close={() => setDeleting(undefined)}
                         confirm={() => deleteTemplate(deleting().path, deleting().namespace)}
                     />
@@ -357,8 +354,11 @@ export const TemplateResource = () => {
 
     const alertCtx = useContext(AlertContext)!;
     const appearanceCtx = useContext(AppearanceContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
     const [searchParams] = useSearchParams();
+
+    const i18n = localeCtx.i18n.template;
 
     const namespace = createMemo(() => params.namespace as string | undefined);
     const path = createMemo(() => searchParams.path ? searchParams.path as string : undefined);
@@ -400,7 +400,7 @@ export const TemplateResource = () => {
         setInProgress(true);
 
         appearanceCtx.updateTemplate(t.path, e.getValue(), namespace())
-            .then(() => alertCtx.success(`Template "${t.path}" is updated successfully`))
+            .then(() => alertCtx.success(i18n.actions.templateUpdated(t.path)))
             .catch((e) => alertCtx.fail(e.message))
             .finally(() => setInProgress(false));
     }
@@ -409,31 +409,31 @@ export const TemplateResource = () => {
         <div class="container d-flex flex-column flex-grow-1 py-4 px-md-4" style="min-height: 100vh">
             <Switch>
                 <Match when={!path()}>
-                    <p class="text-secondary text-center"><strong>Path</strong> is missing from search parameters.</p>
+                    <p class="text-secondary text-center">{i18n.missingPath()}.</p>
                 </Match>
                 <Match when={editor.loading || template.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={editor.error || template.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching template: <strong>{editor.error?.message} {template.error?.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.template())}: <strong>{editor.error?.message} {template.error?.message}</strong></p>
                 </Match>
                 <Match when={template.state === 'ready' && template() === undefined}>
-                    <p class="text-secondary text-center">Could not find the template with path {path()}.</p>
+                    <p class="text-secondary text-center">{i18n.templateNotFound(path() ?? '')}.</p>
                 </Match>
                 <Match when={template()}>
                     {(template) => (
                         <div class="d-flex align-items-center mb-4">
                             <div class="flex-grow-1">
                                 <h2 class="m-0">{template().path}</h2>
-                                <Show when={namespace()} fallback={<small>Global Template</small>}>
-                                    <small>Namespace <strong>({namespace()})</strong> Scoped Template</small>
+                                <Show when={namespace()} fallback={<small>{i18n.labels.globalTemplate()}</small>}>
+                                    <small>{localeCtx.i18n.common.labels.namespace()} <strong>({namespace()})</strong> {i18n.labels.scopedTemplate()}</small>
                                 </Show>
                             </div>
 
                             <button class="btn btn-primary icon-link ms-2" onClick={save} disabled={inProgress()}>
                                 <ProgressSpinner show={inProgress()} />
                                 <FloppyFill viewBox="0 0 16 16" />
-                                Save
+                                {localeCtx.i18n.common.actions.save()}
                             </button>
                         </div>
                     )}

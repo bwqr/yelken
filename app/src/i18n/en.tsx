@@ -73,6 +73,7 @@ export const common = {
     },
     labels: {
         active: 'Active',
+        activeTheme: 'Active Theme',
         createdAt: 'Created At',
         description: 'Description',
         details: 'Details',
@@ -84,6 +85,7 @@ export const common = {
         optional: 'optional',
     },
     loading: 'Loading',
+    loadingItem: (item: string) => `${item} is loading`,
     loadingError: 'Encountered an error while loading',
     loadingItemError: (item: string) => `Encountered an error while loading ${item}`,
 };
@@ -161,7 +163,6 @@ export const model = {
         selectField: 'Select a field',
     },
     labels: {
-        activeTheme: 'Active Theme',
         fields: 'Fields',
         field: 'Field',
     },
@@ -219,6 +220,36 @@ export const nav = {
 export const pagination = {
     previous: 'Previous',
     next: 'Next',
+};
+
+export const template = {
+    template: 'Template',
+    actions: {
+        confirmDelete: (path: string) => (<>Are you sure about deleting the template <strong>{path}</strong></>),
+        confirmRevert: (path: string) => (<>Are you sure about reverting changes applied on the template <strong>{path}</strong></>),
+        createTemplate: 'Create Template',
+        revert: 'Revert',
+        templateCreated: (path: string) => `Template "${path}" is created successfully`,
+        templateDeleted: (path: string) => `Template "${path}" is deleted successfully`,
+        templateUpdated: (path: string) => `Template "${path}" is updated successfully`,
+    },
+    labels: {
+        globalTemplate: 'Global Template',
+        modified: 'Modified',
+        namespaces: 'Namespaces',
+        path: 'Path',
+        pathPlaceholder: 'Path of template, e.g. index.html',
+        overridenGlobally: 'Overriden Globally',
+        scopedTemplate: 'Theme Template',
+    },
+    validationErrors: {
+        path: 'Please enter a path with at least 3 characters',
+        notHtmlPath: () => (<>Path must end with <strong>.html</strong></>),
+    },
+    serverErrors: {},
+    missingPath: () => (<><strong>Path</strong> is missing from search parameters</>),
+    noTemplateForNamespace: (namespace: string) => (<>There is no template for the <strong>{namespace}</strong> namespace to display yet. You can create a new one by using <strong>Create Template</strong> button</>),
+    templateNotFound: (path: string) => (<>Could not find the template with path <strong>{path}</strong></>),
 };
 
 export const theme = {

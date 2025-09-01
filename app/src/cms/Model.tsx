@@ -396,7 +396,7 @@ export const CreateModel = () => {
                                     checked={themeScoped()}
                                     onChange={() => setThemeScoped(true)}
                                 />
-                                <label class="form-check-label" for="modelScopeTheme">{i18n.labels.activeTheme()} ({commonCtx.options().theme})</label>
+                                <label class="form-check-label" for="modelScopeTheme">{localeCtx.i18n.common.labels.activeTheme()} ({commonCtx.options().theme})</label>
                             </div>
                         </div>
                     </div>

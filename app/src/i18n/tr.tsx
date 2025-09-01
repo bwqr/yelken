@@ -74,6 +74,7 @@ export const common: typeof en.common = {
     },
     labels: {
         active: 'Etkin',
+        activeTheme: 'Etkin Tema',
         createdAt: 'Oluşturulma Zamanı',
         description: 'Açıklama',
         details: 'Detaylar',
@@ -85,6 +86,7 @@ export const common: typeof en.common = {
         optional: 'isteğe bağlı',
     },
     loading: 'Yükleniyor',
+    loadingItem: (item: string) => `${item} yükleniyor`,
     loadingError: 'Encountered an error while loading',
     loadingItemError: (item: string) => `${item} yüklenmesi sırasında bir hata ile karşılaşıldı`,
 };
@@ -162,7 +164,6 @@ export const model: typeof en.model = {
         selectField: 'Bir alan seçin',
     },
     labels: {
-        activeTheme: 'Etkin Tema',
         fields: 'Alanlar',
         field: 'Alan',
     },
@@ -220,6 +221,36 @@ export const nav: typeof en.nav = {
 export const pagination: typeof en.pagination = {
     previous: 'Önceki',
     next: 'Sonraki',
+};
+
+export const template: typeof en.template = {
+    template: 'Şablon',
+    actions: {
+        confirmDelete: (path: string) => (<><strong>{path}</strong> dosya yolunda bulunan şablonu silmek istediğinize emin misiniz</>),
+        confirmRevert: (path: string) => (<><strong>{path}</strong> dosya yolunda bulunan şablonda yapılan değişiklikleri geri almak istediğinize emin misiniz</>),
+        createTemplate: 'Şablon Oluştur',
+        revert: 'Geri Al',
+        templateCreated: (path: string) => `"${path}" dosya yolunda bulunan şablon başarılı bir şekilde oluşturuldu`,
+        templateDeleted: (path: string) => `"${path}" dosya yolunda bulunan şablon başarılı bir şekilde silindi`,
+        templateUpdated: (path: string) => `"${path}" dosya yolunda bulunan şablon başarılı bir şekilde güncellendi`,
+    },
+    labels: {
+        globalTemplate: 'Global Şablon',
+        modified: 'Değiştirildi',
+        namespaces: 'İsim Alanları',
+        path: 'Dosya Yolu',
+        pathPlaceholder: 'Şablon dosya yolu, örnk. index.html',
+        overridenGlobally: 'Global Şablon Etkin',
+        scopedTemplate: 'Tema Şablon',
+    },
+    validationErrors: {
+        path: 'Lütfen en az 3 karakter içeren bir dosya yolu girin',
+        notHtmlPath: () => (<>Dosya yolu <strong>.html</strong> ile bitmek zorunda</>),
+    },
+    serverErrors: {},
+    missingPath: () => (<><strong>Dosya Yolu</strong> uzantı içindeki arama parametrelerinde bulunmuyor</>),
+    noTemplateForNamespace: (namespace: string) => (<><strong>{namespace}</strong> isim alanı içerisinde herhangi bir şablon bulunmuyor. <strong>Şablon Oluştur</strong> butonunu kullanarak yeni bir şablon oluşturabilirsin</>),
+    templateNotFound: (path: string) => (<><strong>{path}</strong> dosya yolunda bulunan şablon bulunamadı</>),
 };
 
 export const theme: typeof en.theme = {
