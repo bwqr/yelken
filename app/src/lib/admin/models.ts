@@ -1,6 +1,12 @@
 import type { Permission } from "../models";
 import type { UserState } from "../user/models";
 
+export enum OptionKey {
+    Name = 'site.name',
+    Description = 'site.description',
+    Keywords = 'site.keywords',
+}
+
 export interface LocaleResource {
     resource: string,
 }

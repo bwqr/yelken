@@ -4,6 +4,7 @@ import { ColorMode } from "../theme";
 import { ContentStage } from '../lib/cms/models';
 import { Permission } from '../lib/models';
 import { UserState } from '../lib/user/models';
+import { OptionKey } from '../lib/admin/models';
 
 export const auth: typeof en.auth = {
     login: {
@@ -337,6 +338,23 @@ export const role: typeof en.role = {
     },
     roleNotFound: (key: string) => (<><strong>{key}</strong> anahtarı ile tanımlanan rol bulunamadı</>),
     noRole: () => (<>Herhangi bir rol bulunmuyor. <strong>Rol Oluştur</strong> butonunu kullanarak yeni bir rol oluşturabilirsin</>),
+};
+
+export const settings: typeof en.settings = {
+    actions: {
+        optionUpdated: (name: string) => `"${name}" isimli site seçeneği güncellendi`,
+    },
+    labels: {
+        siteOptions: 'Site Seçenekleri',
+    },
+    siteOptions: {
+        [OptionKey.Name]: 'Site İsmi',
+        [OptionKey.Description]: 'Site Açıklaması',
+        [OptionKey.Keywords]: 'Site Anahtar Kelimeleri',
+    },
+    serverErrors: {
+        invalid_option_key: 'Geçersiz seçenek anahtarı',
+    },
 };
 
 export const template: typeof en.template = {

@@ -4,25 +4,24 @@ import ProgressSpinner from "../components/ProgressSpinner";
 import { createStore } from "solid-js/store";
 import { AlertContext } from "../lib/alert";
 import { FloppyFill } from "../Icons";
-import { BrowserLocale } from "../lib/models";
+import { LocaleContext } from "../lib/i18n";
+import { OptionKey } from "../lib/admin/models";
 
 export const Settings = () => {
-    enum OptionKey {
-        Name = 'site.name',
-        Description = 'site.description',
-        Keywords = 'site.keywords',
-    }
-
-    function buildOptions(values: Record<string, string>): Record<string, string> {
+    function buildOptions(values: Record<string, string>): Record<OptionKey, string> {
         return Object.values(OptionKey).reduce((map, key) => {
             map[key] = typeof values[key] === 'string' ? values[key] : '';
 
             return map;
-        }, {} as Record<string, string>);
+        }, {} as Record<OptionKey, string>);
     }
 
     const adminCtx = useContext(AdminContext)!;
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.settings;
+
     const [siteOptions, { mutate }] = createResource(() => adminCtx.fetchSiteOptions().then(buildOptions));
 
     const [editOptions, setEditOptions] = createStore(buildOptions({}));
@@ -46,22 +45,29 @@ export const Settings = () => {
 
         adminCtx.updateSiteOption({ key, value })
             .then(() => {
-                alertCtx.success(`Site option "${key}" is updated successfully`)
+                alertCtx.success(i18n.actions.optionUpdated(i18n.siteOptions[key]()))
+
                 mutate({ ...editOptions })
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
+    };
+
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
     };
 
     return (
         <div class="container py-4 px-md-4">
-            <h1 class="mb-5">Settings</h1>
+            <h1 class="mb-5">{localeCtx.i18n.nav.links.settings()}</h1>
             <Switch>
                 <Match when={siteOptions.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={siteOptions.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching users: <strong>{siteOptions.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.labels.siteOptions())}: <strong>{siteOptions.error.message}</strong></p>
                 </Match>
                 <Match when={siteOptions()}>
                     {(siteOptions) => (
@@ -70,7 +76,7 @@ export const Settings = () => {
                             <div class="offset-md-3 col-md-6">
                                 <div class="border rounded p-3">
 
-                                    <h5>Site Options</h5>
+                                    <h5>{i18n.labels.siteOptions()}</h5>
 
                                     <hr />
 
@@ -79,13 +85,13 @@ export const Settings = () => {
                                             <For each={Object.values(OptionKey)}>
                                                 {(key) => (
                                                     <tr>
-                                                        <td style="width: 25%;">{key}</td>
+                                                        <td style="width: 25%;">{i18n.siteOptions[key]()}</td>
                                                         <td class="py-1">
                                                             <div class="input-group" role="group">
                                                                 <input
                                                                     type="text"
                                                                     class="form-control float-end"
-                                                                    placeholder={key}
+                                                                    placeholder={i18n.siteOptions[key]()}
                                                                     value={editOptions[key]}
                                                                     onInput={(ev) => setEditOptions(key, ev.target.value)}
                                                                 />
@@ -98,7 +104,7 @@ export const Settings = () => {
                                                                 >
                                                                     <ProgressSpinner show={inProgress() === key} small={true} />
                                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                                    Save
+                                                                    {localeCtx.i18n.common.actions.save()}
                                                                 </button>
                                                             </div>
                                                         </td>

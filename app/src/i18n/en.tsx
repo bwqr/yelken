@@ -3,6 +3,7 @@ import { ColorMode } from "../theme";
 import { ContentStage } from "../lib/cms/models";
 import { Permission } from "../lib/models";
 import { UserState } from "../lib/user/models";
+import { OptionKey } from "../lib/admin/models";
 
 export const auth = {
     login: {
@@ -336,6 +337,23 @@ export const role = {
     },
     roleNotFound: (key: string) => (<>Could not find the role with key <strong>{key}</strong></>),
     noRole: () => (<>There is no role to display yet. You can create a new one by using <strong>Create Role</strong> button</>),
+};
+
+export const settings = {
+    actions: {
+        optionUpdated: (name: string) => `Site option "${name}" is updated`,
+    },
+    labels: {
+        siteOptions: 'Site Options',
+    },
+    siteOptions: {
+        [OptionKey.Name]: 'Site Name',
+        [OptionKey.Description]: 'Site Description',
+        [OptionKey.Keywords]: 'Site Keywords',
+    },
+    serverErrors: {
+        invalid_option_key: 'Invalid option key',
+    },
 };
 
 export const template = {
