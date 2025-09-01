@@ -22,12 +22,6 @@ export const auth: typeof en.auth = {
     }
 };
 
-export const admin: typeof en.admin = {
-    settings: {
-        locale: 'Dil',
-    }
-};
-
 export const app: typeof en.app = {
     pageNotFound: () => (<>Sayfa bulunamadı. <A href="/">Ana Sayfaya</A> geri dön.</>),
 };
@@ -66,6 +60,7 @@ export const asset: typeof en.asset = {
 
 export const common: typeof en.common = {
     actions: {
+        activate: 'Etkinleştir',
         add: 'Ekle',
         cancel: 'İptal Et',
         create: 'Oluştur',
@@ -73,9 +68,12 @@ export const common: typeof en.common = {
         delete: 'Sil',
         discard: 'İptal Et',
         edit: 'Düzenle',
+        install: 'Yükle',
         save: 'Kaydet',
+        uninstall: 'Kaldır',
     },
     labels: {
+        active: 'Etkin',
         createdAt: 'Oluşturulma Zamanı',
         description: 'Açıklama',
         details: 'Detaylar',
@@ -219,7 +217,40 @@ export const nav: typeof en.nav = {
     }
 };
 
-export const pagination = {
+export const pagination: typeof en.pagination = {
     previous: 'Önceki',
     next: 'Sonraki',
+};
+
+export const theme: typeof en.theme = {
+    actions: {
+        confirmUninstall: (name: string, id: string) => (<><strong>{name} ({id})</strong> isimli temayı kaldırmak istediğinizden emin misiniz</>),
+        installTheme: 'Tema Yükle',
+        chooseThemeFile: 'Bir tema dosyası seçin',
+        themeActivated: (name: string) => `"${name}" isimli tema başarılı bir şekilde etkinleştirildi`,
+        themeInstalled: (name: string) => `"${name}" isimli tema başarılı bir şekilde yüklendi`,
+        themeUninstalled: (name: string) => `"${name}" isimli tema başarılı bir şekilde silindi`,
+    },
+    labels: {
+        id: 'ID',
+        analysisError: 'İnceleme Hatası',
+        analyzingTheme: 'Tema inceleniyor',
+        themeDetails: 'Tema Detayı',
+        version: 'Sürüm',
+    },
+    analysisErrors: {
+        invalidTheme: 'Geçersiz tema dosyası',
+        manifestNotFound: 'Manifest dosyası bulunamadı',
+    },
+    validationErrors: {
+        theme: 'Lütfen bir tema dosyası seçin',
+    },
+    serverErrors: {
+        failed_reading_zip: 'Geçersiz zip dosyası',
+        invalid_manifest_file: 'Geçersiz manifest dosyası',
+        no_manifest_file: 'Manifest dosyası tema içerisinde bulunamadı',
+        theme_already_exists: 'Tema zaten yüklü',
+        unknown_field: 'Manifest içerisinde bilinmeyen bir alan var',
+    },
+    noTheme: () => (<>Herhangi bir tema yüklü değil. <strong>Tema Yükle</strong> butonunu kullanarak yeni bir tema yükleyebilirsin</>),
 };

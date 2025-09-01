@@ -9,6 +9,7 @@ import { Api, HttpError } from "../lib/api";
 import ProgressSpinner from "../components/ProgressSpinner";
 import type { Theme } from "../lib/appearance/models";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+import { LocaleContext } from "../lib/i18n";
 
 interface Manifest {
     id: string,
@@ -57,7 +58,10 @@ export const InstallTheme = () => {
     }
 
     const alertCtx = useContext(AlertContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.theme;
 
     const [manifest, setManifest] = createSignal(undefined as Manifest | undefined)
     const [theme, setTheme] = createSignal(undefined as File | undefined);
@@ -83,10 +87,10 @@ export const InstallTheme = () => {
             }
         } catch (e) {
             console.error(e);
-            throw new Error('Invalid theme file.');
+            throw new Error(i18n.analysisErrors.invalidTheme());
         }
 
-        throw new Error('Could not find manifest file.');
+        throw new Error(i18n.analysisErrors.manifestNotFound());
     };
 
     const themeChanged = (ev: Event & { target: HTMLInputElement }) => {
@@ -137,15 +141,17 @@ export const InstallTheme = () => {
 
         Api.request('/appearance/theme/install', 'POST', { formdata })
             .then(() => {
-                alertCtx.success(`Theme "${manifest()?.name}" is installed successfully`);
+                alertCtx.success(i18n.actions.themeInstalled(manifest()?.name ?? ''));
 
                 navigate('/themes', { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.message);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(undefined));
@@ -153,13 +159,13 @@ export const InstallTheme = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Install Theme</h2>
+            <h2 class="mb-5">{i18n.actions.installTheme()}</h2>
 
             <div class="row">
                 <form class="offset-md-4 col-md-4" onSubmit={onSubmit}>
                     <div class="border rounded p-3">
                         <div class="mb-4">
-                            <label for="themeFile" class="form-label">Choose a theme file</label>
+                            <label for="themeFile" class="form-label">{i18n.actions.chooseThemeFile()}</label>
                             <input
                                 id="themeFile"
                                 type="file"
@@ -169,38 +175,42 @@ export const InstallTheme = () => {
                                 onChange={themeChanged}
                             />
                             <Show when={validationErrors().has(ValidationError.Theme)}>
-                                <small class="invalid-feedback">Please choose a theme file.</small>
+                                <small class="invalid-feedback">{i18n.validationErrors.theme()}.</small>
                             </Show>
                         </div>
 
                         <Show when={inProgress() === Action.Analyze}>
                             <div class="d-flex justify-content-center mb-4">
                                 <ProgressSpinner show={true} />
-                                <span class="ms-2">Theme is being analyzed.</span>
+                                <span class="ms-2">{i18n.labels.analyzingTheme()}.</span>
                             </div>
                         </Show>
                         <Show when={analysisError()}>
-                            {(error) => (<small class="text-danger mb-4">Analysis Error: {error()}</small>)}
+                            {(error) => (
+                                <div class="mb-2">
+                                    <small class="text-danger">{i18n.labels.analysisError()}: {error()}.</small>
+                                </div>
+                            )}
                         </Show>
                         <Show when={manifest()}>
                             {(manifest) => (
                                 <table class="table mb-4 w-100 caption-top" style="table-layout: fixed;">
-                                    <caption class="p-0">Theme Details</caption>
+                                    <caption class="p-0">{i18n.labels.themeDetails()}</caption>
                                     <tbody>
                                         <tr>
-                                            <td style="width: 25%">ID</td>
+                                            <td style="width: 25%">{i18n.labels.id()}</td>
                                             <td>{manifest().id}</td>
                                         </tr>
                                         <tr>
-                                            <td>Version</td>
+                                            <td>{i18n.labels.version()}</td>
                                             <td>{manifest().version}</td>
                                         </tr>
                                         <tr>
-                                            <td>Name</td>
+                                            <td>{localeCtx.i18n.common.labels.name()}</td>
                                             <td>{manifest().name}</td>
                                         </tr>
                                         <tr>
-                                            <td>Models</td>
+                                            <td>{localeCtx.i18n.nav.links.models()}</td>
                                             <td>{manifest().models.map((m) => m.name).join(', ')}</td>
                                         </tr>
                                     </tbody>
@@ -223,7 +233,7 @@ export const InstallTheme = () => {
                             >
                                 <ProgressSpinner show={inProgress() === Action.Upload} />
                                 <Upload viewBox="0 0 16 16" />
-                                Install
+                                {localeCtx.i18n.common.actions.install()}
                             </button>
                         </div>
                     </div>
@@ -241,6 +251,9 @@ export const Themes = () => {
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
     const appearanceCtx = useContext(AppearanceContext)!;
+    const localeCtx = useContext(LocaleContext)!;
+
+    const i18n = localeCtx.i18n.theme;
 
     const [item, setItem] = createSignal(undefined as string | undefined);
     const [uninstalling, setUninstalling] = createSignal(undefined as Theme | undefined);
@@ -263,9 +276,9 @@ export const Themes = () => {
             .then(() => {
                 setItem(undefined);
 
-                alertCtx.success(`Theme "${theme.name}" is activated successfully`);
+                alertCtx.success(i18n.actions.themeActivated(theme.name));
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -275,30 +288,36 @@ export const Themes = () => {
                 setItem(undefined);
                 setUninstalling(undefined);
 
-                alertCtx.success(`Theme "${theme.name}" is uninstalled successfully`);
+                alertCtx.success(i18n.actions.themeUninstalled(theme.name));
 
                 mutate(themes()?.filter((t) => t.id !== theme.id) ?? [])
             });
     }
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Themes</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.themes()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/themes/install">
                     <Upload viewBox="0 0 16 16" />
-                    Install Theme
+                    {i18n.actions.installTheme()}
                 </A>
             </div>
             <Switch>
                 <Match when={themes.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={themes.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching themes: <strong>{themes.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.themes())}: <strong>{themes.error.message}</strong></p>
                 </Match>
                 <Match when={themes()?.length === 0}>
-                    <p class="text-secondary text-center">There is no theme installed yet. You can install a new one by using <strong>Install Theme</strong> button.</p>
+                    <p class="text-secondary text-center">{i18n.noTheme()}.</p>
                 </Match>
                 <Match when={themes()}>
                     {(themes) => (
@@ -308,9 +327,9 @@ export const Themes = () => {
                                     <thead>
                                         <tr>
                                             <th></th>
-                                            <th scope="col">ID</th>
-                                            <th scope="col">Version</th>
-                                            <th scope="col">Name</th>
+                                            <th scope="col">{i18n.labels.id()}</th>
+                                            <th scope="col">{i18n.labels.version()}</th>
+                                            <th scope="col">{localeCtx.i18n.common.labels.name()}</th>
                                             <th></th>
                                             <th></th>
                                         </tr>
@@ -325,7 +344,7 @@ export const Themes = () => {
                                                     <td>{theme.name}</td>
                                                     <td class="text-center">
                                                         <Show when={theme.id === commonCtx.options().theme}>
-                                                            <span class="badge rounded-pill border border-success text-success ms-2">Active</span>
+                                                            <span class="badge rounded-pill border border-success text-success ms-2">{localeCtx.i18n.common.labels.active()}</span>
                                                         </Show>
                                                     </td>
                                                     <td class="dropdown text-end">
@@ -341,7 +360,7 @@ export const Themes = () => {
                                                                         on:click={(ev) => { ev.stopPropagation(); setThemeActive(theme); }}
                                                                     >
                                                                         <ProgressSpinner show={inProgress() === Action.Activate} />
-                                                                        Activate
+                                                                        {localeCtx.i18n.common.actions.activate()}
                                                                     </button>
                                                                 </li>
                                                                 <Show when={theme.id !== commonCtx.options().theme}>
@@ -351,7 +370,7 @@ export const Themes = () => {
                                                                             disabled={inProgress() !== undefined || theme.id === commonCtx.options().theme}
                                                                             on:click={() => setUninstalling(theme)}
                                                                         >
-                                                                            Uninstall
+                                                                            {localeCtx.i18n.common.actions.uninstall()}
                                                                         </button>
                                                                     </li>
                                                                 </Show>
@@ -371,10 +390,11 @@ export const Themes = () => {
             <Show when={uninstalling()}>
                 {(theme) => (
                     <DeleteConfirmModal
-                        message={<p>Are you sure about uninstalling the theme <strong>{theme().name} ({theme().id})</strong>?</p>}
+                        message={<p>{i18n.actions.confirmUninstall(theme().name, theme().id)}?</p>}
                         close={() => setUninstalling(undefined)}
                         confirm={() => uninstallTheme(theme())}
-                        confirmText="Uninstall"
+                        confirmText={localeCtx.i18n.common.actions.uninstall()}
+                        translateError={translateError}
                     />
                 )}
             </Show>

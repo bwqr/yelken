@@ -21,12 +21,6 @@ export const auth = {
     }
 };
 
-export const admin = {
-    settings: {
-        locale: 'Locale',
-    }
-};
-
 export const app = {
     pageNotFound: () => (<>Page not found. Go to <A href="/">Home Page</A></>),
 };
@@ -65,6 +59,7 @@ export const asset = {
 
 export const common = {
     actions: {
+        activate: 'Activate',
         add: 'Add',
         cancel: 'Cancel',
         create: 'Create',
@@ -72,9 +67,12 @@ export const common = {
         delete: 'Delete',
         discard: 'Discard',
         edit: 'Edit',
+        install: 'Install',
         save: 'Save',
+        uninstall: 'Uninstall',
     },
     labels: {
+        active: 'Active',
         createdAt: 'Created At',
         description: 'Description',
         details: 'Details',
@@ -221,4 +219,37 @@ export const nav = {
 export const pagination = {
     previous: 'Previous',
     next: 'Next',
+};
+
+export const theme = {
+    actions: {
+        confirmUninstall: (name: string, id: string) => (<>Are you sure about uninstalling the theme <strong>{name} ({id})</strong></>),
+        installTheme: 'Install Theme',
+        chooseThemeFile: 'Choose a theme file',
+        themeActivated: (name: string) => `Theme "${name}" is activated successfully`,
+        themeInstalled: (name: string) => `Theme "${name}" is installed successfully`,
+        themeUninstalled: (name: string) => `Theme "${name}" is uninstalled successfully`,
+    },
+    labels: {
+        id: 'ID',
+        analysisError: 'Analysis Error',
+        analyzingTheme: 'Theme is being analyzed',
+        themeDetails: 'Theme Details',
+        version: 'Version',
+    },
+    analysisErrors: {
+        invalidTheme: 'Invalid theme file',
+        manifestNotFound: 'Could not find manifest file',
+    },
+    validationErrors: {
+        theme: 'Please choose a theme file',
+    },
+    serverErrors: {
+        failed_reading_zip: 'Invalid zip file',
+        invalid_manifest_file: 'Invalid manifest file',
+        no_manifest_file: 'Missing manifest file in theme',
+        theme_already_exists: 'Theme already exists',
+        unknown_field: 'Unknown field in manifest',
+    },
+    noTheme: () => (<>There is no theme installed yet. You can install a new one by using <strong>Install Theme</strong> button</>),
 };
