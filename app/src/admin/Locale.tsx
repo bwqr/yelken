@@ -577,7 +577,7 @@ export const Locales = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Locales</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.locales()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/locales/create">
                     <PlusLg viewBox="0 0 16 16" />
                     {i18n.actions.createLocale()}

@@ -1,6 +1,7 @@
 import { A } from "@solidjs/router";
 import { ColorMode } from "../theme";
 import { ContentStage } from "../lib/cms/models";
+import { Permission } from "../lib/models";
 
 export const auth = {
     login: {
@@ -296,6 +297,44 @@ export const page = {
 export const pagination = {
     previous: 'Previous',
     next: 'Next',
+};
+
+export const role = {
+    role: 'Role',
+    actions: {
+        confirmDelete: (name: string) => (<>Are you sure about deleting the role <strong>{name}</strong></>),
+        createRole: 'Create Role',
+        permissionsUpdated: (name: string) => `Permissions of "${name}" role are updated successfully`,
+        roleCreated: (name: string) => `Role "${name}" is created`,
+        roleDeleted: (name: string) => `Role "${name}" is deleted`,
+        roleUpdated: (name: string) => `Role "${name}" is updated`
+    },
+    labels: {
+        keyPlaceholder: 'Reference key',
+        namePlaceholder: 'Name of role',
+        permissions: 'Permissions',
+    },
+    validationErrors: {
+        key: 'Please specify a key for role',
+        name: 'Please specify a name for role',
+    },
+    serverErrors: {
+        already_exists: 'Role already exists',
+        role_not_found: 'Role could not be found',
+    },
+    permissions: {
+        [Permission.Admin]: 'Admin',
+        [Permission.AppearanceRead]: 'Appearance Read',
+        [Permission.AssetWrite]: 'Asset Write',
+        [Permission.CMSRead]: 'CMS Read',
+        [Permission.ContentWrite]: 'Content Write',
+        [Permission.ModelWrite]: 'Model Write',
+        [Permission.PageWrite]: 'Page Write',
+        [Permission.TemplateWrite]: 'Template Write',
+        [Permission.ThemeWrite]: 'Theme Write',
+    },
+    roleNotFound: (key: string) => (<>Could not find the role with key <strong>{key}</strong></>),
+    noRole: () => (<>There is no role to display yet. You can create a new one by using <strong>Create Role</strong> button</>),
 };
 
 export const template = {

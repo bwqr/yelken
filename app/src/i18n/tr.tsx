@@ -2,6 +2,7 @@ import type * as en from './en';
 import { A } from '@solidjs/router';
 import { ColorMode } from "../theme";
 import { ContentStage } from '../lib/cms/models';
+import { Permission } from '../lib/models';
 
 export const auth: typeof en.auth = {
     login: {
@@ -297,6 +298,44 @@ export const page: typeof en.page = {
 export const pagination: typeof en.pagination = {
     previous: 'Önceki',
     next: 'Sonraki',
+};
+
+export const role: typeof en.role = {
+    role: 'Rol',
+    actions: {
+        confirmDelete: (name: string) => (<><strong>{name}</strong> isimli rolü silmek istediğinizden emin misiniz</>),
+        createRole: 'Rol Oluştur',
+        permissionsUpdated: (name: string) => `"${name}" isimli rolün izinleri güncellendi`,
+        roleCreated: (name: string) => `"${name}" isimli rol oluşturuldu`,
+        roleDeleted: (name: string) => `"${name}" isimli rol silindi`,
+        roleUpdated: (name: string) => `"${name}" isimli rol güncellendi`
+    },
+    labels: {
+        keyPlaceholder: 'Tanımlama anahtarı',
+        namePlaceholder: 'Rolün ismi',
+        permissions: 'İzinler',
+    },
+    validationErrors: {
+        key: 'Lütfen rol için bir anahtar belirtin',
+        name: 'Lütfen rol için bir isim belirtin',
+    },
+    serverErrors: {
+        already_exists: 'Rol zaten mevcut',
+        role_not_found: 'Rol bulunamadı',
+    },
+    permissions: {
+        [Permission.Admin]: 'Yönetici',
+        [Permission.AppearanceRead]: 'Görünüm Okuma',
+        [Permission.AssetWrite]: 'Kaynak Oluşturma',
+        [Permission.CMSRead]: 'CMS Okuma',
+        [Permission.ContentWrite]: 'İçerik Oluşturma',
+        [Permission.ModelWrite]: 'Model Oluşturma',
+        [Permission.PageWrite]: 'Sayfa Oluşturma',
+        [Permission.TemplateWrite]: 'Şablon Oluşturma',
+        [Permission.ThemeWrite]: 'Tema Yükleme',
+    },
+    roleNotFound: (key: string) => (<><strong>{key}</strong> anahtarı ile tanımlanan rol bulunamadı</>),
+    noRole: () => (<>Herhangi bir rol bulunmuyor. <strong>Rol Oluştur</strong> butonunu kullanarak yeni bir rol oluşturabilirsin</>),
 };
 
 export const template: typeof en.template = {
