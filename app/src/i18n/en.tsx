@@ -82,7 +82,9 @@ export const common = {
         locale: 'Locale',
         name: 'Name',
         namespace: 'Namespace',
+        no: 'No',
         optional: 'optional',
+        yes: 'Yes',
     },
     loading: 'Loading',
     loadingItem: (item: string) => `${item} is loading`,
@@ -215,6 +217,39 @@ export const nav = {
         [ColorMode.Light]: 'Light',
         [ColorMode.Dark]: 'Dark',
     }
+};
+
+export const page = {
+    page: 'Page',
+    actions: {
+        confirmDelete: (path: string, locale: string) => (<>Are you sure about deleting the page entry <strong>{path} ({locale})</strong>? This action will also delete the page if the entry is the last one</>),
+        createEntry: 'Create Entry',
+        createPage: 'Create Page',
+        pageCreated: (name: string) => `Page "${name}" is created successfully`,
+        pageEntryDeleted: (path: string, locale: string) => `Page entry "${path} (${locale})" is deleted successfully`,
+        pageUpdated: (name: string) => `Page "${name}" is updated successfully`,
+        selectTemplate: 'Select a template',
+    },
+    labels: {
+        entries: 'Entries',
+        globalPages: 'Global Pages',
+        notLocalized: 'Not localized',
+        path: 'Path',
+        paths: 'Paths',
+        themeScopedPages: 'Theme Scoped Pages',
+    },
+    validationErrors: {
+        key: 'Please specify a key for page',
+        locale: 'Please select a locale for page',
+        name: 'Please specify a name for page',
+        path: 'Please specify a path for page',
+        template: 'Please select a template',
+    },
+    serverErrors: {
+        page_already_exists: 'Page already exists',
+    },
+    noPage: (namespace: string) => (<>There is no page for the <strong>{namespace}</strong> namespace to display yet. You can create a new one by using <strong>Create Page</strong> button</>),
+    pageNotFound: (key: string) => (<>Could not find the page with key <strong>{key}</strong></>),
 };
 
 export const pagination = {

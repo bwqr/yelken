@@ -83,7 +83,9 @@ export const common: typeof en.common = {
         locale: 'Yerel',
         name: 'İsim',
         namespace: 'İsim Alanı',
+        no: 'Hayır',
         optional: 'isteğe bağlı',
+        yes: 'Evet',
     },
     loading: 'Yükleniyor',
     loadingItem: (item: string) => `${item} yükleniyor`,
@@ -216,6 +218,39 @@ export const nav: typeof en.nav = {
         [ColorMode.Light]: 'Açık',
         [ColorMode.Dark]: 'Koyu',
     }
+};
+
+export const page: typeof en.page = {
+    page: 'Sayfa',
+    actions: {
+        confirmDelete: (path: string, locale: string) => (<><strong>{path} ({locale})</strong> uzantı yoluna sahip sayfa girdisini silmek istediğinizden emin misiniz? Eğer bu girdi, sayfaya ait son girdi ise bu eylem aynı zamanda sayfayı da silecektir</>),
+        createEntry: 'Girdi Oluştur',
+        createPage: 'Sayfa Oluştur',
+        pageCreated: (name: string) => `"${name}" isimli sayfa oluşturuldu`,
+        pageEntryDeleted: (path: string, locale: string) => `"${path} (${locale})" uzantı yoluna sahip sayfa girdisi silindi`,
+        pageUpdated: (name: string) => `"${name}" isimli sayfa güncellendi`,
+        selectTemplate: 'Bir şablon seçin',
+    },
+    labels: {
+        entries: 'Girdiler',
+        globalPages: 'Global Sayfalar',
+        notLocalized: 'Yerel değil',
+        path: 'Uzantı Yolu',
+        paths: 'Uzantı Yolları',
+        themeScopedPages: 'Tema Bazlı Sayfalar',
+    },
+    validationErrors: {
+        key: 'Lütfen sayfa için bir anahtar belirtin',
+        locale: 'Lütfen sayfa için bir yerel seçin',
+        name: 'Lütfen sayfa için bir isim belirtin',
+        path: 'Lütfen sayfa için bir uzantı yolu belirtin',
+        template: 'Lütfen bir şablon seçin',
+    },
+    serverErrors: {
+        page_already_exists: 'Sayfa zaten mevcut',
+    },
+    noPage: (namespace: string) => (<><strong>{namespace}</strong> isim alanı içerisinde herhangi bir sayfa bulunmuyor. <strong>Sayfa Oluştur</strong> butonunu kullanarak yeni bir sayfa oluşturabilirsin</>),
+    pageNotFound: (key: string) => (<><strong>{key}</strong> anahtarına sahip sayfa bulunamadı</>),
 };
 
 export const pagination: typeof en.pagination = {

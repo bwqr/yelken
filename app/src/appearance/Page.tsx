@@ -10,6 +10,7 @@ import { createMemo } from "solid-js";
 import ProgressSpinner from "../components/ProgressSpinner";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { createStore } from "solid-js/store";
+import { LocaleContext } from "../lib/i18n";
 
 interface PageGroup {
     key: string,
@@ -38,8 +39,11 @@ export const CreatePage = () => {
     const appearanceCtx = useContext(AppearanceContext)!;
     const alertCtx = useContext(AlertContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+
+    const i18n = localeCtx.i18n.page;
 
     const creatingEntry = searchParams.key !== undefined && searchParams.name !== undefined;
     const [name, setName] = createSignal(searchParams.name ? decodeURIComponent(searchParams.name as string) : '');
@@ -98,6 +102,10 @@ export const CreatePage = () => {
             errors.add(ValidationError.Path);
         }
 
+        if (req.value.length === 0) {
+            errors.add(ValidationError.Template);
+        }
+
         if (creatingEntry && !req.locale) {
             errors.add(ValidationError.Locale);
         }
@@ -112,17 +120,19 @@ export const CreatePage = () => {
 
         appearanceCtx.createPage(req)
             .then(() => {
-                alertCtx.success(`Page "${req.name}" is created successfully`);
+                alertCtx.success(i18n.actions.pageCreated(req.name));
 
                 const url = req.namespace ? `/pages/view/${req.namespace}/${req.key}` : `/pages/view/${req.key}`
 
                 navigate(url, { replace: true });
             })
             .catch((e) => {
+                const msg = e.message in i18n.serverErrors ? i18n.serverErrors[e.message as keyof typeof i18n.serverErrors] : e.message;
+
                 if (e instanceof HttpError) {
-                    setServerError(e.error);
+                    setServerError(msg);
                 } else {
-                    alertCtx.fail(e.message);
+                    alertCtx.fail(msg);
                 }
             })
             .finally(() => setInProgress(false));
@@ -130,17 +140,17 @@ export const CreatePage = () => {
 
     return (
         <div class="container py-4 px-md-4">
-            <h2 class="mb-5">Create Page</h2>
+            <h2 class="mb-5">{i18n.actions.createPage()}</h2>
 
             <div class="row m-0">
                 <form class="offset-md-4 col-md-4 p-3 card" onSubmit={onSubmit}>
                     <div class="mb-4">
-                        <label for="pageName" class="form-label">Name</label>
+                        <label for="pageName" class="form-label">{localeCtx.i18n.common.labels.name()}</label>
                         <input
                             id="pageName"
                             type="text"
                             name="name"
-                            placeholder="Name"
+                            placeholder={localeCtx.i18n.common.labels.name()}
                             class="form-control"
                             classList={{ 'is-invalid': validationErrors().has(ValidationError.Name) }}
                             value={name()}
@@ -148,17 +158,17 @@ export const CreatePage = () => {
                             disabled={creatingEntry}
                         />
                         <Show when={validationErrors().has(ValidationError.Name)}>
-                            <small class="invalid-feedback">Please specify a name for page.</small>
+                            <small class="invalid-feedback">{i18n.validationErrors.name()}.</small>
                         </Show>
                     </div>
 
                     <div class="mb-4">
-                        <label for="pageKey" class="form-label">Key</label>
+                        <label for="pageKey" class="form-label">{localeCtx.i18n.common.labels.key()}</label>
                         <input
                             id="pageKey"
                             type="text"
                             name="key"
-                            placeholder="Key"
+                            placeholder={localeCtx.i18n.common.labels.key()}
                             class="form-control"
                             classList={{ 'is-invalid': validationErrors().has(ValidationError.Key) }}
                             value={key()}
@@ -166,16 +176,17 @@ export const CreatePage = () => {
                             disabled={creatingEntry}
                         />
                         <Show when={validationErrors().has(ValidationError.Key)}>
-                            <small class="invalid-feedback">Please specify a key for page.</small>
+                            <small class="invalid-feedback">{i18n.validationErrors.key()}.</small>
                         </Show>
                     </div>
 
                     <div class="mb-4">
-                        <label for="pageDesc" class="form-label">Description <small class="text-secondary">(optional)</small></label>
+                        <label for="pageDesc" class="form-label">{localeCtx.i18n.common.labels.description()} <small class="text-secondary">({localeCtx.i18n.common.labels.optional()})</small></label>
                         <textarea
                             id="pageDesc"
                             class="form-control"
                             rows="2"
+                            placeholder={localeCtx.i18n.common.labels.description()}
                             value={desc()}
                             onChange={(ev) => setDesc(ev.target.value)}
                             disabled={creatingEntry}
@@ -183,24 +194,24 @@ export const CreatePage = () => {
                     </div>
 
                     <div class="mb-4">
-                        <label for="pagePath" class="form-label">Path</label>
+                        <label for="pagePath" class="form-label">{i18n.labels.path()}</label>
                         <input
                             id="pagePath"
                             type="text"
                             name="path"
-                            placeholder="Path"
+                            placeholder={i18n.labels.path()}
                             class="form-control"
                             classList={{ 'is-invalid': validationErrors().has(ValidationError.Path) }}
                             value={path()}
                             onChange={(ev) => setPath(ev.target.value)}
                         />
                         <Show when={validationErrors().has(ValidationError.Path)}>
-                            <small class="invalid-feedback">Please specify a path for page.</small>
+                            <small class="invalid-feedback">{i18n.validationErrors.path()}.</small>
                         </Show>
                     </div>
 
                     <div class="mb-4">
-                        <label for="pageNamespace" class="form-label">Namespace</label>
+                        <label for="pageNamespace" class="form-label">{localeCtx.i18n.common.labels.namespace()}</label>
                         <select
                             id="pageNamespace"
                             name="namespace"
@@ -211,15 +222,15 @@ export const CreatePage = () => {
                         >
                             <Switch>
                                 <Match when={themes.loading}>
-                                    <option value="" disabled selected>Loading...</option>
+                                    <option value="" disabled selected>{localeCtx.i18n.common.loading()} ...</option>
                                 </Match>
                                 <Match when={themes.error}><></></Match>
                                 <Match when={themes()}>
                                     {(themes) => (
                                         <>
-                                            <option value="">Global</option>
+                                            <option value="">{localeCtx.i18n.common.labels.global()}</option>
                                             <For each={themes()}>
-                                                {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
+                                                {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ` (${localeCtx.i18n.common.labels.activeTheme()})` : ''}</option>)}
                                             </For>
                                         </>
                                     )}
@@ -227,12 +238,12 @@ export const CreatePage = () => {
                             </Switch>
                         </select>
                         <Show when={themes.error}>
-                            <small class="text-danger">Error while fetching themes: <strong>{themes.error.message}</strong></small>
+                            <small class="text-danger">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.themes())}: <strong>{themes.error.message}</strong></small>
                         </Show>
                     </div>
 
                     <div class="mb-4">
-                        <label for="pageTemplate" class="form-label">Template</label>
+                        <label for="pageTemplate" class="form-label">{localeCtx.i18n.template.template()}</label>
                         <select
                             id="pageTemplate"
                             name="template"
@@ -243,13 +254,13 @@ export const CreatePage = () => {
                         >
                             <Switch>
                                 <Match when={templates.loading}>
-                                    <option value="" disabled selected>Loading...</option>
+                                    <option value="" disabled selected>{localeCtx.i18n.common.loading()} ...</option>
                                 </Match>
                                 <Match when={templates.error}><></></Match>
                                 <Match when={templates()}>
                                     {(templates) => (
                                         <>
-                                            <option value="" disabled selected>Select a template</option>
+                                            <option value="" disabled selected>{i18n.actions.selectTemplate()}</option>
                                             <For each={templates()}>
                                                 {(template) => (<option value={template.path}>{template.path}</option>)}
                                             </For>
@@ -259,15 +270,15 @@ export const CreatePage = () => {
                             </Switch>
                         </select>
                         <Show when={validationErrors().has(ValidationError.Template)}>
-                            <small class="invalid-feedback">Please select a template.</small>
+                            <small class="invalid-feedback">{i18n.validationErrors.template()}.</small>
                         </Show>
                         <Show when={templates.error}>
-                            <small class="text-danger">Error while fetching templates: <strong>{templates.error.message}</strong></small>
+                            <small class="text-danger">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.templates())}: <strong>{templates.error.message}</strong></small>
                         </Show>
                     </div>
 
                     <div class="mb-4">
-                        <label for="pageLocale" class="form-label">Locale</label>
+                        <label for="pageLocale" class="form-label">{localeCtx.i18n.common.labels.locale()}</label>
                         <select
                             id="pageLocale"
                             name="locale"
@@ -276,7 +287,7 @@ export const CreatePage = () => {
                             value={locale()}
                             onChange={(ev) => setLocale(ev.target.value)}
                         >
-                            <option value="" selected disabled={creatingEntry}>Not localized</option>
+                            <option value="" selected disabled={creatingEntry}>{i18n.labels.notLocalized()}</option>
                             <For each={commonCtx.activeLocales()}>
                                 {(locale) => (
                                     <option value={locale.key}>{locale.name}</option>
@@ -284,7 +295,7 @@ export const CreatePage = () => {
                             </For>
                         </select>
                         <Show when={validationErrors().has(ValidationError.Locale)}>
-                            <small class="invalid-feedback">Please specify a locale for page.</small>
+                            <small class="invalid-feedback">{i18n.validationErrors.locale()}.</small>
                         </Show>
                     </div>
 
@@ -303,7 +314,7 @@ export const CreatePage = () => {
                         >
                             <ProgressSpinner show={inProgress()} />
                             <PlusLg viewBox="0 0 16 16" />
-                            Create
+                            {localeCtx.i18n.common.actions.create()}
                         </button>
                     </div>
                 </form>
@@ -329,12 +340,14 @@ function groupPages(pages: PageModel[]): PageGroup[] {
 export const Pages = () => {
     const appearanceCtx = useContext(AppearanceContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const i18n = localeCtx.i18n.page;
 
     const namespace = createMemo(() => searchParams.namespace as string | undefined);
     const [globalPages] = createResource(() => appearanceCtx.fetchPages().then(groupPages))
     const [pages] = createResource(namespace, (namespace) => appearanceCtx.fetchPages(namespace).then(groupPages));
-    const [themes] = createResource(() => appearanceCtx.fetchThemes());
 
     createEffect(() => {
         if (!namespace()) {
@@ -345,53 +358,41 @@ export const Pages = () => {
     return (
         <div class="container py-4 px-md-4">
             <div class="d-flex align-items-center mb-5">
-                <h1 class="flex-grow-1 m-0">Pages</h1>
+                <h1 class="flex-grow-1 m-0">{localeCtx.i18n.nav.links.pages()}</h1>
                 <A class="btn btn-outline-primary icon-link" href="/pages/create">
                     <PlusLg viewBox="0 0 16 16" />
-                    Create Page
+                    {i18n.actions.createPage()}
                 </A>
             </div>
 
             <div class="row">
                 <div class="offset-md-3 col-md-6">
                     <div class="d-flex align-items-center">
-                        <h5 class="flex-grow-1">Theme Scoped Pages</h5>
+                        <h5 class="flex-grow-1">{i18n.labels.themeScopedPages()}</h5>
 
-                        <Switch>
-                            <Match when={themes.loading}>
-                                <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading Themes ...</p>
-                            </Match>
-                            <Match when={themes.error}>
-                                <p class="text-danger-emphasis text-center">Error while fetching themes: <strong>{themes.error.message}</strong></p>
-                            </Match>
-                            <Match when={themes()}>
-                                {(themes) => (
-                                    <select
-                                        class="form-select w-auto"
-                                        disabled={pages.loading}
-                                        value={namespace() ?? ''}
-                                        onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
-                                    >
-                                        <For each={themes()}>
-                                            {(theme) => (<option value={theme.id}>{theme.name}{commonCtx.options().theme === theme.id ? ' (Active Theme)' : ''}</option>)}
-                                        </For>
-                                    </select>
-                                )}
-                            </Match>
-                        </Switch>
+                        <select
+                            class="form-select w-auto"
+                            disabled={pages.loading}
+                            value={namespace() ?? ''}
+                            onChange={(ev) => setSearchParams({ namespace: ev.target.value })}
+                        >
+                            <For each={commonCtx.namespaces()}>
+                                {(namespace) => (<option value={namespace.key}>{namespace.key}{commonCtx.options().theme === namespace.key ? ` (${localeCtx.i18n.common.labels.activeTheme()})` : ''}</option>)}
+                            </For>
+                        </select>
                     </div>
 
                     <hr />
 
                     <Switch>
                         <Match when={pages.loading}>
-                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                         </Match>
                         <Match when={pages.error}>
-                            <p class="text-danger-emphasis text-center">Error while fetching pages: <strong>{pages.error.message}</strong></p>
+                            <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.pages())}: <strong>{pages.error.message}</strong></p>
                         </Match>
                         <Match when={pages()?.length === 0}>
-                            <p class="text-secondary text-center">There is no page for the <strong>{namespace()}</strong> theme to display yet. You can create a new one by using <strong>Create Page</strong> button.</p>
+                            <p class="text-secondary text-center">{i18n.noPage(namespace() ?? localeCtx.i18n.common.labels.global())}.</p>
                         </Match>
                         <Match when={pages()}>
                             {(pages) => (
@@ -399,9 +400,9 @@ export const Pages = () => {
                                     <thead>
                                         <tr>
                                             <th style="width: 5%;"></th>
-                                            <th scope="col" style="width: 25%;">Name</th>
-                                            <th scope="col" style="width: 25%;">Key</th>
-                                            <th scope="col" style="width: 55%;">Paths</th>
+                                            <th scope="col" style="width: 25%;">{localeCtx.i18n.common.labels.name()}</th>
+                                            <th scope="col" style="width: 25%;">{localeCtx.i18n.common.labels.key()}</th>
+                                            <th scope="col" style="width: 55%;">{i18n.labels.paths()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -425,18 +426,18 @@ export const Pages = () => {
                         </Match>
                     </Switch>
 
-                    <h5 class="mt-5">Global Pages</h5>
+                    <h5 class="mt-5">{i18n.labels.globalPages()}</h5>
                     <hr />
 
                     <Switch>
                         <Match when={globalPages.loading}>
-                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                            <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                         </Match>
                         <Match when={globalPages.error}>
-                            <p class="text-danger-emphasis text-center">Error while fetching global pages: <strong>{globalPages.error.message}</strong></p>
+                            <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(localeCtx.i18n.nav.links.pages())}: <strong>{globalPages.error.message}</strong></p>
                         </Match>
                         <Match when={globalPages()?.length === 0}>
-                            <p class="text-secondary text-center">There is no <strong>global</strong> page to display.</p>
+                            <p class="text-secondary text-center">{i18n.noPage(localeCtx.i18n.common.labels.global())}.</p>
                         </Match>
                         <Match when={globalPages()}>
                             {(pages) => (
@@ -444,9 +445,9 @@ export const Pages = () => {
                                     <thead>
                                         <tr>
                                             <th style="width: 5%;"></th>
-                                            <th scope="col" style="width: 25%;">Name</th>
-                                            <th scope="col" style="width: 25%;">Key</th>
-                                            <th scope="col" style="width: 55%;">Paths</th>
+                                            <th scope="col" style="width: 25%;">{localeCtx.i18n.common.labels.name()}</th>
+                                            <th scope="col" style="width: 25%;">{localeCtx.i18n.common.labels.key()}</th>
+                                            <th scope="col" style="width: 55%;">{i18n.labels.paths()}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -487,8 +488,11 @@ export const Page = () => {
     const alertCtx = useContext(AlertContext)!;
     const appearanceCtx = useContext(AppearanceContext)!;
     const commonCtx = useContext(CommonContext)!;
+    const localeCtx = useContext(LocaleContext)!;
     const params = useParams();
     const navigate = useNavigate();
+
+    const i18n = localeCtx.i18n.page;
 
     const namespace = createMemo(() => params.namespace as string | undefined);
     const [group, { mutate }] = createResource(() => ({ key: params.key, namespace: namespace() }), ({ key, namespace }) => appearanceCtx.fetchPage(key, namespace).then((pages) => {
@@ -542,11 +546,11 @@ export const Page = () => {
             .then(() => {
                 setEditingDetails(false);
 
-                alertCtx.success(`Page "${req.name}" is updated successfully`);
+                alertCtx.success(i18n.actions.pageUpdated(req.name));
 
                 mutate({ ...g, name: req.name, desc: req.desc });
             })
-            .catch((e) => alertCtx.fail(e.message))
+            .catch((e) => alertCtx.fail(translateError(e.message)))
             .finally(() => setInProgress(undefined));
     };
 
@@ -555,7 +559,7 @@ export const Page = () => {
             .then(() => {
                 setDeleting(undefined);
 
-                alertCtx.success(`Page entry "${path} (${locale ?? '-'})" is deleted successfully`);
+                alertCtx.success(i18n.actions.pageEntryDeleted(path, locale ?? '-'));
 
                 const g = group();
 
@@ -571,35 +575,41 @@ export const Page = () => {
             });
     };
 
+    const translateError = (e: string) => {
+        return (e in i18n.serverErrors)
+            ? i18n.serverErrors[e as keyof typeof i18n.serverErrors]()
+            : e;
+    };
+
     return (
         <div class="container py-4 px-md-4">
             <Switch>
                 <Match when={group.loading}>
-                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> Loading ...</p>
+                    <p class="icon-link justify-content-center w-100"><ProgressSpinner show={true} /> {localeCtx.i18n.common.loading()} ...</p>
                 </Match>
                 <Match when={group.error}>
-                    <p class="text-danger-emphasis text-center">Error while fetching page: <strong>{group.error.message}</strong></p>
+                    <p class="text-danger-emphasis text-center">{localeCtx.i18n.common.loadingItemError(i18n.page())}: <strong>{group.error.message}</strong></p>
                 </Match>
                 <Match when={group.state === 'ready' && group() === undefined}>
-                    <p class="text-secondary text-center">Could not find the page with key {params.key}.</p>
+                    <p class="text-secondary text-center">{i18n.pageNotFound(params.key)}.</p>
                 </Match>
                 <Match when={group()}>
                     {(group) => (
                         <>
                             <div class="mb-5">
                                 <h2 class="m-0">{group().name}</h2>
-                                <small>Page</small>
+                                <small>{i18n.page()}</small>
                             </div>
 
                             <div class="row g-4">
                                 <div class="offset-md-1 col-md-4">
                                     <div class="border rounded p-3">
                                         <div class="d-flex justify-content-center">
-                                            <h5 class="flex-grow-1 m-0">Details</h5>
+                                            <h5 class="flex-grow-1 m-0">{localeCtx.i18n.common.labels.details()}</h5>
                                             <Show when={editingDetails()} fallback={
                                                 <button type="button" class="btn icon-link py-0 px-1" onClick={() => setEditingDetails(true)}>
                                                     <PencilSquare viewBox="0 0 16 16" />
-                                                    Edit
+                                                    {localeCtx.i18n.common.actions.edit()}
                                                 </button>
                                             }>
                                                 <button
@@ -607,7 +617,7 @@ export const Page = () => {
                                                     class="btn text-danger icon-link py-0 px-1"
                                                     onClick={() => setEditingDetails(false)}
                                                 >
-                                                    Discard
+                                                    {localeCtx.i18n.common.actions.discard()}
                                                 </button>
                                                 <button
                                                     type="button"
@@ -617,7 +627,7 @@ export const Page = () => {
                                                 >
                                                     <ProgressSpinner show={inProgress() === Action.UpdateDetails} small={true} />
                                                     <FloppyFill viewBox="0 0 16 16" />
-                                                    Save
+                                                    {localeCtx.i18n.common.actions.save()}
                                                 </button>
                                             </Show>
                                         </div>
@@ -627,7 +637,7 @@ export const Page = () => {
                                         <table class="table table-borderless w-100 m-0" style="table-layout: fixed;">
                                             <tbody>
                                                 <tr>
-                                                    <td style="width: 35%">Name</td>
+                                                    <td style="width: 35%">{localeCtx.i18n.common.labels.name()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().name}>
                                                             <input
@@ -643,7 +653,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Key</td>
+                                                    <td>{localeCtx.i18n.common.labels.key()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().key}>
                                                             <input
@@ -658,7 +668,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Namespace</td>
+                                                    <td>{localeCtx.i18n.common.labels.namespace()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={namespace() ?? '-'}>
                                                             <input
@@ -673,7 +683,7 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Description</td>
+                                                    <td>{localeCtx.i18n.common.labels.description()}</td>
                                                     <td class="text-end" classList={{ 'py-1': editingDetails() }}>
                                                         <Show when={editingDetails()} fallback={group().desc ?? '-'}>
                                                             <textarea
@@ -687,8 +697,8 @@ export const Page = () => {
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td>Localized</td>
-                                                    <td class="text-end">{group().pages.find((p) => p.locale) ? 'Yes' : 'No'}</td>
+                                                    <td>{localeCtx.i18n.model.fieldFeatures.localized()}</td>
+                                                    <td class="text-end">{group().pages.find((p) => p.locale) ? localeCtx.i18n.common.labels.yes() : localeCtx.i18n.common.labels.no()}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -698,14 +708,14 @@ export const Page = () => {
                                 <div class="offset-md-1 col-md-5">
                                     <div class="border rounded p-3">
                                         <div class="d-flex align-items-center">
-                                            <h5 class="flex-grow-1 m-0">Entries</h5>
+                                            <h5 class="flex-grow-1 m-0">{i18n.labels.entries()}</h5>
                                             <Show when={group().pages.length < commonCtx.activeLocales().length && group().pages.find((p) => p.locale)}>
                                                 <A
                                                     href={`/pages/create?key=${group().key}&name=${encodeURIComponent(group().name)}${group().desc ? `&desc=${encodeURIComponent(group().desc as string)}` : ''}${namespace() ? `&namespace=${namespace()}` : ''}`}
                                                     class="btn icon-link"
                                                 >
                                                     <PlusLg viewBox="0 0 16 16" />
-                                                    Create Entry
+                                                    {i18n.actions.createEntry()}
                                                 </A>
                                             </Show>
                                         </div>
@@ -715,9 +725,9 @@ export const Page = () => {
                                         <table class="table w-100">
                                             <thead>
                                                 <tr>
-                                                    <th scope="col">Path</th>
-                                                    <th scope="col">Locale</th>
-                                                    <th scope="col">Template</th>
+                                                    <th scope="col">{i18n.labels.path()}</th>
+                                                    <th scope="col">{localeCtx.i18n.common.labels.locale()}</th>
+                                                    <th scope="col">{localeCtx.i18n.template.template()}</th>
                                                     <th></th>
                                                 </tr>
                                             </thead>
@@ -752,11 +762,10 @@ export const Page = () => {
             <Show when={deleting()}>
                 {(deleting) => (
                     <DeleteConfirmModal
-                        message={
-                            <p>Are you sure about deleting the page entry <strong>{deleting().path} ({deleting().locale ?? '-'})</strong>? This action will also delete the page if the entry is the last one.</p>
-                        }
+                        message={<p>{i18n.actions.confirmDelete(deleting().path, deleting().locale ?? '-')}.</p>}
                         close={() => setDeleting(undefined)}
                         confirm={() => deletePage(deleting().key, deleting().path, deleting().locale, deleting().namespace)}
+                        translateError={translateError}
                     />
                 )}
             </Show>
