@@ -54,7 +54,7 @@ function Alerts(props: { alerts: DisposableAlert[], removeAlert: (alert: Disposa
                         class="border rounded border-2 px-3 py-3 d-flex mb-2 icon-link"
                         classList={{ 'border-success': alert.state === AlertState.Success, 'border-danger': alert.state === AlertState.Failure }}
                         role="alert"
-                        style="background-color: var(--bs-body-bg); min-width: 18rem;"
+                        style="background-color: var(--bs-body-bg); min-width: 18rem; max-width: 30rem;"
                     >
                         <Dynamic component={alert.state === AlertState.Failure ? Exclamation : Check} viewBox="0 0 16 16" />
                         <span class="flex-grow-1 me-2">{alert.title}</span>
