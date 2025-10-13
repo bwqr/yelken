@@ -107,7 +107,8 @@ impl IntoResponse for HttpError {
     fn into_response(self) -> axum::response::Response {
         if self.code.as_u16() > 499 {
             log::error!(
-                "Internal server error {}, context {:?}",
+                "Internal server error, code: {}, error: {}, context: {:?}",
+                self.code.as_u16(),
                 self.error,
                 self.context
             );
