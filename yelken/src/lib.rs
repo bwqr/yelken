@@ -18,6 +18,8 @@ use opendal::Operator;
 use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
+mod health;
+
 pub struct DatabaseConfig {
     pub url: String,
 }
@@ -94,7 +96,9 @@ pub async fn router(
         .layer(Extension(crypto))
         .layer(Extension(options.clone()));
 
-    let api = Router::new().nest("/common", common::router(state.clone()));
+    let api = Router::new()
+        .nest("/common", common::router(state.clone()))
+        .nest("/health", health::router());
 
     #[cfg(feature = "admin")]
     let api = api.nest("/admin", admin::router(state.clone()));
