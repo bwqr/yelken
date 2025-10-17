@@ -8,6 +8,7 @@ base.path = "../base"
 
 axum.workspace = true
 diesel.workspace = true
+opendal.workspace = true
 rand.workspace = true
 serde.workspace = true
 

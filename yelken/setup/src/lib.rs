@@ -9,6 +9,7 @@ use base::{crypto::Crypto, db::SyncConnection};
 use diesel::backend::Backend;
 use diesel::prelude::*;
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use opendal::{BlockingOperator, EntryMode};
 use serde::Deserialize;
 
 #[cfg(feature = "postgres")]
@@ -229,6 +230,42 @@ pub fn initialize_db(
     })
 }
 
+pub fn initialize_storage(
+    conn: &mut SyncConnection,
+    source: BlockingOperator,
+    destination: BlockingOperator,
+) -> Result<(), String> {
+    let entries = source
+        .list_with("")
+        .recursive(true)
+        .call()
+        .map_err(|e| format!("Failed to list files in source, {e:?}"))?;
+
+    for entry in entries {
+        let EntryMode::FILE = entry.metadata().mode() else {
+            continue;
+        };
+
+        let file = source
+            .read(entry.path())
+            .map_err(|e| format!("Failed to read source file, {e:?}"))?;
+
+        destination
+            .write(entry.path(), file)
+            .map_err(|e| format!("Failed to write destination file, {e:?}"))?;
+    }
+
+    diesel::insert_into(options::table)
+        .values((
+            options::key.eq("setup.storage_init"),
+            options::value.eq("true"),
+        ))
+        .execute(conn)
+        .map_err(|e| format!("Failed to create option for storage initialization, {e:?}"))?;
+
+    Ok(())
+}
+
 fn check_initialized(conn: &mut SyncConnection, key: &str) -> QueryResult<bool> {
     let Some(value) = options::table
         .filter(options::key.eq(key))
@@ -248,4 +285,8 @@ pub fn check_admin_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
 
 pub fn check_defaults_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
     check_initialized(conn, "setup.defaults_init")
+}
+
+pub fn check_storage_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.storage_init")
 }

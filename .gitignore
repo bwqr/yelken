@@ -1,1 +1,3 @@
 /storage
+/themes/*
+!/themes/default

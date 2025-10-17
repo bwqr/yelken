@@ -1,6 +1,7 @@
 *
 !yelken
 !app
+!themes/default
 yelken/.env
 yelken/target
 app/.env.local

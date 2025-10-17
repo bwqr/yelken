@@ -2818,6 +2818,7 @@ dependencies = [
  "base",
  "diesel",
  "diesel_migrations",
+ "opendal",
  "rand 0.9.1",
  "serde",
 ]

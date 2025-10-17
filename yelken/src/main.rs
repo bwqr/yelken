@@ -19,6 +19,8 @@ enum Command {
         #[arg(long)]
         defaults: bool,
         #[arg(long)]
+        storage: bool,
+        #[arg(long)]
         force: bool,
     },
     Migrate,
@@ -156,6 +158,7 @@ fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
         Command::Setup {
             admin,
             defaults,
+            storage,
             force,
         } => {
             let mut conn = <SyncConnection as diesel::Connection>::establish(&db_url).unwrap();
@@ -172,7 +175,30 @@ fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
             let create_defaults =
                 defaults && (force || !setup::check_defaults_initialized(&mut conn).unwrap());
 
+            let init_storage =
+                storage && (force || !setup::check_storage_initialized(&mut conn).unwrap());
+
             setup::initialize_db(&mut conn, &crypto, create_defaults, admin_user).unwrap();
+
+            if init_storage {
+                let init_dir =
+                    std::env::var("YELKEN_INIT_DIR").expect("YELKEN_INIT_DIR is not defined");
+                let storage_dir =
+                    std::env::var("YELKEN_STORAGE_DIR").expect("YELKEN_STORAGE_DIR is not defined");
+
+                let source =
+                    opendal::Operator::new(opendal::services::Fs::default().root(&init_dir))
+                        .unwrap()
+                        .finish();
+
+                let destination =
+                    opendal::Operator::new(opendal::services::Fs::default().root(&storage_dir))
+                        .unwrap()
+                        .finish();
+
+                setup::initialize_storage(&mut conn, source.blocking(), destination.blocking())
+                    .unwrap();
+            }
         }
     }
 }
