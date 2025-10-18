@@ -1,12 +1,12 @@
 <ul style="display: inline;">
-    {% for key, name in locale.all %}
+    {% for locale in l10n.locales %}
         <li style="display: inline;">
             <a
                 hreflang="{{ key }}"
-                href="{{ get_url(path = '/' ~ key, localize = false) }}"
-                onclick="document.cookie = 'yelken_locale={{ key }}; SameSite=Strict; Path={{ base_url }}'"
+                href="{{ get_url(path = '/' ~ locale.key, localize = false) }}"
+                onclick="document.cookie = 'yelken_locale={{ locale.key }}; SameSite=Strict; Path={{ base_url }}'"
             >
-              {{ name }}
+              {{ locale.name }}
             </a>
         </li>
     {% endfor %}

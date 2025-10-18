@@ -11,6 +11,7 @@ members = [
   "derive",
   "plugin",
   "setup",
+  "store",
   "wasm",
 ]
 

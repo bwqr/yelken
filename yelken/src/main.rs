@@ -19,7 +19,9 @@ enum Command {
         #[arg(long)]
         defaults: bool,
         #[arg(long)]
-        storage: bool,
+        theme: bool,
+        #[arg(long)]
+        theme_path: Option<String>,
         #[arg(long)]
         force: bool,
     },
@@ -147,7 +149,7 @@ async fn logger(req: Request, next: Next) -> Response {
     res
 }
 
-fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
+async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
     match command {
         Command::Migrate => {
             setup::migrate(
@@ -158,13 +160,16 @@ fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
         Command::Setup {
             admin,
             defaults,
-            storage,
+            theme,
+            theme_path,
             force,
         } => {
-            let mut conn = <SyncConnection as diesel::Connection>::establish(&db_url).unwrap();
+            let mut conn = <Connection as diesel_async::AsyncConnection>::establish(&db_url)
+                .await
+                .unwrap();
 
             let create_admin =
-                admin && (force || !setup::check_admin_initialized(&mut conn).unwrap());
+                admin && (force || !setup::check_admin_initialized(&mut conn).await.unwrap());
 
             let admin_user = create_admin.then(|| {
                 serde_json::from_reader::<_, setup::User>(std::io::stdin())
@@ -173,32 +178,39 @@ fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
             });
 
             let create_defaults =
-                defaults && (force || !setup::check_defaults_initialized(&mut conn).unwrap());
+                defaults && (force || !setup::check_defaults_initialized(&mut conn).await.unwrap());
 
-            let init_storage =
-                storage && (force || !setup::check_storage_initialized(&mut conn).unwrap());
-
-            setup::initialize_db(&mut conn, &crypto, create_defaults, admin_user).unwrap();
-
-            if init_storage {
-                let init_dir =
-                    std::env::var("YELKEN_INIT_DIR").expect("YELKEN_INIT_DIR is not defined");
+            let install_theme = if theme {
+                let theme_root = theme_path.unwrap_or_else(|| {
+                    std::env::var("YELKEN_DEFAULT_THEME_DIR")
+                        .expect("YELKEN_DEFAULT_THEME_DIR is not defined")
+                });
                 let storage_dir =
                     std::env::var("YELKEN_STORAGE_DIR").expect("YELKEN_STORAGE_DIR is not defined");
 
-                let source =
-                    opendal::Operator::new(opendal::services::Fs::default().root(&init_dir))
-                        .unwrap()
-                        .finish();
+                let src = opendal::Operator::new(opendal::services::Fs::default().root(&theme_root))
+                    .unwrap()
+                    .finish();
 
-                let destination =
+                let dst =
                     opendal::Operator::new(opendal::services::Fs::default().root(&storage_dir))
                         .unwrap()
                         .finish();
 
-                setup::initialize_storage(&mut conn, source.blocking(), destination.blocking())
-                    .unwrap();
-            }
+                Some(setup::InstallTheme { src, src_dir: "".to_string(), dst })
+            } else {
+                None
+            };
+
+            setup::init(
+                &mut conn,
+                &crypto,
+                create_defaults,
+                admin_user,
+                install_theme,
+            )
+            .await
+            .unwrap();
         }
     }
 }
@@ -220,7 +232,7 @@ async fn main() {
     let db_config = db_config_from_env().unwrap();
 
     if let Some(command) = args.command {
-        run_command(command, &crypto, &db_config.url);
+        run_command(command, &crypto, &db_config.url).await;
 
         return;
     }
