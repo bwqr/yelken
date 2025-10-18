@@ -180,24 +180,32 @@ async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
             let create_defaults =
                 defaults && (force || !setup::check_defaults_initialized(&mut conn).await.unwrap());
 
-            let install_theme = if theme {
+            let install_theme =
+                theme && (force || !setup::check_theme_installed(&mut conn).await.unwrap());
+
+            let install_theme = if install_theme {
                 let theme_root = theme_path.unwrap_or_else(|| {
                     std::env::var("YELKEN_DEFAULT_THEME_DIR")
-                        .expect("YELKEN_DEFAULT_THEME_DIR is not defined")
+                        .expect("Neither `YELKEN_DEFAULT_THEME_DIR` nor `--theme-path` is specified. Please specify at least one.")
                 });
                 let storage_dir =
                     std::env::var("YELKEN_STORAGE_DIR").expect("YELKEN_STORAGE_DIR is not defined");
 
-                let src = opendal::Operator::new(opendal::services::Fs::default().root(&theme_root))
-                    .unwrap()
-                    .finish();
+                let src =
+                    opendal::Operator::new(opendal::services::Fs::default().root(&theme_root))
+                        .unwrap()
+                        .finish();
 
                 let dst =
                     opendal::Operator::new(opendal::services::Fs::default().root(&storage_dir))
                         .unwrap()
                         .finish();
 
-                Some(setup::InstallTheme { src, src_dir: "".to_string(), dst })
+                Some(setup::InstallTheme {
+                    src,
+                    src_dir: "".to_string(),
+                    dst,
+                })
             } else {
                 None
             };

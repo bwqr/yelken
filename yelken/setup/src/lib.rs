@@ -13,9 +13,11 @@ use opendal::Operator;
 use serde::Deserialize;
 
 #[cfg(feature = "postgres")]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/postgres");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/postgres");
 #[cfg(feature = "sqlite")]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqlite");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqlite");
+
+const DEFAULT_LOCALE: (&'static str, &'static str) = ("en", "English");
 
 #[derive(Deserialize)]
 pub struct User {
@@ -38,12 +40,18 @@ pub fn migrate<DB: Backend>(
 
 async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
     diesel::insert_into(locales::table)
-        .values((locales::key.eq("en"), locales::name.eq("English")))
+        .values((
+            locales::key.eq(DEFAULT_LOCALE.0),
+            locales::name.eq(DEFAULT_LOCALE.1),
+        ))
         .execute(conn)
         .await?;
 
     diesel::insert_into(options::table)
-        .values([(options::key.eq("default_locale"), options::value.eq("en"))])
+        .values([(
+            options::key.eq("default_locale"),
+            options::value.eq(DEFAULT_LOCALE.0),
+        )])
         .execute(conn)
         .await?;
 
@@ -70,7 +78,7 @@ async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
                 fields::kind.eq("asset"),
             ),
         ])
-        .get_results::<base::models::Field>(conn)
+        .execute(conn)
         .await?;
 
     Ok(())
@@ -170,13 +178,21 @@ pub async fn init(
             &theme.src,
             &theme.src_dir,
             &theme.dst,
-            "en".to_string(),
+            DEFAULT_LOCALE.0.to_string(),
         )
         .await
         .expect("Failed to install theme");
 
         diesel::insert_into(options::table)
             .values([(options::key.eq("theme"), options::value.eq(theme.id))])
+            .execute(conn)
+            .await?;
+
+        diesel::insert_into(options::table)
+            .values((
+                options::key.eq("setup.theme_init"),
+                options::value.eq("true"),
+            ))
             .execute(conn)
             .await?;
     }
@@ -206,6 +222,6 @@ pub async fn check_defaults_initialized(conn: &mut Connection) -> QueryResult<bo
     check_initialized(conn, "setup.defaults_init").await
 }
 
-pub async fn check_storage_initialized(conn: &mut Connection) -> QueryResult<bool> {
-    check_initialized(conn, "setup.storage_init").await
+pub async fn check_theme_installed(conn: &mut Connection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.theme_init").await
 }
