@@ -80,13 +80,20 @@ lto = true
 [features]
 default = [
   "admin", "app", "appearance", "auth", "cms", "setup", "user",
-  "base/postgres",
+  "auth/email", "base/postgres",
   "axum/default", "opendal/services-fs", "dep:tokio"
 ]
+
+cloud = [
+  "admin", "app", "appearance", "auth", "cms", "setup", "user",
+  "auth/oauth", "base/postgres",
+  "axum/default", "opendal/services-fs", "dep:tokio"
+]
+
 admin = ["dep:admin"]
 app = ["dep:app"]
 appearance = ["dep:appearance"]
-auth = ["dep:auth", "auth/email"]
+auth = ["dep:auth"]
 cms = ["dep:cms"]
 plugin = ["dep:plugin", "appearance?/plugin"]
 setup = ["dep:clap", "dep:setup"]

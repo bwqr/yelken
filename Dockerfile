@@ -1,16 +1,16 @@
-FROM rust:1-slim-bookworm AS yelken-builder
+FROM rust:alpine3.22 AS yelken-builder
 
 WORKDIR /src/yelken
 
-RUN apt-get update && apt-get install -y libpq-dev
+RUN apk update && apk add libpq-dev musl-dev openssl-libs-static
 
 COPY yelken .
 
-RUN cargo build --release
+RUN cargo build --release --no-default-features --features cloud
 
 
 
-FROM node:lts-bookworm AS app-builder
+FROM node:lts-alpine3.22 AS app-builder
 
 WORKDIR /src/app
 
@@ -20,9 +20,7 @@ RUN npm install && npx vite build --base='/{YELKEN_BASE_URL}/'
 
 
 
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y libpq5
+FROM alpine:3.22
 
 WORKDIR /app
 
