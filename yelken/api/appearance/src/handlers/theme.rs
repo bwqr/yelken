@@ -246,8 +246,7 @@ async fn install(
         storage,
         default_locale,
     )
-    .await
-    .unwrap();
+    .await?;
 
     Ok(theme)
 }

@@ -4,6 +4,7 @@ use base::crypto::Crypto;
 use base::db::Connection;
 use base::middlewares::permission::FULL_PERMS;
 use base::models::LoginKind;
+use base::responses::HttpError;
 use base::schema::{fields, locales, options, permissions, users};
 use diesel::backend::Backend;
 use diesel::prelude::*;
@@ -139,7 +140,7 @@ pub async fn init(
     defaults: bool,
     admin: Option<User>,
     theme: Option<InstallTheme>,
-) -> QueryResult<()> {
+) -> Result<(), HttpError> {
     conn.transaction(|conn| {
         async move {
             if defaults {
@@ -180,8 +181,7 @@ pub async fn init(
             &theme.dst,
             DEFAULT_LOCALE.0.to_string(),
         )
-        .await
-        .expect("Failed to install theme");
+        .await?;
 
         diesel::insert_into(options::table)
             .values([(options::key.eq("theme"), options::value.eq(theme.id))])

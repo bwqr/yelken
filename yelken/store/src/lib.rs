@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use base::db::{BatchQuery, Connection};
 use base::models::{ContentStage, Field, Locale, PageKind, Theme};
+use base::responses::HttpError;
 use base::schema::{
     content_values, contents, fields, locales, model_fields, models, namespaces, pages, themes,
 };
@@ -9,7 +10,7 @@ use base::schema::{
 use diesel::prelude::*;
 use diesel::result::{DatabaseErrorKind, Error};
 use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
-use opendal::{EntryMode, Operator};
+use opendal::{EntryMode, ErrorKind, Operator};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -71,49 +72,52 @@ pub async fn install_theme(
     src_dir: &str,
     dst: &Operator,
     default_locale: String,
-) -> Result<Theme, ()> {
+) -> Result<Theme, HttpError> {
     let manifest = src
         .read([src_dir, "Yelken.json"].join("/").as_str())
         .await
-        .expect("Failed to read manifest file");
+        .map_err(|e| {
+            if let ErrorKind::NotFound = e.kind() {
+                HttpError::unprocessable_entity("no_manifest_file")
+            } else {
+                log::error!("Failed reading manifest file, {e:?}");
 
-    let manifest =
-        serde_json::from_reader::<_, ThemeManifest>(manifest).expect("Invalid manifest file");
+                HttpError::internal_server_error("io_error")
+            }
+        })?;
+
+    let manifest = serde_json::from_reader::<_, ThemeManifest>(manifest).map_err(|e| {
+        HttpError::unprocessable_entity("invalid_manifest_file").with_context(format!("{e:?}"))
+    })?;
 
     let theme_id = manifest.id.clone();
 
     let theme = conn
         .transaction(move |conn| {
-            async move {
-                QueryResult::<Theme>::Ok(
-                    create_theme_resources(conn, manifest, default_locale)
-                        .await
-                        .expect("failed to create theme resources"),
-                )
-            }
-            .scope_boxed()
+            async move { create_theme_resources(conn, manifest, default_locale).await }
+                .scope_boxed()
         })
-        .await
-        .expect("Failed to create theme resources");
+        .await?;
 
-    for entry in src
-        .list_with(src_dir)
-        .recursive(true)
-        .await
-        .expect("Failed to list theme files")
-    {
+    let entries =
+        src.list_with(src_dir).recursive(true).await.map_err(|e| {
+            HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
+        })?;
+
+    for entry in entries {
         let EntryMode::FILE = entry.metadata().mode() else {
             continue;
         };
 
-        let file = src
-            .read(entry.path())
-            .await
-            .expect("Failed to read theme file");
+        let file = src.read(entry.path()).await.map_err(|e| {
+            HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
+        })?;
 
         dst.write(&["themes", &theme_id, entry.path()].join("/"), file)
             .await
-            .expect("Failed to write theme file");
+            .map_err(|e| {
+                HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
+            })?;
     }
 
     Ok(theme)
@@ -123,11 +127,8 @@ async fn create_theme_resources(
     conn: &mut Connection,
     manifest: ThemeManifest,
     default_locale: String,
-) -> Result<Theme, &'static str> {
-    let locales = locales::table
-        .load::<Locale>(conn)
-        .await
-        .map_err(|_| "failed_loading_locales")?;
+) -> Result<Theme, HttpError> {
+    let locales = locales::table.load::<Locale>(conn).await?;
 
     let theme = diesel::insert_into(themes::table)
         .values((
@@ -139,10 +140,10 @@ async fn create_theme_resources(
         .await
         .map_err(|e| {
             if let Error::DatabaseError(DatabaseErrorKind::UniqueViolation, _) = &e {
-                return "theme_already_exists";
+                return HttpError::conflict("theme_already_exists");
             }
 
-            "failed_inserting_theme"
+            e.into()
         })?;
 
     diesel::insert_into(namespaces::table)
@@ -151,8 +152,7 @@ async fn create_theme_resources(
             namespaces::source.eq("theme"),
         ))
         .execute(conn)
-        .await
-        .map_err(|_| "failed_inserting_namespace")?;
+        .await?;
 
     diesel::insert_into(pages::table)
         .values(
@@ -183,8 +183,7 @@ async fn create_theme_resources(
         )
         .batched()
         .execute(conn)
-        .await
-        .map_err(|_| "failed_inserting_pages")?;
+        .await?;
 
     let models = HashMap::<String, base::models::Model>::from_iter(
         diesel::insert_into(models::table)
@@ -204,8 +203,7 @@ async fn create_theme_resources(
             )
             .batched()
             .get_results::<base::models::Model>(conn)
-            .await
-            .map_err(|_| "failed_inserting_models")?
+            .await?
             .into_iter()
             .map(|model| (model.key.clone(), model)),
     );
@@ -213,14 +211,16 @@ async fn create_theme_resources(
     let fields = HashMap::<String, Field>::from_iter(
         fields::table
             .load::<Field>(conn)
-            .await
-            .map_err(|_| "failed_loading_fields")?
+            .await?
             .into_iter()
             .map(|field| (field.key.clone(), field)),
     );
 
     for model in manifest.models {
-        let model_id = models.get(&model.key).ok_or("unreachable")?.id;
+        let model_id = models
+            .get(&model.key)
+            .ok_or(HttpError::internal_server_error("unreachable"))?
+            .id;
 
         let model_fields = model
             .fields
@@ -229,9 +229,12 @@ async fn create_theme_resources(
                 fields
                     .get(&model_field.field)
                     .map(|f| (f.id, model_field))
-                    .ok_or_else(|| "unknown_field")
+                    .ok_or_else(|| {
+                        HttpError::unprocessable_entity("unknown_field")
+                            .with_context(format!("Field {} is not known", model_field.field))
+                    })
             })
-            .collect::<Result<Vec<(i32, &ModelField)>, &'static str>>()?;
+            .collect::<Result<Vec<(i32, &ModelField)>, HttpError>>()?;
 
         let model_fields = HashMap::<String, base::models::ModelField>::from_iter(
             diesel::insert_into(model_fields::table)
@@ -255,8 +258,7 @@ async fn create_theme_resources(
                 )
                 .batched()
                 .get_results::<base::models::ModelField>(conn)
-                .await
-                .map_err(|_| "failed_inserting_model_fields")?
+                .await?
                 .into_iter()
                 .map(|mf| (mf.key.clone(), mf)),
         );
@@ -269,9 +271,14 @@ async fn create_theme_resources(
                     model_fields
                         .get(&v.field)
                         .map(|mf| (mf.id, v))
-                        .ok_or_else(|| "unknown_field")
+                        .ok_or_else(|| {
+                            HttpError::unprocessable_entity("unknown_field").with_context(format!(
+                                "Field in content value {} is not known",
+                                v.field
+                            ))
+                        })
                 })
-                .collect::<Result<Vec<(i32, &ContentValue)>, &'static str>>()?;
+                .collect::<Result<Vec<(i32, &ContentValue)>, HttpError>>()?;
 
             let content_id = diesel::insert_into(contents::table)
                 .values((
@@ -280,8 +287,7 @@ async fn create_theme_resources(
                     contents::stage.eq(ContentStage::Published),
                 ))
                 .get_result::<base::models::Content>(conn)
-                .await
-                .map_err(|_| "failed_inserting_contents")?
+                .await?
                 .id;
 
             diesel::insert_into(content_values::table)
@@ -308,8 +314,7 @@ async fn create_theme_resources(
                 )
                 .batched()
                 .execute(conn)
-                .await
-                .map_err(|_| "failed_inserting_content_values")?;
+                .await?;
         }
     }
 
@@ -320,19 +325,21 @@ pub async fn extract_archive(
     archive: &[u8],
     tmp_storage: &Operator,
     dir: &str,
-) -> Result<(), &'static str> {
+) -> Result<(), HttpError> {
     use rc_zip_sync::{ReadZip, rc_zip::parse::EntryKind};
 
-    let archive = archive
-        .read_zip()
-        .map_err(|_| "Unable to read bytes as zip archive")?;
+    let archive = archive.read_zip().map_err(|e| {
+        HttpError::unprocessable_entity("invalid_theme_archive").with_context(format!("{e:?}"))
+    })?;
 
     for entry in archive.entries() {
         let EntryKind::File = entry.kind() else {
             continue;
         };
 
-        let outpath = entry.sanitized_name().ok_or_else(|| "invalid_file_name")?;
+        let outpath = entry
+            .sanitized_name()
+            .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
 
         if !(outpath.starts_with("assets/")
             || (outpath.starts_with("templates/") && outpath.ends_with(".html"))
@@ -344,7 +351,9 @@ pub async fn extract_archive(
             continue;
         }
 
-        let bytes = entry.bytes().map_err(|_| "failed_reading_bytes")?;
+        let bytes = entry.bytes().map_err(|e| {
+            HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
+        })?;
 
         let dst_file_path = [dir, outpath].join("/");
 
@@ -352,7 +361,7 @@ pub async fn extract_archive(
             .write(&dst_file_path, bytes)
             .await
             .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
-            .map_err(|_| "io_error")?;
+            .map_err(|_| HttpError::internal_server_error("io_error"))?;
     }
 
     Ok(())
