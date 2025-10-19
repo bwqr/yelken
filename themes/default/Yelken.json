@@ -1,0 +1,85 @@
+{
+  "id": "yelken.default",
+  "version": "0.1.0",
+  "name": "Yelken Default Theme",
+  "models": [
+    {
+      "name": "Menu",
+      "key": "menu",
+      "fields": [
+        { "name": "Name", "key": "name", "field": "text", "localized": true },
+        { "name": "Path", "key": "path", "field": "text", "localized": true },
+        { "name": "Weight", "key": "weight", "field": "integer" },
+        { "name": "Parent", "key": "parent", "field": "integer" }
+      ]
+    },
+    {
+      "name": "Article",
+      "key": "article",
+      "fields": [
+        { "name": "Title", "key": "title", "field": "text", "localized": true },
+        { "name": "Content", "key": "content", "field": "text", "localized": true },
+        { "name": "Slug", "key": "slug", "field": "text", "localized": true }
+      ]
+    }
+  ],
+  "contents": [
+    {
+      "name": "Home",
+      "model": "menu",
+      "values": [
+        { "field": "name", "locale": "en", "value": "Home" },
+        { "field": "path", "locale": "en", "value": "/" },
+        { "field": "weight", "value": "1" }
+      ]
+    },
+    {
+      "name": "About Us",
+      "model": "menu",
+      "values": [
+        { "field": "name", "locale": "en", "value": "About Us" },
+        { "field": "path", "locale": "en", "value": "/about-us" },
+        { "field": "weight", "value": "2" }
+      ]
+    },
+    {
+      "name": "Contact",
+      "model": "menu",
+      "values": [
+        { "field": "name", "locale": "en", "value": "Contact" },
+        { "field": "path", "locale": "en", "value": "/contact" },
+        { "field": "weight", "value": "3" }
+      ]
+    },
+    {
+      "name": "Hello World",
+      "model": "article",
+      "values": [
+        { "field": "title", "locale": "en", "value": "Hello World" },
+        { "field": "title", "locale": "tr", "value": "Merhaba Dünya" },
+        { "field": "content", "locale": "en", "value": "Content of the article" },
+        { "field": "content", "locale": "tr", "value": "Makalenin içeriği" },
+        { "field": "slug", "locale": "en", "value": "hello-world" },
+        { "field": "slug", "locale": "tr", "value": "merhaba-dunya" }
+      ]
+    },
+    {
+      "name": "Nice Day",
+      "model": "article",
+      "values": [
+        { "field": "title", "locale": "en", "value": "Nice Day" },
+        { "field": "title", "locale": "tr", "value": "Hoş Gün" },
+        { "field": "content", "locale": "en", "value": "Content of nice day article" },
+        { "field": "content", "locale": "tr", "value": "Hoş gün makalesinin içeriği" },
+        { "field": "slug", "locale": "en", "value": "nice-day" },
+        { "field": "slug", "locale": "tr", "value": "hos-gun" }
+      ]
+    }
+  ],
+  "pages": [
+    { "name": "Home", "key": "home", "path": "/", "template": "index.html", "locale": "en" },
+    { "name": "Home", "key": "home", "path": "/", "template": "index.html", "locale": "tr" },
+    { "name": "Article", "key": "article", "path": "/article/{slug}", "template": "article.html", "locale": "en" },
+    { "name": "Article", "key": "article", "path": "/makale/{slug}", "template": "article.html", "locale": "tr" }
+  ]
+}

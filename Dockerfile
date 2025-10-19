@@ -30,6 +30,9 @@ COPY --from=yelken-builder /src/yelken/target/release/yelken ./yelken
 
 COPY --from=app-builder /src/app/dist ./dist
 
+COPY themes/default /app/themes/default
+
 ENV YELKEN_APP_ASSETS_DIR=/app/dist
+ENV YELKEN_DEFAULT_THEME_DIR=/app/themes/default
 
 CMD ["./yelken"]

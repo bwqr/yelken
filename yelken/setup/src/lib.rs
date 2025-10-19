@@ -1,20 +1,24 @@
 use std::error::Error;
 
+use base::crypto::Crypto;
+use base::db::Connection;
 use base::middlewares::permission::FULL_PERMS;
-use base::models::{LoginKind, NamespaceSource, PageKind};
-use base::schema::{
-    fields, locales, model_fields, models, namespaces, options, pages, permissions, themes, users,
-};
-use base::{crypto::Crypto, db::SyncConnection};
+use base::models::LoginKind;
+use base::responses::HttpError;
+use base::schema::{fields, locales, options, permissions, users};
 use diesel::backend::Backend;
 use diesel::prelude::*;
+use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
+use opendal::Operator;
 use serde::Deserialize;
 
 #[cfg(feature = "postgres")]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/postgres");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/postgres");
 #[cfg(feature = "sqlite")]
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqlite");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../migrations/sqlite");
+
+const DEFAULT_LOCALE: (&'static str, &'static str) = ("en", "English");
 
 #[derive(Deserialize)]
 pub struct User {
@@ -23,40 +27,36 @@ pub struct User {
     pub password: String,
 }
 
+pub struct InstallTheme {
+    pub src: Operator,
+    pub src_dir: String,
+    pub dst: Operator,
+}
+
 pub fn migrate<DB: Backend>(
     conn: &mut impl MigrationHarness<DB>,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     conn.run_pending_migrations(MIGRATIONS).map(|_| ())
 }
 
-pub fn create_defaults(conn: &mut SyncConnection) -> QueryResult<()> {
-    diesel::insert_into(themes::table)
-        .values((
-            themes::id.eq("default"),
-            themes::version.eq("0.1.0"),
-            themes::name.eq("Yelken Default Theme"),
-        ))
-        .execute(conn)?;
-
-    diesel::insert_into(namespaces::table)
-        .values((
-            namespaces::key.eq("default"),
-            namespaces::source.eq(NamespaceSource::Theme),
-        ))
-        .execute(conn)?;
-
+async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
     diesel::insert_into(locales::table)
-        .values((locales::key.eq("en"), locales::name.eq("English")))
-        .execute(conn)?;
+        .values((
+            locales::key.eq(DEFAULT_LOCALE.0),
+            locales::name.eq(DEFAULT_LOCALE.1),
+        ))
+        .execute(conn)
+        .await?;
 
     diesel::insert_into(options::table)
-        .values([
-            (options::key.eq("theme"), options::value.eq("default")),
-            (options::key.eq("default_locale"), options::value.eq("en")),
-        ])
-        .execute(conn)?;
+        .values([(
+            options::key.eq("default_locale"),
+            options::value.eq(DEFAULT_LOCALE.0),
+        )])
+        .execute(conn)
+        .await?;
 
-    let fields = diesel::insert_into(fields::table)
+    diesel::insert_into(fields::table)
         .values([
             (
                 fields::key.eq("text"),
@@ -79,76 +79,13 @@ pub fn create_defaults(conn: &mut SyncConnection) -> QueryResult<()> {
                 fields::kind.eq("asset"),
             ),
         ])
-        .get_results::<base::models::Field>(conn)?;
-
-    let model = diesel::insert_into(models::table)
-        .values((
-            models::namespace.eq(Option::<String>::None),
-            models::key.eq("article"),
-            models::name.eq("Article"),
-        ))
-        .get_result::<base::models::Model>(conn)?;
-
-    diesel::insert_into(model_fields::table)
-        .values([
-            (
-                model_fields::model_id.eq(model.id),
-                model_fields::field_id.eq(fields[0].id),
-                model_fields::key.eq("title"),
-                model_fields::name.eq("Title"),
-                model_fields::localized.eq(true),
-                model_fields::required.eq(true),
-            ),
-            (
-                model_fields::model_id.eq(model.id),
-                model_fields::field_id.eq(fields[0].id),
-                model_fields::key.eq("content"),
-                model_fields::name.eq("Content"),
-                model_fields::localized.eq(true),
-                model_fields::required.eq(true),
-            ),
-            (
-                model_fields::model_id.eq(model.id),
-                model_fields::field_id.eq(fields[0].id),
-                model_fields::key.eq("slug"),
-                model_fields::name.eq("Slug"),
-                model_fields::localized.eq(true),
-                model_fields::required.eq(true),
-            ),
-        ])
-        .execute(conn)?;
-
-    diesel::insert_into(pages::table)
-        .values([
-            (
-                pages::namespace.eq("default"),
-                pages::key.eq("home"),
-                pages::name.eq("Home"),
-                pages::path.eq("/"),
-                pages::kind.eq(PageKind::Template),
-                pages::value.eq("index.html"),
-                pages::locale.eq("en"),
-            ),
-            (
-                pages::namespace.eq("default"),
-                pages::key.eq("article"),
-                pages::name.eq("Article"),
-                pages::path.eq("/article/{slug}"),
-                pages::kind.eq(PageKind::Template),
-                pages::value.eq("article.html"),
-                pages::locale.eq("en"),
-            ),
-        ])
-        .execute(conn)?;
+        .execute(conn)
+        .await?;
 
     Ok(())
 }
 
-pub fn create_admin_user(
-    conn: &mut SyncConnection,
-    crypto: &Crypto,
-    user: User,
-) -> QueryResult<()> {
+async fn create_admin_user(conn: &mut Connection, crypto: &Crypto, user: User) -> QueryResult<()> {
     use rand::{Rng, distr::Alphanumeric, rng};
 
     let username = user
@@ -176,7 +113,8 @@ pub fn create_admin_user(
             users::login_kind.eq(LoginKind::Email),
             users::password.eq(format!("{salt}{password}")),
         ))
-        .get_result::<base::models::User>(conn)?;
+        .get_result::<base::models::User>(conn)
+        .await?;
 
     diesel::insert_into(permissions::table)
         .values(
@@ -191,49 +129,83 @@ pub fn create_admin_user(
                 .collect::<Vec<_>>(),
         )
         .execute(conn)
-        .unwrap();
+        .await?;
 
     Ok(())
 }
 
-pub fn initialize_db(
-    conn: &mut SyncConnection,
+pub async fn init(
+    conn: &mut Connection,
     crypto: &Crypto,
     defaults: bool,
     admin: Option<User>,
-) -> QueryResult<()> {
+    theme: Option<InstallTheme>,
+) -> Result<(), HttpError> {
     conn.transaction(|conn| {
-        if defaults {
-            create_defaults(conn)?;
+        async move {
+            if defaults {
+                create_defaults(conn).await?;
 
-            diesel::insert_into(options::table)
-                .values((
-                    options::key.eq("setup.defaults_init"),
-                    options::value.eq("true"),
-                ))
-                .execute(conn)?;
+                diesel::insert_into(options::table)
+                    .values((
+                        options::key.eq("setup.defaults_init"),
+                        options::value.eq("true"),
+                    ))
+                    .execute(conn)
+                    .await?;
+            }
+
+            if let Some(admin) = admin {
+                create_admin_user(conn, crypto, admin).await?;
+
+                diesel::insert_into(options::table)
+                    .values((
+                        options::key.eq("setup.admin_init"),
+                        options::value.eq("true"),
+                    ))
+                    .execute(conn)
+                    .await?;
+            }
+
+            QueryResult::<()>::Ok(())
         }
-
-        if let Some(admin) = admin {
-            create_admin_user(conn, crypto, admin)?;
-
-            diesel::insert_into(options::table)
-                .values((
-                    options::key.eq("setup.admin_init"),
-                    options::value.eq("true"),
-                ))
-                .execute(conn)?;
-        }
-
-        Ok(())
+        .scope_boxed()
     })
+    .await?;
+
+    if let Some(theme) = theme {
+        let theme = store::install_theme(
+            conn,
+            &theme.src,
+            &theme.src_dir,
+            &theme.dst,
+            DEFAULT_LOCALE.0.to_string(),
+        )
+        .await?;
+
+        diesel::insert_into(options::table)
+            .values([(options::key.eq("theme"), options::value.eq(theme.id))])
+            .execute(conn)
+            .await?;
+
+        diesel::insert_into(options::table)
+            .values((
+                options::key.eq("setup.theme_init"),
+                options::value.eq("true"),
+            ))
+            .execute(conn)
+            .await?;
+    }
+
+    Ok(())
 }
 
-fn check_initialized(conn: &mut SyncConnection, key: &str) -> QueryResult<bool> {
+async fn check_initialized(conn: &mut Connection, key: &str) -> QueryResult<bool> {
     let Some(value) = options::table
         .filter(options::key.eq(key))
         .select(options::value)
         .first::<String>(conn)
+        .await
         .optional()?
     else {
         return Ok(false);
@@ -242,10 +214,14 @@ fn check_initialized(conn: &mut SyncConnection, key: &str) -> QueryResult<bool> 
     Ok(value == "true")
 }
 
-pub fn check_admin_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
-    check_initialized(conn, "setup.admin_init")
+pub async fn check_admin_initialized(conn: &mut Connection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.admin_init").await
 }
 
-pub fn check_defaults_initialized(conn: &mut SyncConnection) -> QueryResult<bool> {
-    check_initialized(conn, "setup.defaults_init")
+pub async fn check_defaults_initialized(conn: &mut Connection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.defaults_init").await
+}
+
+pub async fn check_theme_installed(conn: &mut Connection) -> QueryResult<bool> {
+    check_initialized(conn, "setup.theme_init").await
 }

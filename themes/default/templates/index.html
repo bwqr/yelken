@@ -1,0 +1,10 @@
+{% extends "layouts/base.html" %}
+
+{% block body %}
+  <p>{{ localize("articles") }}</p>
+  <ul>
+  {% for article in get_contents("article", ["title", "slug"]) %}
+    <li><a href="{{ get_url(page="article", params=[article.slug]) }}">{{ article.title }}</a></li>
+  {% endfor %}
+  </ul>
+{% endblock body %}

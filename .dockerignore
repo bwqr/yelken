@@ -1,7 +1,8 @@
 *
 !yelken
 !app
-yelken/.env
+!themes/default
+yelken/.env*
 yelken/target
 app/.env.local
 app/dist

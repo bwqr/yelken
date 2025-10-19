@@ -5,9 +5,12 @@ edition = "2024"
 
 [dependencies]
 base.path = "../base"
+store.path = "../store"
 
 axum.workspace = true
 diesel.workspace = true
+diesel-async.workspace = true
+opendal.workspace = true
 rand.workspace = true
 serde.workspace = true
 
