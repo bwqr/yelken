@@ -19,14 +19,11 @@ log.workspace = true
 opendal.workspace = true
 rand.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 unic-langid.workspace = true
 url.workspace = true
 
-bytes = "1.10.1"
 matchit = "0.8.4"
 minijinja = { version = "2.9.0", default-features = false, features = ["builtins", "debug", "loader", "loop_controls", "macros", "multi_template", "serde"] }
-zip = { version = "3", default-features = false, features = ["deflate"] }
 serde_urlencoded = "0.7.1"
 
 [dev-dependencies]

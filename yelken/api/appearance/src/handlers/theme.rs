@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io::Read, str::FromStr};
+use std::str::FromStr;
 
 use axum::{
     extract::{Multipart, Path, State},
@@ -9,13 +9,12 @@ use base::{
     db::Pool,
     models::{NamespaceSource, Theme},
     responses::HttpError,
-    runtime::{spawn_blocking, IntoSendFuture},
+    runtime::IntoSendFuture,
     schema::{namespaces, options, themes},
     services::SafePath,
     utils::{LocationKind, ResourceKind},
     AppState,
 };
-use bytes::Buf;
 use diesel::{
     prelude::*,
     result::{DatabaseErrorKind, Error},
@@ -191,11 +190,11 @@ pub async fn install_theme(
         return Err(HttpError::bad_request("missing_field_in_multipart"));
     }
 
-    let reader = field
+    let archive = field
         .bytes()
         .await
         .map_err(|_| HttpError::bad_request("invalid_multipart"))?
-        .reader();
+        .to_vec();
 
     let tmp_theme_dir = (0..32)
         .map(|_| rng().sample(Alphanumeric) as char)
@@ -205,7 +204,7 @@ pub async fn install_theme(
         &state.pool,
         &state.storage,
         &state.tmp_storage,
-        reader,
+        &archive,
         tmp_theme_dir.clone(),
         format!("{}", options.default_locale()),
     )
@@ -229,18 +228,16 @@ async fn install(
     pool: &Pool,
     storage: &Operator,
     tmp_storage: &Operator,
-    reader: impl Read + Send + 'static,
+    archive: &[u8],
     tmp_dir: String,
     default_locale: String,
 ) -> Result<Theme, HttpError> {
-    {
-        let tmp_storage = tmp_storage.clone();
-        let extract_dir = tmp_dir.clone();
-
-        spawn_blocking(move || extract_archive(reader, tmp_storage.clone(), extract_dir))
-            .await
-            .map_err(|_| HttpError::internal_server_error("blocking_error"))
-    }??;
+    store::extract_archive(archive, tmp_storage, &tmp_dir)
+        .await
+        .map_err(|e| {
+            HttpError::internal_server_error("failed_extracting_archive")
+                .with_context(e.to_string())
+        })?;
 
     let theme = store::install_theme(
         &mut *pool.get().await?,
@@ -253,59 +250,4 @@ async fn install(
     .unwrap();
 
     Ok(theme)
-}
-
-fn extract_archive(
-    mut reader: impl Read,
-    tmp_storage: Operator,
-    dir: String,
-) -> Result<(), HttpError> {
-    while let Some(file) = zip::read::read_zipfile_from_stream(&mut reader)
-        .map_err(|_| HttpError::internal_server_error("failed_reading_zip"))?
-    {
-        if !file.is_file() {
-            continue;
-        }
-
-        let outpath = file
-            .enclosed_name()
-            .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
-
-        if !(outpath.starts_with("assets/")
-            || (outpath.starts_with("templates/")
-                && outpath
-                    .extension()
-                    .map(|e| e == AsRef::<OsStr>::as_ref("html"))
-                    .unwrap_or(false))
-            || outpath
-                .parent()
-                .map(|p| p == AsRef::<std::path::Path>::as_ref("locales"))
-                .unwrap_or(false)
-            || outpath == AsRef::<std::path::Path>::as_ref("Yelken.json"))
-        {
-            log::warn!("Unexpected file found in archive, {outpath:?}");
-
-            continue;
-        }
-
-        let outpath = outpath
-            .to_str()
-            .ok_or_else(|| HttpError::unprocessable_entity("invalid_file_name"))?;
-
-        let bytes = file
-            .bytes()
-            .collect::<Result<Vec<u8>, std::io::Error>>()
-            .inspect_err(|e| log::warn!("Failed to read file bytes {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
-
-        let dest_file_path = [dir.as_str(), outpath].join("/");
-
-        tmp_storage
-            .blocking()
-            .write(&dest_file_path, bytes)
-            .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
-    }
-
-    Ok(())
 }

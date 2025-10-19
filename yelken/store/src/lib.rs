@@ -315,3 +315,45 @@ async fn create_theme_resources(
 
     Ok(theme)
 }
+
+pub async fn extract_archive(
+    archive: &[u8],
+    tmp_storage: &Operator,
+    dir: &str,
+) -> Result<(), &'static str> {
+    use rc_zip_sync::{ReadZip, rc_zip::parse::EntryKind};
+
+    let archive = archive
+        .read_zip()
+        .map_err(|_| "Unable to read bytes as zip archive")?;
+
+    for entry in archive.entries() {
+        let EntryKind::File = entry.kind() else {
+            continue;
+        };
+
+        let outpath = entry.sanitized_name().ok_or_else(|| "invalid_file_name")?;
+
+        if !(outpath.starts_with("assets/")
+            || (outpath.starts_with("templates/") && outpath.ends_with(".html"))
+            || (outpath.starts_with("locales/") && outpath.ends_with(".ftl"))
+            || outpath == "Yelken.json")
+        {
+            log::warn!("Unexpected file found in archive, {outpath:?}");
+
+            continue;
+        }
+
+        let bytes = entry.bytes().map_err(|_| "failed_reading_bytes")?;
+
+        let dst_file_path = [dir, outpath].join("/");
+
+        tmp_storage
+            .write(&dst_file_path, bytes)
+            .await
+            .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
+            .map_err(|_| "io_error")?;
+    }
+
+    Ok(())
+}
