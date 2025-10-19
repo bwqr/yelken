@@ -80,9 +80,7 @@ pub async fn install_theme(
             if let ErrorKind::NotFound = e.kind() {
                 HttpError::unprocessable_entity("no_manifest_file")
             } else {
-                log::error!("Failed reading manifest file, {e:?}");
-
-                HttpError::internal_server_error("io_error")
+                HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
             }
         })?;
 
@@ -94,8 +92,7 @@ pub async fn install_theme(
 
     let theme = conn
         .transaction(move |conn| {
-            async move { create_theme_resources(conn, manifest, default_locale).await }
-                .scope_boxed()
+            create_theme_resources(conn, manifest, default_locale).scope_boxed()
         })
         .await?;
 
