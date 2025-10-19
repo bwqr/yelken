@@ -6,9 +6,10 @@ use base::middlewares::permission::FULL_PERMS;
 use base::models::LoginKind;
 use base::responses::HttpError;
 use base::schema::{fields, locales, options, permissions, users};
-use diesel::backend::Backend;
 use diesel::prelude::*;
-use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
+use diesel_async::{
+    AsyncConnection, AsyncMigrationHarness, RunQueryDsl, scoped_futures::ScopedFutureExt,
+};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use opendal::Operator;
 use serde::Deserialize;
@@ -33,10 +34,10 @@ pub struct InstallTheme {
     pub dst: Operator,
 }
 
-pub fn migrate<DB: Backend>(
-    conn: &mut impl MigrationHarness<DB>,
-) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    conn.run_pending_migrations(MIGRATIONS).map(|_| ())
+pub fn migrate(conn: Connection) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    AsyncMigrationHarness::new(conn)
+        .run_pending_migrations(MIGRATIONS)
+        .map(|_| ())
 }
 
 async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {

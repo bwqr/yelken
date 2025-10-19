@@ -1,6 +1,6 @@
 use diesel_async::{
     pooled_connection::deadpool::{self, Object},
-    AsyncConnection,
+    AsyncConnection, AsyncConnectionCore,
 };
 
 #[cfg(all(not(feature = "sqlite"), not(feature = "postgres")))]
@@ -12,7 +12,7 @@ pub use sqlite::{Connection, SyncConnection};
 #[cfg(feature = "postgres")]
 pub use postgres::{Connection, SyncConnection};
 
-pub type Backend = <Connection as AsyncConnection>::Backend;
+pub type Backend = <Connection as AsyncConnectionCore>::Backend;
 pub type BackendValue<'a> = <Backend as diesel::backend::Backend>::RawValue<'a>;
 pub type Pool = deadpool::Pool<Connection>;
 pub type PooledConnection = Object<Connection>;

@@ -2,11 +2,7 @@ use std::{net::SocketAddrV4, time::Instant};
 
 use anyhow::{Context, Result};
 use axum::{extract::Request, middleware::Next, response::Response};
-use base::{
-    config::Config,
-    crypto::Crypto,
-    db::{Connection, SyncConnection},
-};
+use base::{config::Config, crypto::Crypto, db::Connection};
 use clap::{Parser, Subcommand};
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
 use yelken::DatabaseConfig;
@@ -152,10 +148,11 @@ async fn logger(req: Request, next: Next) -> Response {
 async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
     match command {
         Command::Migrate => {
-            setup::migrate(
-                &mut <SyncConnection as diesel::Connection>::establish(&db_url).unwrap(),
-            )
-            .unwrap();
+            let conn = <Connection as diesel_async::AsyncConnection>::establish(&db_url)
+                .await
+                .unwrap();
+
+            setup::migrate(conn).unwrap();
         }
         Command::Setup {
             admin,
