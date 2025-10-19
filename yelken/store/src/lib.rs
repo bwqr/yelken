@@ -357,8 +357,9 @@ pub async fn extract_archive(
         tmp_storage
             .write(&dst_file_path, bytes)
             .await
-            .inspect_err(|e| log::warn!("Failed to write file {e:?}"))
-            .map_err(|_| HttpError::internal_server_error("io_error"))?;
+            .map_err(|e| {
+                HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
+            })?;
     }
 
     Ok(())
