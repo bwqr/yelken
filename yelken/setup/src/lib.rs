@@ -1,15 +1,14 @@
 use std::error::Error;
 
 use base::crypto::Crypto;
-use base::db::Connection;
+use base::db::{BatchQuery, Connection};
 use base::middlewares::permission::FULL_PERMS;
 use base::models::LoginKind;
 use base::responses::HttpError;
 use base::schema::{fields, locales, options, permissions, users};
+use diesel::backend::Backend;
 use diesel::prelude::*;
-use diesel_async::{
-    AsyncConnection, AsyncMigrationHarness, RunQueryDsl, scoped_futures::ScopedFutureExt,
-};
+use diesel_async::{AsyncConnection, RunQueryDsl, scoped_futures::ScopedFutureExt};
 use diesel_migrations::{EmbeddedMigrations, MigrationHarness, embed_migrations};
 use opendal::Operator;
 use serde::Deserialize;
@@ -34,10 +33,10 @@ pub struct InstallTheme {
     pub dst: Operator,
 }
 
-pub fn migrate(conn: Connection) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
-    AsyncMigrationHarness::new(conn)
-        .run_pending_migrations(MIGRATIONS)
-        .map(|_| ())
+pub fn migrate<DB: Backend>(
+    conn: &mut impl MigrationHarness<DB>,
+) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    conn.run_pending_migrations(MIGRATIONS).map(|_| ())
 }
 
 async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
@@ -54,6 +53,7 @@ async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
             options::key.eq("default_locale"),
             options::value.eq(DEFAULT_LOCALE.0),
         )])
+        .batched()
         .execute(conn)
         .await?;
 
@@ -80,6 +80,7 @@ async fn create_defaults(conn: &mut Connection) -> QueryResult<()> {
                 fields::kind.eq("asset"),
             ),
         ])
+        .batched()
         .execute(conn)
         .await?;
 
@@ -129,6 +130,7 @@ async fn create_admin_user(conn: &mut Connection, crypto: &Crypto, user: User) -
                 })
                 .collect::<Vec<_>>(),
         )
+        .batched()
         .execute(conn)
         .await?;
 
@@ -186,6 +188,7 @@ pub async fn init(
 
         diesel::insert_into(options::table)
             .values([(options::key.eq("theme"), options::value.eq(theme.id))])
+            .batched()
             .execute(conn)
             .await?;
 

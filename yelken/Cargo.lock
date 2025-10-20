@@ -2259,17 +2259,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "positioned-io"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4ec4b80060f033312b99b6874025d9503d2af87aef2dd4c516e253fbfcdada7"
-dependencies = [
- "byteorder",
- "libc",
- "winapi",
-]
-
-[[package]]
 name = "postcard"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2582,7 +2571,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8dbbb62743954c246c258053c85035f4850d73d9d85b3ee70a1a0e2e7c37d535"
 dependencies = [
  "oval",
- "positioned-io",
  "rc-zip",
  "tracing",
 ]

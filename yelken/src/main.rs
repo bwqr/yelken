@@ -146,13 +146,13 @@ async fn logger(req: Request, next: Next) -> Response {
 }
 
 async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
+    let mut conn = <Connection as diesel_async::AsyncConnection>::establish(&db_url)
+        .await
+        .unwrap();
+
     match command {
         Command::Migrate => {
-            let conn = <Connection as diesel_async::AsyncConnection>::establish(&db_url)
-                .await
-                .unwrap();
-
-            setup::migrate(conn).unwrap();
+            setup::migrate(&mut diesel_async::AsyncMigrationHarness::new(conn)).unwrap();
         }
         Command::Setup {
             admin,
@@ -161,10 +161,6 @@ async fn run_command(command: Command, crypto: &Crypto, db_url: &str) {
             theme_path,
             force,
         } => {
-            let mut conn = <Connection as diesel_async::AsyncConnection>::establish(&db_url)
-                .await
-                .unwrap();
-
             let create_admin =
                 admin && (force || !setup::check_admin_initialized(&mut conn).await.unwrap());
 

@@ -233,6 +233,7 @@ async fn install(
     default_locale: String,
 ) -> Result<Theme, HttpError> {
     store::extract_archive(archive, tmp_storage, &tmp_dir)
+        .into_send_future()
         .await
         .map_err(|e| {
             HttpError::internal_server_error("failed_extracting_archive")
@@ -246,6 +247,7 @@ async fn install(
         storage,
         default_locale,
     )
+    .into_send_future()
     .await?;
 
     Ok(theme)

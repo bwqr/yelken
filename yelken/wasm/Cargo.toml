@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 [dependencies]
 base = { path = "../base", default-features = false }
 setup = { path = "../setup", default-features = false }
-yelken = { path = "../", default-features = false }
+yelken = { path = "../", default-features = false, features = ["admin", "app", "appearance", "auth-email", "cms", "user"] }
 
 axum.workspace = true
 chrono = { workspace = true, features = ["wasmbind"] }
@@ -30,5 +30,4 @@ wasm-bindgen-futures = "0.4.50"
 web-sys = { version = "0.3.77", features = ["Headers", "Response", "ResponseInit"] }
 
 [features]
-default = ["yelken/admin", "yelken/app", "yelken/appearance", "yelken/auth", "yelken/cms", "yelken/user"]
 sqlite = ["base/sqlite", "setup/sqlite"]

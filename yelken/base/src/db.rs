@@ -105,7 +105,7 @@ mod sqlite {
         fn execute<'conn, 'query>(
             query: Self,
             conn: &'conn mut super::Connection,
-        ) -> <super::Connection as super::AsyncConnection>::ExecuteFuture<'conn, 'query>
+        ) -> <super::Connection as super::AsyncConnectionCore>::ExecuteFuture<'conn, 'query>
         where
             SqliteBatchInsertWrapper<T>: 'query,
         {

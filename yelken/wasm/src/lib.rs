@@ -15,7 +15,10 @@ use base::{
     crypto::Crypto,
     db::{Connection, SyncConnection},
 };
-use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
+use diesel_async::{
+    RunQueryDsl,
+    pooled_connection::{AsyncDieselConnectionManager, deadpool},
+};
 use futures::StreamExt;
 use include_dir::{Dir, include_dir};
 use opendal::Operator;
@@ -78,46 +81,60 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         .unwrap()
         .finish();
 
+    let theme_storage = Operator::new(opendal::services::Memory::default())
+        .unwrap()
+        .finish();
+
+    fill_storage(&theme_storage, "", &THEME);
+
+    fill_storage(&app_assets_storage, "", &APP_ASSETS);
+
     let db_url = "/file.db";
 
-    {
-        use diesel::RunQueryDsl;
-
-        let mut conn = <SyncConnection as diesel::Connection>::establish(db_url).unwrap();
-
-        setup::migrate(&mut conn).unwrap();
-
-        diesel::sql_query("PRAGMA foreign_keys = ON;")
-            .execute(&mut conn)
-            .unwrap();
-
-        setup::create_admin_user(
-            &mut conn,
-            &crypto,
-            setup::User {
-                name,
-                email,
-                login: setup::Login::Password(password),
-            },
-        )
+    setup::migrate(&mut <SyncConnection as diesel::Connection>::establish(db_url).unwrap())
         .unwrap();
-
-        fill_storage(&storage, "themes/default", &THEME);
-
-        fill_storage(&app_assets_storage, "", &APP_ASSETS);
-    }
 
     let db_config = AsyncDieselConnectionManager::<Connection>::new(db_url);
     let pool = deadpool::Pool::builder(db_config).build().unwrap();
 
-    {
-        use diesel_async::RunQueryDsl;
+    let mut conn = pool.get().await.unwrap();
 
-        diesel::sql_query("PRAGMA foreign_keys = ON;")
-            .execute(&mut pool.get().await.unwrap())
-            .await
-            .unwrap();
-    }
+    diesel::sql_query("PRAGMA foreign_keys = ON;")
+        .execute(&mut pool.get().await.unwrap())
+        .await
+        .unwrap();
+
+    let create_admin = !setup::check_admin_initialized(&mut conn).await.unwrap();
+
+    let admin_user = create_admin.then(|| setup::User {
+        name,
+        email,
+        password,
+    });
+
+    let create_defaults = !setup::check_defaults_initialized(&mut conn).await.unwrap();
+
+    let install_theme = !setup::check_theme_installed(&mut conn).await.unwrap();
+
+    let install_theme = if install_theme {
+        Some(setup::InstallTheme {
+            src: theme_storage,
+            src_dir: "".to_string(),
+            dst: storage.clone(),
+        })
+    } else {
+        None
+    };
+
+    setup::init(
+        &mut conn,
+        &crypto,
+        create_defaults,
+        admin_user,
+        install_theme,
+    )
+    .await
+    .unwrap();
 
     let site_url = base_url.parse().expect("Given base_url is not a valid url");
     let app_url = base_url.parse().expect("Given base_url is not a valid url");

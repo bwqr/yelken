@@ -9,7 +9,7 @@ store.path = "../store"
 
 axum.workspace = true
 diesel.workspace = true
-diesel-async = { workspace = true, features = ["migrations"] }
+diesel-async.workspace = true
 opendal.workspace = true
 rand.workspace = true
 serde.workspace = true
