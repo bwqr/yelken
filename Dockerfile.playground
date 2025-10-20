@@ -32,7 +32,7 @@ COPY --from=yelken-builder /src/yelken/wasm/pkg wasm
 
 COPY playground .
 
-RUN npm install && npm run build
+RUN npm install && npm run build && ./firefox-no-module-fix.sh
 
 
 

@@ -1,5 +1,5 @@
 import wasmUrl from 'wasm/wasm_bg.wasm?url';
-import * as config from './src/config';
+import * as config from './src/config?';
 import { app_init, serve_request, initSync } from 'wasm';
 
 const origin = new URL(import.meta.url).origin;
