@@ -2,8 +2,13 @@
 !yelken
 !app
 !themes/default
+!playground
 yelken/.env*
 yelken/target
 app/.env.local
 app/dist
 app/node_modules
+playground/dist
+playground/node_modules
+playground/.vite
+playground/wasm

@@ -1,0 +1,41 @@
+FROM node:lts-alpine3.22 AS app-builder
+
+WORKDIR /src/app
+
+COPY app .
+
+RUN npm install && npx vite build --base='/{YELKEN_BASE_URL}/'
+
+
+
+FROM rust:alpine3.22 AS yelken-builder
+
+WORKDIR /src/yelken
+
+RUN apk update && apk add musl-dev clang && rustup target add wasm32-unknown-unknown && cargo install wasm-pack
+
+COPY --from=app-builder /src/app/dist /src/app/dist
+
+COPY themes/default /src/themes/default
+
+COPY yelken .
+
+RUN wasm-pack build --target web wasm --features sqlite
+
+
+
+FROM node:lts-alpine3.22 AS playground-builder
+
+WORKDIR /src/playground
+
+COPY --from=yelken-builder /src/yelken/wasm/pkg wasm
+
+COPY playground .
+
+RUN npm install && npm run build
+
+
+
+FROM nginx:stable-alpine3.21
+
+COPY --from=playground-builder /src/playground/dist /usr/share/nginx/html
