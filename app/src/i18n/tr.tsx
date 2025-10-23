@@ -153,7 +153,8 @@ export const content: typeof en.content = {
 
 export const dashboard: typeof en.dashboard = {
     loggedIn: (name: string) => (<><strong>{name}</strong> kullanıcısı ile giriş yaptınız</>),
-    welcome: 'Başlamak için güzel bir gün',
+    welcome: 'Yelken CMS\'e hoş geldiniz',
+    viewWebsite: 'Web sitenizi görüntüleyin',
 };
 
 export const locale: typeof en.locale = {

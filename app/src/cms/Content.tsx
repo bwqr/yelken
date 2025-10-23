@@ -380,7 +380,7 @@ export const ContentsByModel = () => {
                                                         <td></td>
                                                         <td>{content.id}</td>
                                                         <td><A href={`/contents/view/${content.id}`}>{content.name}</A></td>
-                                                        <td>{content.stage}</td>
+                                                        <td>{i18n.stages[content.stage]()}</td>
                                                         <td>{localeCtx.dateFormat().format(content.createdAt)}</td>
                                                     </tr>
                                                 )}

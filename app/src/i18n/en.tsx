@@ -152,7 +152,8 @@ export const content = {
 
 export const dashboard = {
     loggedIn: (name: string) => (<>You have logged in as <strong>{name}</strong></>),
-    welcome: 'It is a good day to start',
+    welcome: 'Welcome to Yelken CMS',
+    viewWebsite: 'View your web site',
 };
 
 export const locale = {
