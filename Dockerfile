@@ -1,12 +1,14 @@
 FROM rust:alpine3.22 AS yelken-builder
 
+ARG YELKEN_CLOUD
+
 WORKDIR /src/yelken
 
 RUN apk update && apk add libpq-dev musl-dev openssl-libs-static
 
 COPY yelken .
 
-RUN cargo build --release --no-default-features --features cloud
+RUN cargo build --release --no-default-features --features $( test $YELKEN_CLOUD && echo 'cloud' || echo 'default')
 
 
 
