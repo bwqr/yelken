@@ -1,7 +1,7 @@
 use std::{net::SocketAddrV4, time::Instant};
 
 use anyhow::{Context, Result};
-use axum::{extract::Request, middleware::Next, response::Response};
+use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Response};
 use base::{config::Config, crypto::Crypto, db::Connection};
 use clap::{Parser, Subcommand};
 use diesel_async::pooled_connection::{AsyncDieselConnectionManager, deadpool};
@@ -35,6 +35,7 @@ struct ServerConfig {
     pub app_assets_dir: String,
     pub storage_dir: String,
     pub tmp_dir: String,
+    pub cors_origins: Vec<HeaderValue>,
 }
 
 impl ServerConfig {
@@ -54,11 +55,29 @@ impl ServerConfig {
 
         let tmp_dir = std::env::var("YELKEN_TMP_DIR").context("YELKEN_TMP_DIR is not defined")?;
 
+        let cors_origins = match std::env::var("YELKEN_CORS_ORIGINS") {
+            Ok(origins) => origins
+                .split(',')
+                .map(|origin| {
+                    let url = url::Url::parse(origin)
+                        .map_err(|_| anyhow::anyhow!("invalid_origin_url"))?;
+
+                    url.origin()
+                        .ascii_serialization()
+                        .parse::<HeaderValue>()
+                        .map_err(|_| anyhow::anyhow!("invalid_origin_header"))
+                })
+                .collect::<Result<Vec<_>>>()
+                .context("YELKEN_CORS_ORIGINS is not valid")?,
+            Err(_) => vec![],
+        };
+
         Ok(Self {
             address,
             app_assets_dir,
             storage_dir,
             tmp_dir,
+            cors_origins,
         })
     }
 }
@@ -269,6 +288,7 @@ async fn main() {
         storage,
         app_assets_storage,
         tmp_storage,
+        server_config.cors_origins,
     )
     .await
     .layer(axum::middleware::from_fn(logger));

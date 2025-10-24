@@ -147,6 +147,8 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         upload_size_limit: 8192 * 1024,
     };
 
+    let cors_origins = vec![];
+
     let app = yelken::router(
         crypto,
         config,
@@ -154,6 +156,7 @@ pub async fn app_init(base_url: String, name: String, email: String, password: S
         storage,
         app_assets_storage,
         tmp_storage,
+        cors_origins,
     )
     .await
     .layer(axum::middleware::from_fn(logger));

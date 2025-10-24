@@ -69,6 +69,7 @@ pub async fn router(
     storage: Operator,
     app_assets_storage: Operator,
     tmp_storage: Operator,
+    cors_origins: Vec<HeaderValue>,
 ) -> Router<()> {
     let options = load_options(pool.get().await.unwrap()).await;
 
@@ -80,14 +81,7 @@ pub async fn router(
             http::Method::DELETE,
         ])
         .allow_headers([http::header::AUTHORIZATION, http::header::CONTENT_TYPE])
-        .allow_origin(
-            config
-                .app_url
-                .origin()
-                .ascii_serialization()
-                .parse::<HeaderValue>()
-                .unwrap(),
-        );
+        .allow_origin(cors_origins);
 
     let state = AppState::new(config, pool, storage.clone(), tmp_storage);
 

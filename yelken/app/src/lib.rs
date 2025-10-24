@@ -63,7 +63,7 @@ pub fn router(app_assets_storage: Operator, site_url: Url) -> Router<AppState> {
         .unwrap(),
     );
 
-    let index = index.replace("/{YELKEN_BASE_URL}/", base_url.as_str());
+    let index = index.replace("/{YELKEN_BASE_URL}/", base_url.path());
 
     Router::new()
         .nest_service(
