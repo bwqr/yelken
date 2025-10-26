@@ -110,7 +110,10 @@ pub async fn install_theme(
             HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
         })?;
 
-        dst.write(&["themes", &theme_id, entry.path()].join("/"), file)
+        let path = entry.path().strip_prefix(src_dir).unwrap_or(entry.path());
+        let path = path.strip_prefix('/').unwrap_or(path);
+
+        dst.write(&["themes", &theme_id, path].join("/"), file)
             .await
             .map_err(|e| {
                 HttpError::internal_server_error("io_error").with_context(format!("{e:?}"))
