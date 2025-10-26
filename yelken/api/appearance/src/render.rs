@@ -6,6 +6,7 @@ use base::db::Pool;
 use base::models::ContentStage;
 use base::runtime::{block_on, IntoSendFuture};
 use base::schema::{content_values, contents, fields, model_fields, models};
+use chrono::NaiveDateTime;
 use context::Context;
 use minijinja::value::Kwargs;
 use minijinja::{Environment, Error, ErrorKind, State, Value};
@@ -362,7 +363,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
 
     env.add_function(
         "localize",
-        move |state: &State, key: String, kwargs: Kwargs| -> Option<String> {
+        move |state: &State, key: String, kwargs: Kwargs| -> String {
             let ctx: Arc<Context> = state
                 .lookup("ctx")
                 .expect("could not find render context")
@@ -372,6 +373,7 @@ fn register_functions(env: &mut Environment, resources: FnResources) {
             let args = kwargs.args().map(|arg| (arg, kwargs.get(arg).unwrap()));
 
             l10n.localize(&ctx.request.locale.id, &key, args)
+                .unwrap_or(key)
         },
     );
 
@@ -785,21 +787,25 @@ impl ContentSource {
             contents_query = contents_query.offset(offset);
         }
 
-        let (content_ids, total) = if self.count {
-            let content_ids = contents_query
-                .select((contents::id, base::paginate::CountStarOver))
-                .load::<(i32, i64)>(&mut conn)
+        let (contents, total) = if self.count {
+            let contents = contents_query
+                .select((
+                    contents::id,
+                    contents::created_at,
+                    base::paginate::CountStarOver,
+                ))
+                .load::<(i32, NaiveDateTime, i64)>(&mut conn)
                 .await
                 .map_err(RenderError::Database)?;
 
-            let total = content_ids.get(0).map(|x| x.1);
+            let total = contents.get(0).map(|x| x.2);
 
-            (content_ids.into_iter().map(|x| x.0).collect(), total)
+            (contents.into_iter().map(|x| (x.0, x.1)).collect(), total)
         } else {
             (
                 contents_query
-                    .select(contents::id)
-                    .load::<i32>(&mut conn)
+                    .select((contents::id, contents::created_at))
+                    .load::<(i32, NaiveDateTime)>(&mut conn)
                     .await
                     .map_err(RenderError::Database)?,
                 None,
@@ -807,7 +813,10 @@ impl ContentSource {
         };
 
         let mut content_values = content_values::table
-            .filter(content_values::content_id.eq_any(&content_ids))
+            .filter(
+                content_values::content_id
+                    .eq_any(&contents.iter().map(|c| c.0).collect::<Vec<i32>>()),
+            )
             .filter(
                 content_values::model_field_id
                     .eq_any(model_fields.iter().map(|mf| mf.0).collect::<Vec<i32>>()),
@@ -827,11 +836,16 @@ impl ContentSource {
             .await
             .map_err(RenderError::Database)?;
 
-        let contents = content_ids
+        let contents = contents
             .into_iter()
-            .map(|id| {
-                let mut content =
-                    BTreeMap::<String, Value>::from_iter([("id".to_string(), Value::from(id))]);
+            .map(|(id, created_at)| {
+                let mut content = BTreeMap::<String, Value>::from_iter([
+                    ("id".to_string(), Value::from(id)),
+                    (
+                        "created_at".to_string(),
+                        Value::from(created_at.format("%Y-%m-%d").to_string()),
+                    ),
+                ]);
 
                 let mut values = content_values
                     .extract_if(.., |v| v.0 == id)

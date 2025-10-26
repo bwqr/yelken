@@ -263,15 +263,29 @@ pub async fn serve_page(
             .unwrap();
 
         return match res {
-            Ok((html, _)) => Ok((StatusCode::NOT_FOUND, Html(html)).into_response()),
-            Err(e) if e.kind() == minijinja::ErrorKind::TemplateNotFound => {
-                Ok((StatusCode::NOT_FOUND, Html("Not Found")).into_response())
-            }
-            Err(e) => Ok((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Html(format!("Failed to render page, {e:?}")),
+            Ok((html, status)) => Ok((
+                status
+                    .and_then(|s| StatusCode::from_u16(s).ok())
+                    .unwrap_or(StatusCode::OK),
+                Html(html),
             )
                 .into_response()),
+            Err(e) => {
+                log::warn!("Could not render template: {:#}", e);
+
+                let mut e = &e as &dyn std::error::Error;
+
+                while let Some(next_err) = e.source() {
+                    log::warn!("caused by: {:#}", next_err);
+                    e = next_err;
+                }
+
+                Ok((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Html(format!("Failed to render page,\n{e}")),
+                )
+                    .into_response())
+            }
         };
     };
 
@@ -355,11 +369,12 @@ pub async fn serve_page(
         )
             .into_response()),
         Err(e) => {
-            log::info!("Could not render template: {:#}", e);
+            log::warn!("Could not render template: {:#}", e);
 
             let mut e = &e as &dyn std::error::Error;
+
             while let Some(next_err) = e.source() {
-                log::info!("caused by: {:#}", next_err);
+                log::warn!("caused by: {:#}", next_err);
                 e = next_err;
             }
 

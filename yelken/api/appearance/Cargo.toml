@@ -12,6 +12,7 @@ store.path = "../../store"
 anyhow.workspace = true
 arc-swap.workspace=true
 axum = { workspace = true, features = ["multipart"] }
+chrono.workspace = true
 diesel.workspace = true
 diesel-async.workspace = true
 fluent.workspace = true

@@ -168,7 +168,8 @@ create table pages(
     value      varchar(128) not null,
     locale     varchar(8)   default null,
     created_at timestamp    not null default current_timestamp,
-    constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action
+    constraint fk_pages_locale foreign key (locale) references locales (key) on delete no action on update no action,
+    constraint fk_pages_namespace foreign key (namespace) references namespaces (key) on delete no action on update no action
 );
 
 create table tags(
