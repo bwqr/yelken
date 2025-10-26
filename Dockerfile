@@ -22,6 +22,16 @@ RUN npm install && npx vite build --base='/{YELKEN_BASE_URL}/'
 
 
 
+FROM node:lts-alpine3.22 AS theme-builder
+
+WORKDIR /src/themes
+
+COPY themes .
+
+RUN cd default && npm install && npm run build
+
+
+
 FROM alpine:3.22
 
 WORKDIR /app
@@ -30,7 +40,10 @@ COPY --from=yelken-builder /src/yelken/target/release/yelken ./yelken
 
 COPY --from=app-builder /src/app/dist ./dist
 
-COPY themes/default /app/themes/default
+COPY --from=theme-builder /src/themes/default/assets /app/themes/default/assets
+COPY --from=theme-builder /src/themes/default/locales /app/themes/default/locales
+COPY --from=theme-builder /src/themes/default/templates /app/themes/default/templates
+COPY --from=theme-builder /src/themes/default/Yelken.json /app/themes/default/Yelken.json
 
 ENV YELKEN_APP_ASSETS_DIR=/app/dist
 ENV YELKEN_DEFAULT_THEME_DIR=/app/themes/default

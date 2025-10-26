@@ -12,3 +12,6 @@ playground/dist
 playground/node_modules
 playground/.vite
 playground/wasm
+themes/default/assets/dist
+themes/default/templates/dist
+themes/default/node_modules
