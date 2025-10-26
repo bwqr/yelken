@@ -1,0 +1,35 @@
+.quote-container {
+    border: none;
+}
+
+.quote-toggle {
+    display: none;
+}
+
+.quote-label {
+    display: none;
+    cursor: pointer;
+    border-radius: 5px;
+    color: var(--meta-color);
+    font-size: 0.75rem;
+    font-family: var(--sans-serif-font);
+    text-align: center;
+    text-decoration: none;
+}
+
+.quote-toggle:not(:checked) ~ .quote .translated .quote-label-original,
+.quote-toggle:checked ~ .quote .original .quote-label-translate {
+    display: inline;
+}
+
+.original {
+    display: none;
+}
+
+.quote-toggle:checked ~ .quote .original {
+    display: block;
+}
+
+.quote-toggle:checked ~ .quote .translated {
+    display: none;
+}

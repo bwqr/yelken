@@ -1,0 +1,29 @@
+<li class="theme-switcher-wrapper js">
+    {#- Create the localised strings for the title and aria-label attributes -#}
+    {%- set toggle_str = localize("toggle_mode") -%}
+    {%- set dark_str = localize("dark") -%}
+    {%- set light_str = localize("light") -%}
+
+    {%- set combined_mode_str = dark_str ~ "/" ~ light_str -%}
+
+    <div
+        title="Theme Switcher"
+        class="theme-switcher"
+        tabindex="0"
+        role="button"
+        aria-label="Theme Switcher"
+        aria-pressed="false">
+    </div>
+
+    {%- set reset_str = localize("reset") -%}
+
+    <div
+        title="Reset Theme"
+        class="theme-resetter arrow"
+        tabindex="0"
+        role="button"
+        aria-hidden="true"
+        aria-label="Reset Theme">
+    </div>
+
+</li>

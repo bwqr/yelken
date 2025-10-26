@@ -1,0 +1,33 @@
+{% extends "layouts/base.html" %}
+
+{% set post = get_content('post', 'permalink', request.params.permalink) %}
+
+{% block main_content %}
+{% if post is none %}
+    {% include "404.html" %}
+{% else %}
+<main>
+    <article class="h-entry">
+        <h1 class="p-name article-title">
+            {{ post.title }}
+        </h1>
+        <a class="u-url u-uid" href="{{ get_url(page="post", params=[post.permalink]) }}"></a>
+
+        <ul class="meta">
+            {%- set separator_with_class = "<span class='separator' aria-hidden='true'>•</span>"-%}
+
+            <li><time class="dt-published" datetime="{{ post.created_at }}">{{ post.created_at }}</time></li>
+        </ul>
+
+        <p class="p-summary">{{ post.summary }}</p>
+
+        {% if post.content %}
+            <section class="e-content body">
+                {{ post.content }}
+            </section>
+        {%- endif -%}
+
+    </article>
+</main>
+{% endif %}
+{% endblock main_content %}

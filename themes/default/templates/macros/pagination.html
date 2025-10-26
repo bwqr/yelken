@@ -1,0 +1,33 @@
+{% macro display(page) %}
+
+{% set last_page = [page.current_page + 1, page.total_pages] | min %}
+
+{% if last_page > 1 %}
+<ul class="pagination">
+    {% if page.current_page > 1 %}
+        <li class="page-item page-prev">
+            <a href="?page={{ page.current_page - 1 }}&per_page={{ page.per_page }}" class="page-link" aria-label="{{ localize("prev") }}"><span class="arrow">←</span> {{ localize("prev") }}</a>
+        </li>
+    {% else %}
+        <li class="page-item page-prev">
+            <span class="page-link disabled" aria-disabled="true" aria-label="{{ localize("prev") }} (disabled)"><span class="arrow">←</span> {{ localize("prev") }}</span>
+        </li>
+    {% endif %}
+
+    <li class="page-item page-numbers">
+        {{ page.current_page }} {{ localize("of") }} {{ last_page }}
+    </li>
+
+    {% if page.current_page < last_page %}
+        <li class="page-item page-next">
+            <a href="?page={{ page.current_page + 1 }}&per_page={{ page.per_page }}" class="page-link" aria-label="{{ localize("next") }}">{{ localize("next") }} <span class="arrow">→</span></a>
+        </li>
+    {% else %}
+        <li class="page-item page-next">
+            <span class="page-link disabled" aria-disabled="true" aria-label="{{ localize("next") }} (disabled)">{{ localize("next") }} <span class="arrow">→</span></span>
+        </li>
+    {% endif %}
+</ul>
+{% endif %}
+
+{% endmacro %}

@@ -1,0 +1,48 @@
+{% macro display(title, posts) -%}
+<div id="posts-list">
+    <div>
+        <h1 class="title-container section-title bottom-divider">{{ title }}</h1>
+    </div>
+
+    {% for post in posts %}
+        {%- set separator = "•" -%}
+
+        <div class="bloglist-container">
+            {% if loop.last %}
+                {% set bottom_divider = false %}
+            {% else %}
+                {% set bottom_divider = true %}
+            {% endif %}
+
+            <section class="bloglist-meta {% if bottom_divider -%}bottom-divider{%- endif -%}">
+                <ul>
+                    <li class="date">{{ post.created_at }}</li>
+                </ul>
+            </section>
+
+            <section class="bloglist-content {% if bottom_divider -%}bottom-divider{%- endif -%}">
+                <div>
+                    <h2 class="bloglist-title">
+                        <a href="{{ get_url(page="post", params=[post.permalink]) }}">{{ post.title }}</a>
+                    </h2>
+
+                    {% if post.tags %}
+                        <div class="bloglist-tags">
+                            {% for tag in post.tags %}
+                                <span>{{ tag }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="description">
+                        <p>{{ post.summary }}</p>
+                    </div>
+                    <a class="readmore" href="{{ get_url(page="post", params=[post.permalink]) }}">{{ localize("read-more") }}&nbsp;<span class="arrow">→</span></a>
+                </div>
+              </section>
+        </div>
+
+    {% endfor %}
+</div>
+
+{%- endmacro %}

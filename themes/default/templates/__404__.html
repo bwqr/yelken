@@ -1,3 +1,7 @@
-{%- block body -%}
-<p>Page is not found</p>
-{%- endblock body -%}
+{% extends "layouts/base.html" %}
+
+{% block main_content %}
+
+  {% include "404.html" %}
+
+{% endblock main_content %}

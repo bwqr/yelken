@@ -1,0 +1,60 @@
+figure {
+    display: inline-block;
+    box-sizing: border-box;
+    margin: 0;
+    max-width: 100%;
+    height: auto;
+}
+
+figcaption {
+    color: var(--meta-color);
+    font-size: 0.72rem;
+    font-family: var(--serif-font);
+    text-align: center;
+}
+
+img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+    height: auto;
+}
+
+img.inline {
+    display: inline;
+    vertical-align: middle;
+}
+
+figure h4 {
+    margin: 0;
+    margin-block-end: 1em;
+    font-size: 1rem;
+}
+
+figure h4::before {
+    content: "↳ ";
+}
+
+.img-dark {
+    display: none;
+    &.inline{
+        display: none;
+    }
+}
+
+.img-light.inline {
+    display: inline;
+}
+
+[data-theme="dark"] {
+    .img-dark {
+        display: block;
+        &.inline {
+            display: inline;
+        }
+    }
+
+    .img-light {
+        display: none;
+    }
+}

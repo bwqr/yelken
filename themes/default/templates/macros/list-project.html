@@ -1,0 +1,29 @@
+{% macro display(title, projects) -%}
+    <div id="featured-projects" class="list">
+        <h1 class="title-container section-title bottom-divider">{{ title }}</h1>
+    </div>
+
+    <div class="cards">
+    {% for project in projects %}
+        <a href="{{ get_url(page="project", params=[project.permalink]) }}"
+            class="card"
+            data-tags="{% for tag in project.tags %}{{ tag | lower }}{% if not loop.last %},{% endif %}{% endfor %}">
+            {% if project.image %}
+                <img class="card-image"
+                    alt="{{ asset_url(project.image) }}"
+                    src="{{ asset_url(project.image, kind='content') }}">
+            {% else %}
+                <div class="card-image-placeholder"></div>
+            {% endif %}
+
+            <div class="card-info">
+                <h2 class="card-title">{{ project.title }}</h2>
+                <div class="card-description">
+                    {{ project.summary }}
+                </div>
+            </div>
+        </a>
+    {% endfor %}
+    </div>
+
+{%- endmacro %}

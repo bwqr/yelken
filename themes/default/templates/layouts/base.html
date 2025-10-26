@@ -1,12 +1,20 @@
 <!DOCTYPE html>
 {%- block init %}{% endblock init -%}
-<html>
-<head>
-{%- block head %}{% endblock head -%}
-</head>
-<body>
-{% include "layouts/nav.html" %}
+<html lang="{{ lang }}" data-code-direction="inherit">
 
-{%- block body %}{% endblock body -%}
+{% include "layouts/head.html" %}
+
+<body>
+    <a href="#main-content" id="skip-link">{{ localize("skip-to-content") }}</a>
+
+    {% include "layouts/nav.html" %}
+
+    <div class="content" id="main-content">
+        {% block main_content %}
+         No content is provided
+        {% endblock main_content %}
+    </div>
+    {% include "layouts/footer.html" %}
 </body>
+
 </html>

@@ -1,0 +1,20 @@
+<li class="language-switcher">
+    <details class="dropdown">
+        <summary role="button" aria-haspopup="true" title="Language Selection" aria-label="Language Selection">
+            <div class="language-switcher-icon language-switcher-icon-with-code"></div>
+            <div class="language-switcher-icon-code">{{lang}}</div>
+        </summary>
+        <div class="dropdown-content" role="menu">
+            {{ request.locale.name }}
+
+            {%- for locale in l10n.locales -%}
+                {%- if request.locale.key == locale.key -%}
+                    {%- continue -%}
+                {%- endif -%}
+
+                <a role="menuitem" lang="{{ locale.key }}" aria-label="{{ locale.name }}" href="{{ get_url(path='/' ~ locale.key, localize=false) }}">{{ locale.name }}</a>
+            {%- endfor -%}
+        </div>
+    </details>
+</li>
+

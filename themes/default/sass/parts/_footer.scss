@@ -1,0 +1,91 @@
+footer {
+    margin-top: auto;
+    margin-block-end: 1.4rem;
+    color: var(--meta-color);
+    font-size: 0.88rem;
+    font-family: var(--post-font-family);
+    text-align: center;
+
+    .nav-links {
+        color: var(--primary-color);
+    }
+
+    p {
+        margin: 0;
+    }
+}
+
+footer section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0rem;
+}
+
+footer nav {
+    display: flex;
+    margin: 0 0rem;
+}
+
+.socials {
+    display: flex;
+    flex-grow: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+
+    svg {
+        max-height: 15px;
+    }
+
+    ul {
+        gap: 5px;
+    }
+}
+
+.social {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image: unset;
+    padding: 0.5vmin;
+}
+
+.social > img {
+    aspect-ratio: 1/1;
+    width: 1.5rem;
+    height: auto;
+    color: #000000;
+}
+
+.social {
+    &:hover {
+        & > img {
+            filter: invert(1);
+        }
+    }
+}
+
+@mixin dark-theme-social {
+    .social {
+        &:hover {
+            & > img {
+                filter: invert(0);
+            }
+        }
+
+        & > img {
+            filter: invert(1);
+        }
+    }
+}
+
+[data-theme="dark"] {
+    @include dark-theme-social;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        @include dark-theme-social;
+    }
+}

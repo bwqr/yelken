@@ -1,0 +1,18 @@
+{% extends "layouts/base.html" %}
+
+{% import "macros/pagination.html" as pagination %}
+{% import "macros/list-post.html" as list_post %}
+
+{% block main_content %}
+
+<main>
+    {% set per_page = request.search_params.per_page|int if request.search_params.per_page else None %}
+    {% set page = request.search_params.page|int if request.search_params.page else None %}
+    {% set page = paginate("post", ["title", "description", "permalink", "tags"], per_page=per_page, page=page) %}
+
+    {{ list_post.display(title=localize("blog-title"), posts=page.items) }}
+
+    {{ pagination.display(page=page) }}
+</main>
+
+{% endblock main_content %}

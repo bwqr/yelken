@@ -7,19 +7,33 @@
       "name": "Menu",
       "key": "menu",
       "fields": [
-        { "name": "Name", "key": "name", "field": "text", "localized": true },
-        { "name": "Path", "key": "path", "field": "text", "localized": true },
+        { "name": "Name", "key": "name", "field": "text", "localized": true, "required": true },
+        { "name": "Url", "key": "url", "field": "text", "localized": true, "required": true },
         { "name": "Weight", "key": "weight", "field": "integer" },
         { "name": "Parent", "key": "parent", "field": "integer" }
       ]
     },
     {
-      "name": "Article",
-      "key": "article",
+      "name": "Post",
+      "key": "post",
       "fields": [
-        { "name": "Title", "key": "title", "field": "text", "localized": true },
-        { "name": "Content", "key": "content", "field": "text", "localized": true },
-        { "name": "Slug", "key": "slug", "field": "text", "localized": true }
+        { "name": "Title", "key": "title", "field": "text", "localized": true, "required": true },
+        { "name": "Summary", "key": "summary", "field": "text", "localized": true, "required": true },
+        { "name": "Content", "key": "content", "field": "multiline", "localized": true },
+        { "name": "Permalink", "key": "permalink", "field": "text", "localized": true, "required": true },
+        { "name": "Tags", "key": "tags", "field": "text", "localized": true, "multiple": true }
+      ]
+    },
+    {
+      "name": "Project",
+      "key": "project",
+      "fields": [
+        { "name": "Title", "key": "title", "field": "text", "localized": true, "required": true },
+        { "name": "Summary", "key": "summary", "field": "text", "localized": true, "required": true },
+        { "name": "Content", "key": "content", "field": "multiline", "localized": true },
+        { "name": "Permalink", "key": "permalink", "field": "text", "localized": true, "required": true },
+        { "name": "Tags", "key": "tags", "field": "text", "localized": true, "multiple": true },
+        { "name": "Image", "key": "image", "field": "asset" }
       ]
     }
   ],
@@ -29,57 +43,81 @@
       "model": "menu",
       "values": [
         { "field": "name", "locale": "en", "value": "Home" },
-        { "field": "path", "locale": "en", "value": "/" },
+        { "field": "name", "locale": "tr", "value": "Ana Sayfa" },
+        { "field": "url", "locale": "en", "value": "/" },
+        { "field": "url", "locale": "tr", "value": "/" },
         { "field": "weight", "value": "1" }
       ]
     },
     {
-      "name": "About Us",
+      "name": "Blog",
       "model": "menu",
       "values": [
-        { "field": "name", "locale": "en", "value": "About Us" },
-        { "field": "path", "locale": "en", "value": "/about-us" },
+        { "field": "name", "locale": "en", "value": "Blog" },
+        { "field": "name", "locale": "tr", "value": "Blog" },
+        { "field": "url", "locale": "en", "value": "/blog" },
+        { "field": "url", "locale": "tr", "value": "/blog" },
         { "field": "weight", "value": "2" }
       ]
     },
     {
-      "name": "Contact",
+      "name": "Projects",
       "model": "menu",
       "values": [
-        { "field": "name", "locale": "en", "value": "Contact" },
-        { "field": "path", "locale": "en", "value": "/contact" },
+        { "field": "name", "locale": "en", "value": "Projects" },
+        { "field": "name", "locale": "tr", "value": "Projeler" },
+        { "field": "url", "locale": "en", "value": "/projects" },
+        { "field": "url", "locale": "tr", "value": "/projeler" },
         { "field": "weight", "value": "3" }
       ]
     },
     {
-      "name": "Hello World",
-      "model": "article",
+      "name": "First Post in Yelken CMS",
+      "model": "post",
       "values": [
-        { "field": "title", "locale": "en", "value": "Hello World" },
-        { "field": "title", "locale": "tr", "value": "Merhaba Dünya" },
-        { "field": "content", "locale": "en", "value": "Content of the article" },
-        { "field": "content", "locale": "tr", "value": "Makalenin içeriği" },
-        { "field": "slug", "locale": "en", "value": "hello-world" },
-        { "field": "slug", "locale": "tr", "value": "merhaba-dunya" }
+        { "field": "title", "locale": "en", "value": "First Post in Yelken CMS" },
+        { "field": "title", "locale": "tr", "value": "Yelken CMS ile İlk Yazı" },
+        { "field": "summary", "locale": "en", "value": "This is your first post created within Yelken CMS" },
+        { "field": "summary", "locale": "tr", "value": "Yelken CMS içerisinde oluşturmuş olduğun ilk yazı" },
+        { "field": "content", "locale": "en", "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+        { "field": "content", "locale": "tr", "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+        { "field": "permalink", "locale": "en", "value": "first-post" },
+        { "field": "permalink", "locale": "tr", "value": "ilk-yazi" },
+        { "field": "tags", "locale": "en", "value": "post" },
+        { "field": "tags", "locale": "tr", "value": "yazı" },
+        { "field": "tags", "locale": "en", "value": "first" },
+        { "field": "tags", "locale": "tr", "value": "ilk" }
       ]
     },
     {
-      "name": "Nice Day",
-      "model": "article",
+      "name": "First Project in Yelken CMS",
+      "model": "project",
       "values": [
-        { "field": "title", "locale": "en", "value": "Nice Day" },
-        { "field": "title", "locale": "tr", "value": "Hoş Gün" },
-        { "field": "content", "locale": "en", "value": "Content of nice day article" },
-        { "field": "content", "locale": "tr", "value": "Hoş gün makalesinin içeriği" },
-        { "field": "slug", "locale": "en", "value": "nice-day" },
-        { "field": "slug", "locale": "tr", "value": "hos-gun" }
+        { "field": "title", "locale": "en", "value": "First Project in Yelken CMS" },
+        { "field": "title", "locale": "tr", "value": "Yelken CMS ile İlk Proje" },
+        { "field": "summary", "locale": "en", "value": "This is your first project created within Yelken CMS" },
+        { "field": "summary", "locale": "tr", "value": "Yelken CMS içerisinde oluşturmuş olduğun ilk proje" },
+        { "field": "content", "locale": "en", "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+        { "field": "content", "locale": "tr", "value": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+        { "field": "permalink", "locale": "en", "value": "first-project" },
+        { "field": "permalink", "locale": "tr", "value": "ilk-proje" },
+        { "field": "tags", "locale": "en", "value": "project" },
+        { "field": "tags", "locale": "tr", "value": "proje" },
+        { "field": "tags", "locale": "en", "value": "first" },
+        { "field": "tags", "locale": "tr", "value": "ilk" }
       ]
     }
   ],
   "pages": [
     { "name": "Home", "key": "home", "path": "/", "template": "index.html", "locale": "en" },
     { "name": "Home", "key": "home", "path": "/", "template": "index.html", "locale": "tr" },
-    { "name": "Article", "key": "article", "path": "/article/{slug}", "template": "article.html", "locale": "en" },
-    { "name": "Article", "key": "article", "path": "/makale/{slug}", "template": "article.html", "locale": "tr" }
+    { "name": "Blog", "key": "blog", "path": "/blog", "template": "blog.html", "locale": "en" },
+    { "name": "Blog", "key": "blog", "path": "/blog", "template": "blog.html", "locale": "tr" },
+    { "name": "Projects", "key": "projects", "path": "/projects", "template": "projects.html", "locale": "en" },
+    { "name": "Projects", "key": "projects", "path": "/projeler", "template": "projects.html", "locale": "tr" },
+    { "name": "Post", "key": "post", "path": "/post/{permalink}", "template": "post.html", "locale": "en" },
+    { "name": "Post", "key": "post", "path": "/yazi/{permalink}", "template": "post.html", "locale": "tr" },
+    { "name": "Project", "key": "project", "path": "/project/{permalink}", "template": "project.html", "locale": "en" },
+    { "name": "Project", "key": "project", "path": "/proje/{permalink}", "template": "project.html", "locale": "tr" }
   ]
 }

@@ -1,10 +1,22 @@
 {% extends "layouts/base.html" %}
 
-{% block body %}
-  <p>{{ localize("articles") }}</p>
-  <ul>
-  {% for article in get_contents("article", ["title", "slug"]) %}
-    <li><a href="{{ get_url(page="article", params=[article.slug]) }}">{{ article.title }}</a></li>
-  {% endfor %}
-  </ul>
-{% endblock body %}
+{% import "macros/list-post.html" as list_post %}
+{% import "macros/list-project.html" as list_project %}
+
+{% block main_content %}
+  <main>
+    <div id="banner-container-home">
+        <div id="home-banner-text">
+            <h1 id="home-banner-header">{{ localize("home-banner-title") }}</h1>
+            <section id="banner-home-subtitle">
+                <p>{{ localize("home-banner-section") | safe }}</p>
+            </section>
+        </div>
+    </div>
+
+    {{ list_post.display(title=localize("home-latest-posts"), posts=get_contents("post", ["title", "summary", "permalink", "tags"])) }}
+
+    {{ list_project.display(title=localize("home-featured-projects"), projects=get_contents("project", ["title", "summary", "permalink", "tags", "image"])) }}
+
+  </main>
+{% endblock main_content %}

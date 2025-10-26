@@ -1,0 +1,24 @@
+.image-label {
+    cursor: pointer;
+}
+
+.image-toggled {
+    position: absolute;
+    top: 0;
+    left: 0;
+    visibility: hidden;
+}
+
+.image-toggler-toggle {
+    display: none;
+}
+
+.image-toggler-toggle:checked ~ .image-label .image-toggled {
+    position: static;
+    visibility: visible;
+}
+
+.image-toggler-toggle:checked ~ .image-label .image-default {
+    position: absolute;
+    visibility: hidden;
+}

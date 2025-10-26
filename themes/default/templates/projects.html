@@ -1,0 +1,14 @@
+{% extends "layouts/base.html" %}
+
+{% import "macros/pagination.html" as pagination %}
+{% import "macros/list-project.html" as list_project %}
+
+{% block main_content %}
+    {% set per_page = request.search_params.per_page|int if request.search_params.per_page else None %}
+    {% set page = request.search_params.page|int if request.search_params.page else None %}
+    {% set page = paginate("project", ["title", "description", "permalink", "tags", "image"], per_page=per_page, page=page) %}
+
+    {{ list_project.display(title=localize("project-title"), projects=page.items) }}
+
+    {{ pagination.display(page=page) }}
+{% endblock main_content %}

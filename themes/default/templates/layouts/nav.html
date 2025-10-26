@@ -1,13 +1,33 @@
-<ul style="display: inline;">
-    {% for locale in l10n.locales %}
-        <li style="display: inline;">
-            <a
-                hreflang="{{ key }}"
-                href="{{ get_url(path = '/' ~ locale.key, localize = false) }}"
-                onclick="document.cookie = 'yelken_locale={{ locale.key }}; SameSite=Strict; Path={{ base_url }}'"
-            >
-              {{ locale.name }}
-            </a>
-        </li>
-    {% endfor %}
-</ul>
+<header>
+    <nav class="navbar">
+        <div class="nav-title">
+        <a class="home-title" href="{{ get_url(path='/') }}">{{ request.options["site.name"] }}</a>
+        </div>
+
+        <div class="nav-navs">
+            <ul>
+                {% set menus = get_contents("menu", ["name", "url", "weight", "parent"]) | sort(attribute="weight") %}
+                {% for menu in menus %}
+                    <li>
+                        {%- if menu.url is startingwith("http") -%}
+                            <a class="nav-links no-hover-padding" href="{{ menu.url }}">
+                        {%- else -%}
+                            <a class="nav-links no-hover-padding" href="{{ get_url(path=menu.url) }}">
+                        {%- endif -%}
+                        {{ menu.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                {#- Wrap the icons to keep them all together -#}
+                <li class="menu-icons-container">
+                    <ul class="menu-icons-group">
+                        {% include "components/lang-switcher.html" %}
+
+                        {# {% include "components/theme-switcher.html" %} #}
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</header>

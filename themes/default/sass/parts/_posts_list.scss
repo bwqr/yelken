@@ -1,0 +1,172 @@
+.bloglist-container {
+    display: grid;
+    grid-template-columns: 1fr 8fr;
+}
+
+
+$padding: 2.5rem;
+
+.bloglist-meta {
+    display: flex;
+    align-items: flex-start;
+    background-color: var(--navbar-color);
+    padding-block: $padding;
+    min-width: 13.5rem;
+
+    .thumbnail-image {
+        margin: 0;
+        margin-inline: auto;  // Centred by default.
+        max-width: 70%;
+    }
+
+    li.date + li.post-thumbnail .thumbnail-image {
+        // Styles for the thumbnail when there's a date above (either date or updated).
+        margin-inline: 0;  // Since metadata is left aligned, the image looks weird when centred.
+        margin-block-start: 0.7rem;
+    }
+
+    ul {
+        margin-inline-end: 0.7rem;
+        padding: 0;
+        color: var(--meta-color);
+        font-weight: 300;
+        font-size: 0.9rem;
+
+        li {
+            list-style-type: none;
+            white-space: nowrap;
+        }
+
+        li.draft-label {
+            width: fit-content;
+            line-height: 1.2rem;
+        }
+    }
+}
+
+.bloglist-content {
+    display: flex;
+    position: relative;
+    align-items: flex-start;
+    background-color: var(--navbar-color);
+    padding: $padding 0;
+
+    .pinned-label {
+        display: flex;
+        position: absolute;
+        top: 0.8rem;
+        align-items: center;
+        gap: 0.3rem;
+        color: var(--meta-color);
+        font-weight: 300;
+        font-size: 0.8rem;
+    }
+
+    .pinned-label svg {
+        width: 0.8rem;
+        height: 0.8rem;
+    }
+
+    div {
+        flex: 1;
+
+        .bloglist-title {
+            margin: 0;
+            font-weight: bold;
+            font-size: 1.2em;
+
+            a {
+                color: var(--text-color-high-contrast);
+                font-weight: 550;
+
+                &:hover {
+                    color: var(--hover-color);
+                }
+            }
+        }
+
+        .bloglist-tags {
+            margin-top: 0.1rem;
+
+            .tag {
+                display: inline-block;
+                margin-inline-end: 0.7rem;
+                font-weight: 400;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+            }
+        }
+
+        .description p {
+            margin: 0.5rem 0 1rem;
+            color: var(--text-color);
+            font-weight: 250;
+            font-size: 0.9rem;
+            line-height: 1.5rem;
+        }
+    }
+}
+
+.all-posts {
+    font-weight: 350;
+    font-size: 1.3rem;
+}
+
+#all-projects {
+    margin-top: 2rem;
+}
+
+.posts-first #featured-projects {
+    margin-top: 4rem;
+}
+
+.projects-first #posts-list {
+    margin-top: 4rem;
+}
+
+@media only screen and (max-width: 1100px) {
+    .bloglist-container {
+        display: block;
+    }
+
+    .pinned-label svg {
+        margin-bottom: -2px;
+    }
+
+    .bloglist-meta {
+        border-bottom: 0;
+        padding-block: 2rem;
+
+        ul {
+            margin-block-end: 0;
+            width: 100%;
+
+            li {
+                display: inline;
+                margin-inline-end: 0.3rem;
+            }
+        }
+
+        .post-thumbnail {
+            display: none;
+        }
+    }
+
+    .bloglist-content {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 0;
+        padding-bottom: 2rem;
+
+
+        .pinned-label {
+            position: static;
+            margin: 0;
+            margin-top: -1.9rem;
+        }
+
+        div {
+            width: 100%;
+        }
+    }
+}

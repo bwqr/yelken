@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "build": "node build.js"
+  },
+  "type": "module",
+  "devDependencies": {
+    "sass-embedded": "^1.93.2"
+  }
+}
