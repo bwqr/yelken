@@ -2,8 +2,8 @@ skip-to-content = Skip to Content
 read-more = Read More
 powered-by = Powered by {$yelken} and {$theme}
 
-home-banner-title = Welcome to Blog
-home-banner-section = This website is powered by Yelken CMS
+home-banner-title = Welcome to Your New Website
+home-banner-section = This is the beginning of a new website powered by Yelken CMS
 
 home-latest-posts = Latest Posts
 home-featured-projects = Featured Projects
