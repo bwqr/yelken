@@ -8,6 +8,16 @@ RUN npm install && npx vite build --base='/{YELKEN_BASE_URL}/'
 
 
 
+FROM node:lts-alpine3.22 AS theme-builder
+
+WORKDIR /src/themes
+
+COPY themes .
+
+RUN cd default && npm install && npm run build
+
+
+
 FROM rust:alpine3.22 AS yelken-builder
 
 WORKDIR /src/yelken
@@ -16,7 +26,10 @@ RUN apk update && apk add musl-dev clang && rustup target add wasm32-unknown-unk
 
 COPY --from=app-builder /src/app/dist /src/app/dist
 
-COPY themes/default /src/themes/default
+COPY --from=theme-builder /src/themes/default/assets /src/themes/default/assets
+COPY --from=theme-builder /src/themes/default/locales /src/themes/default/locales
+COPY --from=theme-builder /src/themes/default/templates /src/themes/default/templates
+COPY --from=theme-builder /src/themes/default/Yelken.json /src/themes/default/Yelken.json
 
 COPY yelken .
 
