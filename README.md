@@ -13,16 +13,13 @@ The main goals of Yelken can be described as
 * Have an extendable architecture with plugins and themes
 * Keep deployment to anywhere very easy
 
-Yelken also received its first alpha release. You can read more about this release from [announcement](https://bwqr.github.io/yelken-blog/first-announcement/), if you have not read it yet.
+Yelken also received its first alpha release. You can read more about this release from [announcement](https://blog.yelken.io/first-announcement/), if you have not read it yet.
 
 ## Features
 
-* [ ] Content management with built in localization support (define your own model to have different kind of contents)
-  * Implemented as a Proof of Concept (PoC)
-* [ ] Admin UI
-  * implemented as a PoC
-* [ ] Templating to manage look of your website (based on Jinja2, enables theming your website)
-  * Implemented as a PoC, functions exposed to templates will change
+* [x] Content management with built in localization support (define your own model to have different kind of contents)
+* [x] Admin UI (called App)
+* [x] Templating to manage look of your website (based on Jinja2, enables theming your website)
 * [ ] Receiving input from users (form handling)
 * [ ] Powerful plugin system (supports plugins written in other programming languages thanks to WebAssembly, e.g., Rust, C, Go, Javascript, Python, etc.)
   * Implemented as a PoC, needs required capabilities of plugins to be identified
@@ -31,11 +28,11 @@ Yelken also received its first alpha release. You can read more about this relea
 
 ## Documentation
 
-Right now, [Yelken Book](https://bwqr.github.io/yelken-book/) is the correct place to look for documentation.
+Right now, [Yelken Book](https://docs.yelken.io) is the correct place to look for documentation.
 
 ## Getting Started
 
-Yelken Book has a chapter about [Getting Started](https://bwqr.github.io/yelken-book/getting-started.html) which describes how to run Yelken.
+Yelken Book has a chapter about [Getting Started](https://docs.yelken.io/getting-started.html) which describes how to run Yelken.
 
 ## Roadmap
 
@@ -45,7 +42,7 @@ To achieve its goal, it needs to
 * [ ] Complete planned features
 * [ ] Have a plugin marketplace
 * [ ] Make its deployment to any environment an easy task
-* [ ] Provide Yelken as SaaS
+* [x] Provide Yelken as SaaS
 
 As a first step, Yelken targets reaching `0.1.0` version that should provide a good base to continue building on. You can check the roadmap of `0.1.0` version from [Yelken 0.1.0](https://github.com/users/bwqr/projects/3/views/1) project.
 
