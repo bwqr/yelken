@@ -1,18 +1,48 @@
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
     restart: always
     environment: 
       POSTGRES_PASSWORD: toor
       POSTGRES_USER: yelken
       POSTGRES_DB: yelken
-    volumes: 
-      - ./init:/docker-entrypoint-initdb.d:ro,z
     networks:
       - app-network
+    volumes:
+      - ./db:/var/lib/postgresql:z
+  yelken_migrate:
+    image: bwqr/yelken:0.1.0-alpha3
+    command: ["./yelken", "migrate"]
+    depends_on:
+      postgres:
+        condition: service_started
+    environment:
+      RUST_LOG: info,account=debug,admin=debug,auth=debug,common=debug,controller=debug,management=debug,base=debug,user=debug,services=debug
+      YELKEN_DATABASE_URL: postgres://yelken:toor@postgres/yelken
+      YELKEN_SECRET_KEY: super_secret_key
+    networks:
+      - app-network
+  yelken_setup:
+    image: bwqr/yelken:0.1.0-alpha3
+    command: ["./yelken", "setup", "--defaults", "--theme"]
+    depends_on:
+      yelken_migrate:
+        condition: service_completed_successfully
+    environment:
+      RUST_LOG: info,account=debug,admin=debug,auth=debug,common=debug,controller=debug,management=debug,base=debug,user=debug,services=debug
+      YELKEN_DATABASE_URL: postgres://yelken:toor@postgres/yelken
+      YELKEN_SECRET_KEY: super_secret_key
+      YELKEN_STORAGE_DIR: /storage
+    networks:
+      - app-network
+    volumes:
+      - ./storage:/storage:z
   yelken:
-    image: bwqr/yelken:0.1.0-alpha2
+    image: bwqr/yelken:0.1.0-alpha3
     restart: always
+    depends_on:
+      yelken_setup:
+        condition: service_completed_successfully
     environment:
       RUST_LOG: info
       YELKEN_ENV: dev
@@ -21,7 +51,8 @@ services:
       YELKEN_SECRET_KEY: super_secret_key
       YELKEN_SITE_URL: http://127.0.0.1:8080
       YELKEN_APP_URL: http://127.0.0.1:8080
-      YELKEN_APP_ASSETS_DIR: /app/dist
+      YELKEN_CORS_ORIGINS: http://127.0.0.1:8080
+      YELKEN_UPLOAD_SIZE_LIMITS: "8192"
       YELKEN_RELOAD_TEMPLATES: yes
       YELKEN_STORAGE_DIR: /storage
       YELKEN_TMP_DIR: /tmp
@@ -30,9 +61,7 @@ services:
     networks:
       - app-network
     volumes:
-      - ./theme:/storage/themes/default:z
-    depends_on:
-      - postgres
+      - ./storage:/storage:z
 networks: 
   app-network:
     driver: bridge
